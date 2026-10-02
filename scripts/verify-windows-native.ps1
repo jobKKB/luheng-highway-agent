@@ -24,7 +24,9 @@ $sentinel = Join-Path $data 'ci-preserve-synthetic.txt'
 $sentinelText = 'Synthetic CI data only: ' + [Guid]::NewGuid().ToString('N')
 $createdData = $false
 $ownedProcesses = [Collections.Generic.List[Diagnostics.Process]]::new()
-$node = (Get-Command node -CommandType Application).Source
+# Hosted runners can expose both setup-node and a preinstalled node.exe.
+# Select the first PATH match, never stringify the returned command array.
+$node = (Get-Command node -CommandType Application | Select-Object -First 1).Source
 $probeScript = Join-Path $SourceRoot 'scripts/verify-windows-native.mjs'
 $uninstaller = Join-Path $install 'Uninstall Luheng Office Agent.exe'
 $uninstallerCopy = Join-Path $work 'uninstall-ci.exe'
