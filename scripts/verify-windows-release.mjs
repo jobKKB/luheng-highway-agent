@@ -25,7 +25,7 @@ function files(root, prefix = '') {
   }
   return result;
 }
-function requireFile(root, name) { const file = member(root, name); assert.ok(lstatSync(file).isFile() && lstatSync(file).size > 0, `Missing or empty file: ${name}`); return file; }
+function requireFile(root, name, { allowEmpty = false } = {}) { const file = member(root, name); assert.ok(lstatSync(file).isFile() && (allowEmpty || lstatSync(file).size > 0), `Missing or empty file: ${name}`); return file; }
 export function inspectPE(file, allowed = ['x64']) {
   const b = readFileSync(file); assert.ok(b.length >= 64 && b.toString('ascii', 0, 2) === 'MZ', `Not a Windows PE executable: ${file}`);
   const offset = b.readUInt32LE(0x3c);
@@ -61,7 +61,10 @@ export function verifyWindowsRelease({ release, installer, sourceRoot = defaultS
   assert.equal(runtimeHashes.source, manifest.browserSource, 'Browser runtime source mismatch');
   const actualRuntime = files(runtime).filter(p => p !== 'runtime-sha256.json').sort();
   assert.deepEqual(Object.keys(runtimeHashes.files).sort(), actualRuntime, 'Browser runtime hash inventory mismatch');
-  for (const [name, hash] of Object.entries(runtimeHashes.files)) { assert.match(hash, /^[a-f0-9]{64}$/); assert.equal(sha256(requireFile(runtime, name)), hash, `Runtime SHA256 mismatch: ${name}`); }
+  // Playwright records legitimate zero-byte completion/dependency markers. The
+  // complete inventory and SHA256 still bind their exact bytes; executable and
+  // required browser companions above remain strictly nonempty.
+  for (const [name, hash] of Object.entries(runtimeHashes.files)) { assert.match(hash, /^[a-f0-9]{64}$/); assert.equal(sha256(requireFile(runtime, name, { allowEmpty: true })), hash, `Runtime SHA256 mismatch: ${name}`); }
   const backendPkg = json(requireFile(backend, 'package.json'));
   assert.equal(backendPkg.version, pkg.version, 'Packaged backend version mismatch');
   assert.deepEqual(backendPkg.dependencies, pkg.dependencies, 'Packaged backend dependency declarations differ');

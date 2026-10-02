@@ -82,6 +82,17 @@ test('rejects missing dependency and incorrect pinned dependency version', async
   assert.throws(f.verify, /dependency version mismatch/);
   rmSync(dependency, { recursive: true }); assert.throws(f.verify, /ENOENT/);
 });
+test('hashed empty Playwright markers are allowed but missing markers and empty companions fail', async t => {
+  const f = await fixture(t), name = 'chromium-1208/DEPENDENCIES_VALIDATED', marker = join(f.runtime, name);
+  put(marker, '');
+  const inventoryPath = join(f.runtime, 'runtime-sha256.json'), inventory = JSON.parse(readFileSync(inventoryPath));
+  inventory.files[name] = hash(marker); putJSON(inventoryPath, inventory);
+  assert.equal(f.verify().status, 'static-preflight-passed');
+  rmSync(marker); assert.throws(f.verify, /hash inventory mismatch/);
+  put(marker, 'changed'); assert.throws(f.verify, /Runtime SHA256 mismatch/);
+  put(marker, ''); put(join(f.runtime, 'chromium-1208/chrome-win64/resources.pak'), '');
+  assert.throws(f.verify, /Missing or empty file/);
+});
 test('rejects missing desktop ASAR file and ASAR version mismatch', async t => {
   const f = await fixture(t); rmSync(join(f.asarSource, 'window-state.cjs')); await asar.createPackage(f.asarSource, f.archive);
   assert.throws(f.verify, /Missing desktop file.*window-state/);
