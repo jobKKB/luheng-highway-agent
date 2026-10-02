@@ -5,8 +5,8 @@
   "files": [
     {
       "path": ".github/workflows/windows-build.yml",
-      "bytes": 1758,
-      "sha256": "08965213d72a0c5b84ccbc1a61e6b7ce9fb8e4d07e12e4432e7075f082892361"
+      "bytes": 2222,
+      "sha256": "bff0bbab0d8fae9776405462191172850b4cf7fdf68985397482a241250e0731"
     },
     {
       "path": ".gitignore",
@@ -185,8 +185,8 @@
     },
     {
       "path": "desktop/windows-build.workflow.yml",
-      "bytes": 1758,
-      "sha256": "08965213d72a0c5b84ccbc1a61e6b7ce9fb8e4d07e12e4432e7075f082892361"
+      "bytes": 2222,
+      "sha256": "bff0bbab0d8fae9776405462191172850b4cf7fdf68985397482a241250e0731"
     },
     {
       "path": "docs/CONTROLLED-BROWSER.md",
@@ -389,6 +389,16 @@
       "sha256": "91791078c40ddde97d873ec1b471132bb6067616eda6c99dd194809c1babe2f5"
     },
     {
+      "path": "scripts/verify-windows-native.mjs",
+      "bytes": 11857,
+      "sha256": "4016896a4f213bc2e08b3c774e297dffed38731d94659c2d6b0aa6e055912bb5"
+    },
+    {
+      "path": "scripts/verify-windows-native.ps1",
+      "bytes": 11000,
+      "sha256": "8766a3b84c39054ced5dc6de1fe0a94d2f33e69175e10b1161c0959acfe0a0ba"
+    },
+    {
       "path": "scripts/verify-windows-release.mjs",
       "bytes": 11111,
       "sha256": "70433fc028cc527c917afa84d788834d2e1d65e7fc234ed49fec58075f777d7d"
@@ -517,6 +527,11 @@
       "path": "tests/v03-integration.test.mjs",
       "bytes": 6692,
       "sha256": "6b1cebc68cde87e928143792a345653174b931f23b7e53404b915401278dc0ae"
+    },
+    {
+      "path": "tests/windows-native-smoke.test.mjs",
+      "bytes": 6197,
+      "sha256": "7406a1dce1a065258e36198559d36793a60ea569eb52fa15f4215c6b2767876b"
     }
   ]
 }

@@ -10,7 +10,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,6 +42,18 @@ jobs:
       - run: npm test
       - run: npm --prefix desktop run check
       - run: npm --prefix desktop run package:win
+      - name: Verify native Windows installer and bundled runtime
+        shell: pwsh
+        timeout-minutes: 15
+        run: ./scripts/verify-windows-native.ps1
+      - name: Upload Windows verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: luheng-windows-verification-${{ github.sha }}
+          path: desktop/dist/native-smoke/*.json
+          if-no-files-found: warn
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         with:
           name: luheng-windows-unsigned-prototype
