@@ -1,0 +1,22 @@
+{
+  "name": "highway-agent-desktop",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Local-first desktop shell for the Highway Agent prototype",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check main.cjs && node --check backend-process.mjs && node --check stage-bundle.cjs && node --check package-windows.cjs && node --check electron-builder.cjs && node --test test/*.test.cjs",
+    "install:runtime": "install-electron",
+    "stage:bundle": "node stage-bundle.cjs",
+    "package:win": "node package-windows.cjs"
+  },
+  "devDependencies": {
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "license": "MIT"
+}

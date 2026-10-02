@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#183b3d" />
+<title>路衡 · 办公智能体 v0.3 本地原型</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar" aria-label="主导航">
+    <a class="brand" href="#chat" aria-label="路衡首页"><span class="brand-mark"><svg viewBox="0 0 36 36" fill="none" aria-hidden="true"><path d="M9 27 16 8h4l7 19M12 21h12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M18 10v3m0 4v3m0 4v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span>路衡<small>办公智能体</small></span><span class="brand-beta" title="v0.3 开发原型，非生产验收版">v0.3</span></a>
+    <button class="new-task-button" data-action="new-task"><span>＋</span> 发起新任务 <kbd>⌘ K</kbd></button>
+    <div class="nav-label">工作空间</div>
+    <nav id="nav"></nav>
+    <div class="sidebar-bottom"><div id="heartbeat-card"></div><div class="workspace-user"><div class="avatar">路</div><div><b>公路事务工作台</b><span>本地私有工作空间</span></div><span class="local-dot" title="本地运行"></span></div></div>
+  </aside>
+  <div class="sidebar-scrim" data-action="close-nav"></div>
+  <div class="app-body">
+    <header class="topbar"><div class="topbar-left"><button class="icon-button mobile-menu" data-action="toggle-nav" aria-label="打开导航"></button><span class="breadcrumb">工作空间</span><span class="breadcrumb-slash">/</span><strong id="page-label">智能对话</strong></div><div class="topbar-right"><span class="connection" id="connection"><i></i> 正在连接</span><button class="mode-chip" data-nav="settings" id="mode-chip">演示环境</button><button class="icon-button" data-action="notifications" id="notification-button" aria-label="查看提醒和通知"></button><div class="top-avatar">LH</div></div></header>
+    <main id="main" tabindex="-1"><div class="initial-loading"><span class="spinner"></span><p>正在连接本地工作空间…</p></div></main>
+  </div>
+</div>
+<div id="modal-root"></div>
+<div id="toast-root" role="status" aria-live="polite"></div>
+<script src="/app.js" defer></script>
+</body>
+</html>

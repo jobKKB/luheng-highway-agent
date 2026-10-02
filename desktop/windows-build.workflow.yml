@@ -1,0 +1,50 @@
+# Source template for the active workflow in .github/workflows/windows-build.yml.
+# Stores an unsigned artifact; does not publish a GitHub Release.
+name: Windows prototype installer
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            desktop/package-lock.json
+      - name: Check OpenSSL for local TLS test fixtures
+        shell: pwsh
+        run: |
+          $openssl = Get-Command openssl -ErrorAction SilentlyContinue
+          if (-not $openssl) {
+            $gitOpenSSL = Join-Path $env:ProgramFiles 'Git\usr\bin\openssl.exe'
+            if (Test-Path $gitOpenSSL) {
+              Split-Path $gitOpenSSL | Out-File -FilePath $env:GITHUB_PATH -Append
+              & $gitOpenSSL version
+            } else {
+              throw 'OpenSSL CLI is required only for TLS fixture tests. Install a trusted OpenSSL distribution or Git for Windows before running this workflow.'
+            }
+          } else {
+            & $openssl.Source version
+          }
+      - run: npm ci
+      - run: npm --prefix desktop ci
+      - run: npm --prefix desktop run install:runtime
+      - run: npx playwright install chromium
+      - run: npm test
+      - run: npm --prefix desktop run check
+      - run: npm --prefix desktop run package:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: luheng-windows-unsigned-prototype
+          path: desktop/dist/*.exe
+          if-no-files-found: error
+          retention-days: 14
