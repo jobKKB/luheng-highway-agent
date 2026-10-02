@@ -430,8 +430,8 @@
     },
     {
       "path": "tests/fixtures/windows-acl.mjs",
-      "bytes": 4401,
-      "sha256": "689a42af03e18f8053de005cf15a8bc17bb004f506e881d2b2c3591e14a51ead"
+      "bytes": 5152,
+      "sha256": "417369c0a682b86a10aeb72ed546df9201ecd2d65aade678268550c0afec622a"
     },
     {
       "path": "tests/hardening.test.mjs",
@@ -475,8 +475,8 @@
     },
     {
       "path": "tests/private-directory.test.mjs",
-      "bytes": 3948,
-      "sha256": "3801fa6c002abdbf3c5542300c7633afbe58a0ea6a3211bed84fc29390b83013"
+      "bytes": 4734,
+      "sha256": "ecc8981d504a000f3241664b84c7b8e57a92c9f4b9944e3381821a6363aea72d"
     },
     {
       "path": "tests/schedules.test.mjs",

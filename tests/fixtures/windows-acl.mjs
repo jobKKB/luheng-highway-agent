@@ -2,6 +2,17 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { win32 } from "node:path";
 
+// A node child launched by PowerShell 7 can inherit its module search path.
+// These readers deliberately run Windows PowerShell 5.1, so use its own OS
+// modules rather than accidentally autoloading PowerShell 7's Get-Acl module.
+// This is a child-process environment only, not a persistent system setting.
+export function windowsAclTestEnvironment(path, env = process.env) {
+  const systemRoot = env.SystemRoot || env.WINDIR;
+  assert.ok(systemRoot && win32.isAbsolute(systemRoot), "Windows system root is required");
+  const result = Object.fromEntries(Object.entries(env).filter(([key]) => key.toLowerCase() !== "psmodulepath"));
+  return { ...result, PSModulePath: win32.join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "Modules"), LUHENG_TEST_ACL_PATH: path };
+}
+
 // Only used on this test's empty/synthetic temporary tree. Establish both a broad
 // inherited ACE and an explicit broad ACE so replacement is actually exercised.
 export function makeWindowsAclPermissiveForTest(path) {
@@ -26,7 +37,7 @@ if (-not ($rules | Where-Object { $_.IdentityReference.Value -eq 'S-1-5-32-545' 
 `;
   const executable = win32.join(process.env.SystemRoot || process.env.WINDIR, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
   execFileSync(executable, ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script], {
-    encoding: "utf8", windowsHide: true, timeout: 15000, env: { ...process.env, LUHENG_TEST_ACL_PATH: path },
+    encoding: "utf8", windowsHide: true, timeout: 15000, env: windowsAclTestEnvironment(path),
   });
 }
 
@@ -43,7 +54,7 @@ $rules = @($acl.GetAccessRules($true, $true, [System.Security.Principal.Security
 `;
   const executable = win32.join(process.env.SystemRoot || process.env.WINDIR, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
   const result = JSON.parse(execFileSync(executable, ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script], {
-    encoding: "utf8", windowsHide: true, timeout: 15000, env: { ...process.env, LUHENG_TEST_ACL_PATH: path },
+    encoding: "utf8", windowsHide: true, timeout: 15000, env: windowsAclTestEnvironment(path),
   }));
   const allowed = new Set([result.user, "S-1-5-18", "S-1-5-32-544"]);
   // An elevated creator's token may assign Administrators as the new file's

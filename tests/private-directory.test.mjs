@@ -4,13 +4,24 @@ import { chmodSync, mkdtempSync, mkdirSync, readdirSync, rmSync, statSync, symli
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { preparePrivateDirectory, WINDOWS_PRIVATE_DIRECTORY_SCRIPT } from "../lib/private-directory.mjs";
-import { assertPrivateWindowsAcl, makeWindowsAclPermissiveForTest } from "./fixtures/windows-acl.mjs";
+import { assertPrivateWindowsAcl, makeWindowsAclPermissiveForTest, windowsAclTestEnvironment } from "./fixtures/windows-acl.mjs";
 
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), "luheng-private-directory-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   return root;
 }
+
+test("Windows ACL fixture isolates Windows PowerShell modules from a PowerShell 7 parent", () => {
+  const env = { SystemRoot: String.raw`C:\Windows`, PSModulePath: String.raw`C:\Program Files\PowerShell\7\Modules`, psmodulepath: "inherited-alias", PATH: "retained" };
+  const child = windowsAclTestEnvironment(String.raw`C:\temporary\报告 [1]`, env);
+  assert.equal(child.PSModulePath, String.raw`C:\Windows\System32\WindowsPowerShell\v1.0\Modules`);
+  assert.equal(child.psmodulepath, undefined);
+  assert.equal(child.PATH, "retained");
+  assert.equal(child.LUHENG_TEST_ACL_PATH, String.raw`C:\temporary\报告 [1]`);
+  assert.equal(env.psmodulepath, "inherited-alias");
+  assert.throws(() => windowsAclTestEnvironment("unused", {}), /system root/);
+});
 
 test("native private directory creation and repair remove permissive access and protect inheritance", t => {
   const root = fixture(t), directory = join(root, "nested", "报告 ' [1] & $() 空格");
