@@ -158,10 +158,18 @@ test('memory-only API key is bound to endpoint origin and clears on origin chang
 });
 
 test('scheduler limits running tasks to two and drains the queue',async t=>{
- const h=await harness(t,{stepDelay:50});const tasks=[];let maximum=0;const sampler=setInterval(()=>maximum=Math.max(maximum,h.app.engine.running.size),1);t.after(()=>clearInterval(sampler));
- for(let i=0;i<6;i++)tasks.push(await h.task('生成测试报告 '+i));
- await until(async()=>{const state=await h.state();return state.tasks.filter(task=>task.status==='running').length===2&&state.tasks.some(task=>task.status==='queued');});
- const results=await Promise.all(tasks.map(task=>h.terminal(task.id)));assert.ok(results.every(task=>task.status==='completed'));assert.equal(maximum,2);assert.equal(h.app.engine.running.size,0);
+ const h=await harness(t);const tasks=[];let maximum=0,release;
+ const gate=new Promise(resolve=>{release=resolve;});const step=h.app.engine.step.bind(h.app.engine);
+ // Hold actual running tasks until all requests are admitted. Polling a brief
+ // running+queued moment after six HTTP round trips races on slower CI hosts.
+ h.app.engine.step=async(...args)=>{maximum=Math.max(maximum,h.app.engine.running.size);await gate;return step(...args);};
+ const sampler=setInterval(()=>maximum=Math.max(maximum,h.app.engine.running.size),1);
+ try{
+  for(let i=0;i<6;i++)tasks.push(await h.task('生成测试报告 '+i));
+  await until(async()=>{const state=await h.state();return state.tasks.filter(task=>task.status==='running').length===2&&state.tasks.filter(task=>task.status==='queued').length===4;},{description:'two held running tasks and four queued tasks'});
+  release();
+  const results=await Promise.all(tasks.map(task=>h.terminal(task.id)));assert.ok(results.every(task=>task.status==='completed'));assert.equal(maximum,2);assert.equal(h.app.engine.running.size,0);
+ }finally{release();clearInterval(sampler);}
 });
 
 test('at most thirty unfinished tasks are admitted and cancellation releases capacity',async t=>{

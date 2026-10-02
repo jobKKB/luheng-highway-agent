@@ -88,6 +88,8 @@ test('PowerShell recipe never opts out of sandbox or treats static exit 2 as ful
   assert.match(text, /Wait-OwnedProcess \$p 180 2/);
   assert.match(text, /deliverableReady = \$false/);
   assert.match(text, /RUNNER_ENVIRONMENT -ne 'github-hosted'/);
-  assert.match(text, /Get-Command node -CommandType Application \| Select-Object -First 1/);
+  assert.match(text, /RUNNER_TOOL_CACHE 'node\/24\.21\.0\/x64\/node\.exe'/);
+  assert.match(text, /\$nodeVersion -ne 'v24\.21\.0'/);
+  assert.ok(!text.includes('Get-Command node'));
   assert.ok(!text.includes('--no-sandbox'));
 });

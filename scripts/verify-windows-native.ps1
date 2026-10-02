@@ -24,9 +24,9 @@ $sentinel = Join-Path $data 'ci-preserve-synthetic.txt'
 $sentinelText = 'Synthetic CI data only: ' + [Guid]::NewGuid().ToString('N')
 $createdData = $false
 $ownedProcesses = [Collections.Generic.List[Diagnostics.Process]]::new()
-# Hosted runners can expose both setup-node and a preinstalled node.exe.
-# Select the first PATH match, never stringify the returned command array.
-$node = (Get-Command node -CommandType Application | Select-Object -First 1).Source
+# setup-node provisions this exact build runtime. Do not discover or delete
+# unrelated preinstalled Node copies on the shared runner image.
+$node = Join-Path $env:RUNNER_TOOL_CACHE 'node/24.21.0/x64/node.exe'
 $probeScript = Join-Path $SourceRoot 'scripts/verify-windows-native.mjs'
 $uninstaller = Join-Path $install 'Uninstall Luheng Office Agent.exe'
 $uninstallerCopy = Join-Path $work 'uninstall-ci.exe'
@@ -69,6 +69,10 @@ function Invoke-Uninstall {
   if (Test-Path -LiteralPath (Join-Path $install 'resources')) { throw 'Uninstall left the packaged resources.' }
 }
 try {
+  if (-not [IO.File]::Exists($node)) { throw 'Pinned setup-node executable is missing.' }
+  $nodeVersion = (& $node --version).Trim()
+  if ($LASTEXITCODE -ne 0 -or $nodeVersion -ne 'v24.21.0') { throw 'Pinned build Node version does not match 24.21.0.' }
+  $report.stages.buildNode = @{ executable = $node; version = $nodeVersion }
   if (Test-Path -LiteralPath $data) { throw 'Existing Luheng app data found; do not overwrite it.' }
   $existing = @(Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -like 'Luheng Office Agent*' })
   if ($existing.Count) { throw 'Existing per-user Luheng installation found; refusing upgrade/uninstall.' }
