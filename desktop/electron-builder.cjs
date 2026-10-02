@@ -8,7 +8,7 @@ module.exports = {
   productName: 'Luheng Office Agent',
   asar: true,
   directories: { output: 'dist' },
-  files: ['main.cjs', 'security.cjs', 'backend-process.mjs', 'bridge.cjs', 'vault.cjs', 'lifecycle.cjs', 'assets/**', 'package.json'],
+  files: ['main.cjs', 'security.cjs', 'backend-process.mjs', 'bridge.cjs', 'vault.cjs', 'lifecycle.cjs', 'window-state.cjs', 'assets/**', 'package.json'],
   extraResources: [
     { from: `${bundleName}/backend`, to: 'backend', filter: ['**/*'] },
     // electron-builder excludes a matcher-root node_modules folder by default;

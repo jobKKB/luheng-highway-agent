@@ -12,12 +12,14 @@ const root = path.resolve(__dirname, '..');
 const bundle = path.join(__dirname, plan.bundleName);
 const backend = path.join(bundle, 'backend');
 const browserRuntime = path.join(bundle, 'browser-runtime');
+mkdirSync(bundle, { recursive: true });
+// A failed new staging run must not leave an old successful manifest usable.
+// Invalidate before input validation too: a missing dependency/source must not
+// leave the previous bundle looking current to a direct electron-builder run.
+rmSync(path.join(bundle, 'bundle-manifest.json'), { force: true });
 const required = ['server.mjs','package.json','LICENSE','THIRD_PARTY_NOTICES.md','lib','public/index.html','public/app.js','node_modules/playwright/package.json','node_modules/playwright-core/package.json','node_modules/imapflow/package.json','node_modules/nodemailer/package.json','node_modules/mailparser/package.json'];
 for (const entry of required) if (!existsSync(path.join(root, entry))) throw new Error(`Missing ${entry}; install root dependencies and finish UI before packaging.`);
 const hashFile = file => createHash('sha256').update(readFileSync(file)).digest('hex');
-mkdirSync(bundle, { recursive: true });
-// A failed new staging run must not leave an old successful manifest usable.
-rmSync(path.join(bundle, 'bundle-manifest.json'), { force: true });
 rmSync(backend, { recursive: true, force: true });
 mkdirSync(backend, { recursive: true });
 for (const entry of ['server.mjs','package.json','LICENSE','THIRD_PARTY_NOTICES.md','lib','public','node_modules']) cpSync(path.join(root,entry),path.join(backend,entry),{recursive:true,dereference:true});

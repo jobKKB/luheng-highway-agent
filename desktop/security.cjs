@@ -47,6 +47,10 @@ function backendEnvironment(env) {
     'WINDIR', 'TEMP', 'TMP', 'TMPDIR', 'LANG', 'LC_ALL', 'DISPLAY',
     'XAUTHORITY', 'XDG_RUNTIME_DIR', 'DBUS_SESSION_BUS_ADDRESS',
     'PLAYWRIGHT_BROWSERS_PATH', 'HIGHWAY_CHROMIUM_PATH', 'CHROME_EXECUTABLE', 'CHROMIUM_PATH',
+    // Preserve existing deployment routing/trust, without enabling new policy.
+    // Never inherit NODE_OPTIONS or NODE_TLS_REJECT_UNAUTHORIZED.
+    'HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy', 'NO_PROXY', 'no_proxy',
+    'NODE_EXTRA_CA_CERTS', 'NODE_USE_SYSTEM_CA',
   ];
   return Object.fromEntries(keys.filter(key => typeof env[key] === 'string').map(key => [key, env[key]]));
 }

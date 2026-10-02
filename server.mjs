@@ -6,7 +6,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { Store, id, now, permissions } from "./lib/store.mjs";
 import { Engine } from "./lib/engine.mjs";
 import { BrowserBroker, fixtureHtml } from "./lib/browser.mjs";
-import { callModel, validateEndpoint } from "./lib/model.mjs";
+import { callModel, validateEndpoint, modelErrorDiagnostic } from "./lib/model.mjs";
 import { isWithinDirectory } from "./lib/paths.mjs";
 import { RoleCredentialVault } from "./lib/agent-authority.mjs";
 import { redactSecrets } from "./lib/redact.mjs";
@@ -16,6 +16,7 @@ import { CredentialSnapshots } from "./lib/persisted-credentials.mjs";
 import { ScheduleService } from "./lib/schedules.mjs";
 import { saveOfficeArtifact } from "./lib/office-artifacts.mjs";
 const root = dirname(fileURLToPath(import.meta.url));
+const applicationVersion = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
 const MIME = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -145,7 +146,7 @@ export async function startServer({
         return json(res, {
           ok: true,
           name: "路衡办公智能体",
-          version: "0.3.0",
+          version: applicationVersion,
           localOnly: true,
         });
       if (path.startsWith("/fixture/")) {
@@ -241,7 +242,7 @@ export async function startServer({
             notifications: store.all("notifications"),
             system: {
               name: "路衡办公智能体",
-              version: "0.3.0",
+              version: applicationVersion,
               platform: process.platform,
               node: process.versions.node,
               localOnly: true,
@@ -690,12 +691,18 @@ export async function startServer({
               message:
                 "演示模式无需API；确定性规则引擎可用。没有连接真实大模型。",
             });
-          const out = await callModel({
-            endpoint: s.endpoint,
-            model: s.model,
-            key: apiKey,
-            messages: [{ role: "user", content: "请只回答：连接成功。" }],
-          });
+          let out;
+          try {
+            out = await callModel({
+              endpoint: s.endpoint,
+              model: s.model,
+              key: apiKey,
+              messages: [{ role: "user", content: "请只回答：连接成功。" }],
+            });
+          } catch (failure) {
+            const diagnostic = modelErrorDiagnostic(failure);
+            return json(res, { ok: false, error: diagnostic.message, code: diagnostic.code }, 400);
+          }
           store.audit("model.connection.test", "真实模型连接测试成功");
           return json(res, {
             ok: true,
@@ -853,7 +860,7 @@ if (
     port,
     dataDir: process.env.HIGHWAY_DATA_DIR || join(root, "data"),
   });
-  console.log(`路衡办公智能体 v0.3.0 已启动：${app.url} （仅本机）`);
+  console.log(`路衡办公智能体 v0.4.0 已启动：${app.url} （仅本机）`);
   process.on("SIGINT", async () => {
     await app.close();
     process.exit(0);

@@ -22,7 +22,7 @@ const desktopBridge = {
   forgetCredentials: async () => { forgetCalls++; savedSnapshot = null; vault.stored = false; },
 };
 const errors = [];
-const nav = async name => { await page.locator('#nav [data-nav="'+name+'"]').click(); await page.waitForURL('**/#'+name); };
+const nav = async name => { if(['schedules','agents','knowledge','mail','browser','audit'].includes(name)&&await page.locator('#nav-tools').isHidden())await page.locator('[data-action="toggle-tools"]').click(); await page.locator('#nav [data-nav="'+name+'"]').click(); await page.waitForURL('**/#'+name); };
 const getState = async () => (await page.request.get(app.url+'/api/state')).json();
 const settle = async (check, label, timeout=20000) => { const end=Date.now()+timeout; while(Date.now()<end){const value=await check();if(value)return value;await new Promise(r=>setTimeout(r,80));}throw new Error('Timed out: '+label); };
 const shot = async name => {
@@ -167,7 +167,9 @@ try {
   assert.equal(await page.locator('#desktop-credential-consent').isChecked(),false);
   assert.equal(await page.locator('#desktop-save-credentials').isDisabled(),true);
   assert.ok(!JSON.stringify(await getState()).includes('FAKE_UI_V03_KEY'));
-  assert.equal(await page.evaluate(()=>localStorage.length+sessionStorage.length),0);
+  assert.deepEqual(await page.evaluate(()=>({local:Object.keys(localStorage),session:Object.keys(sessionStorage)})),{local:[],session:['luheng-active-chat']});
+  assert.equal(await page.evaluate(()=>sessionStorage.getItem('luheng-active-chat')),task.id);
+  assert.ok(!JSON.stringify(await page.evaluate(()=>Object.fromEntries(Object.keys(sessionStorage).map(k=>[k,sessionStorage.getItem(k)])))).includes('FAKE_UI_V03_KEY'));
   await page.locator('[data-action="forget-credentials"]').click();
   await page.keyboard.press('Escape');
   assert.equal(forgetCalls,0);

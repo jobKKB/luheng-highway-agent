@@ -1,11 +1,12 @@
 'use strict';
 
-const { app, BrowserWindow, Menu, Tray, nativeImage, safeStorage, dialog, session, utilityProcess } = require('electron');
+const { app, BrowserWindow, Menu, Tray, nativeImage, safeStorage, dialog, session, utilityProcess, screen } = require('electron');
 const { randomBytes } = require('node:crypto');
 const { mkdirSync } = require('node:fs');
 const path = require('node:path');
 const { SecretVault } = require('./vault.cjs');
 const { DesktopPreferences, TrayLifecycle } = require('./lifecycle.cjs');
+const { WindowStateStore, manageWindowState } = require('./window-state.cjs');
 const { createDesktopHandler } = require('./bridge.cjs');
 const {
   CONTENT_SECURITY_POLICY, isApplicationURL, isAllowedResource,
@@ -31,6 +32,8 @@ let exiting = false;
 let stopped = false;
 let tray;
 let preferences;
+let windowState;
+let windowStateController;
 let vault;
 let desktopHandler;
 let restoreError = false;
@@ -136,8 +139,10 @@ async function openWindow() {
     return;
   }
   const ses = session.fromPartition('luheng-desktop-session'); // Memory-only browser session.
+  const restored = windowState.restore(screen);
   window = new BrowserWindow({
-    width: 1440, height: 960, minWidth: 1080, minHeight: 720,
+    ...restored.bounds, minWidth: restored.minWidth, minHeight: restored.minHeight,
+    frame: true, resizable: true, maximizable: true, minimizable: true,
     title: '路衡 · 办公智能体', backgroundColor: '#f5f6f8', show: false,
     autoHideMenuBar: true,
     webPreferences: {
@@ -164,11 +169,15 @@ async function openWindow() {
   window.webContents.on('will-redirect', preventOutsideApp);
   window.webContents.on('will-frame-navigate', preventOutsideApp);
   window.webContents.on('will-attach-webview', event => event.preventDefault());
-  window.once('ready-to-show', () => window.show());
+  windowStateController = manageWindowState(window, screen, windowState, restored);
+  window.once('ready-to-show', () => {
+    if (restored.maximized) window.maximize();
+    window.show();
+  });
   window.on('close', event => tray?.handleClose(event, window, {
     backgroundEnabled: preferences?.backgroundEnabled === true, exiting,
   }));
-  window.on('closed', () => { window = null; });
+  window.on('closed', () => { window = null; windowStateController = null; });
   await window.loadURL(origin);
 }
 
@@ -181,6 +190,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(async () => {
     Menu.setApplicationMenu(null);
     preferences = new DesktopPreferences(stateRoot);
+    windowState = new WindowStateStore(stateRoot);
     tray = new TrayLifecycle({
       Tray, Menu, nativeImage, iconPath: path.join(__dirname, 'assets', 'tray.png'),
       showWindow: () => { if (origin && !exiting) openWindow().catch(() => app.quit()); },
@@ -210,6 +220,7 @@ if (!app.requestSingleInstanceLock()) {
   process.on('SIGTERM', () => app.quit());
   process.on('SIGINT', () => app.quit());
   app.on('before-quit', event => {
+    windowStateController?.flush();
     tray?.destroy();
     if (!backend || stopped || exiting) return;
     event.preventDefault();

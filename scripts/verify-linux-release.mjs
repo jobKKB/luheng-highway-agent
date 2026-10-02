@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 const release=resolve(process.argv[2]);const out=resolve(process.argv[3]);
 const backend=join(release,'resources/backend');
 const require=createRequire(join(backend,'package.json'));
+const expectedVersion=JSON.parse(readFileSync(join(backend,'package.json'),'utf8')).version;
 const manifest=JSON.parse(readFileSync(join(release,'resources/bundle-manifest.json')));
 const executable=join(release,'resources/browser-runtime',manifest.browserExecutable);
 assert.equal(createHash('sha256').update(readFileSync(executable)).digest('hex'),manifest.browserExecutableSha256);
@@ -17,11 +18,18 @@ const dir=mkdtempSync(join(tmpdir(),'luheng-release-probe-'));
 let app;
 try{
  app=await startServer({port:0,dataDir:dir,stepDelay:1});
- const health=await (await fetch(app.url+'/health')).json();assert.equal(health.version,'0.3.0');
+ const health=await (await fetch(app.url+'/health')).json();assert.equal(health.version,expectedVersion);
+ assert.equal(health.ok,true);assert.equal(health.localOnly,true);
  const cookie=(await fetch(app.url+'/')).headers.get('set-cookie').split(';')[0];
  const request=async(path,body)=>{const response=await fetch(app.url+path,{method:'POST',headers:{cookie,origin:app.url,'content-type':'application/json'},body:JSON.stringify(body)});const result=await response.json();assert.ok(response.ok,JSON.stringify(result));return result;};
+ const state=await (await fetch(app.url+'/api/state',{headers:{cookie}})).json();
+ assert.equal(state.system.version,expectedVersion);
  const task=await request('/api/tasks',{prompt:'汇总演示养护待办并生成周报'});
- while(!['completed','failed'].includes(app.engine.task(task.id).status))await new Promise(r=>setTimeout(r,20));
+ const deadline=Date.now()+30000;
+ while(!['completed','failed'].includes(app.engine.task(task.id).status)){
+  assert.ok(Date.now()<deadline,'Release report task exceeded 30 seconds');
+  await new Promise(r=>setTimeout(r,20));
+ }
  assert.equal(app.engine.task(task.id).status,'completed');
  const files=[];for(const format of ['docx','xlsx'])files.push(await request('/api/tasks/'+task.id+'/export',{format}));
  const packages=Object.fromEntries(['playwright','imapflow','nodemailer','mailparser'].map(name=>[name,require.resolve(name)]));

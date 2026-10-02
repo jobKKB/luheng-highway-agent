@@ -1,7 +1,7 @@
 {
   "name": "路衡办公智能体",
-  "version": "0.3.0",
-  "type": "public-source-repository-not-installer",
+  "version": "0.4.0",
+  "type": "source-only-not-installer",
   "files": [
     {
       "path": ".github/workflows/windows-build.yml",
@@ -20,8 +20,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 10132,
-      "sha256": "99af16d126ba0950c2e12bcfa15239d055ec657f5745e8771f9726e831651933"
+      "bytes": 10956,
+      "sha256": "ac7cf605c8838a76f3a882c62ee7dc40168f91094e1b904cece404ff97780c0a"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -50,13 +50,13 @@
     },
     {
       "path": "desktop/electron-builder.cjs",
-      "bytes": 1953,
-      "sha256": "b60f98fe29e7a0170020456dc460434f438eec10c492d3a56b27c962cfc87568"
+      "bytes": 1973,
+      "sha256": "dc68d6536efab401b111f28d7967fe7737701bce2dc4b10230bc8fa4b302c6cc"
     },
     {
       "path": "desktop/launch.cmd",
-      "bytes": 287,
-      "sha256": "74d4fb935a548b9d0ee8cb8522e5fac1dd1ce83de9216f0395b3b101f348b21b"
+      "bytes": 370,
+      "sha256": "9d641dd020681abad2e4feef16e145d5059a2e746875e9ace2a1d114e3c0dab4"
     },
     {
       "path": "desktop/lifecycle.cjs",
@@ -65,13 +65,13 @@
     },
     {
       "path": "desktop/main.cjs",
-      "bytes": 9101,
-      "sha256": "9b7fbd1b2d697f253c7dff9b6bd9092866d55d1fdeb3d407635058f54cb68903"
+      "bytes": 9633,
+      "sha256": "f8ca9bd382ba4e0a21c0ba0c24a697ab855dc7bc2f65102ff353ec01e5b2b9f7"
     },
     {
       "path": "desktop/package-lock.json",
-      "bytes": 127644,
-      "sha256": "c3230bd57d1850683cd2c4fe45208ea02f56e9749906d84998a7b366d8323cba"
+      "bytes": 127648,
+      "sha256": "1deb9251886e097e2da0d5aa444fe111e1a9086fbdfda526188e574664c0d3b6"
     },
     {
       "path": "desktop/package-windows.cjs",
@@ -80,18 +80,18 @@
     },
     {
       "path": "desktop/package.json",
-      "bytes": 718,
-      "sha256": "613cc18ea20250cd3aa8b2abe2eca90638e9f1c2309be449e7dc12d6ccfc6138"
+      "bytes": 722,
+      "sha256": "523a0c188decc629db9f7f315d4b2f444b81ea626c74607f15ccc164771e0d85"
     },
     {
       "path": "desktop/security.cjs",
-      "bytes": 3255,
-      "sha256": "eab5eeba0bca1c8de8de34af168b4c772b3c44cde6350f7077b40dffb6e432c6"
+      "bytes": 3537,
+      "sha256": "947e4a954f7bd999a65c9a08db560b14b3fd3824cc2ef2a179daab55650e0156"
     },
     {
       "path": "desktop/stage-bundle.cjs",
-      "bytes": 6762,
-      "sha256": "955d68a68cee165cd973711c50dfc787d55705bdb91ea4ef96ae4d531e9c2e82"
+      "bytes": 6921,
+      "sha256": "24b73c4892fa77f58f705557d490d39e018a8355c2caa70216f05f3a97db9424"
     },
     {
       "path": "desktop/stage-utils.cjs",
@@ -109,19 +109,29 @@
       "sha256": "c62f7664557da928bafa6e072f83f1b5fcc99e77d1829c29e059301692a5cc26"
     },
     {
+      "path": "desktop/test/launch-cmd.test.cjs",
+      "bytes": 1294,
+      "sha256": "0553c62525c3771dd2cf6ef5969b2869c3f5301f72085703735f88ea041898eb"
+    },
+    {
       "path": "desktop/test/lifecycle.test.cjs",
       "bytes": 5549,
       "sha256": "65d152f507f8035184ef9a8b944aa40762d12389ed54df507feb321ae9f1ff60"
     },
     {
+      "path": "desktop/test/model-environment.test.cjs",
+      "bytes": 1249,
+      "sha256": "1a6b88d8416a925db78b84535a1bc1e2c4dcb75e7c7be638dda7f1ed8d372cc7"
+    },
+    {
       "path": "desktop/test/packaging.test.cjs",
-      "bytes": 1486,
-      "sha256": "483338577c90a06e1078e6b151a75c2d7d10d283936df51c96bae4f8d8e5ae9d"
+      "bytes": 1506,
+      "sha256": "e0be264fabdd022e326b786213d66d32b4bf00b74ac17b90c30b86ee55560162"
     },
     {
       "path": "desktop/test/real-backend.test.cjs",
-      "bytes": 8458,
-      "sha256": "dd7ef2f957ea0c4467e582c4f535916b01e12350ca9c7b4238319999656a64cc"
+      "bytes": 8678,
+      "sha256": "757c12a7dc7efabab82726ca8f3250fd7346e2065cb3ed913b6ee63d4ef090bf"
     },
     {
       "path": "desktop/test/run-native-checks.sh",
@@ -139,19 +149,39 @@
       "sha256": "9cfab1b461aef8902bc6e8ccf1e3fff27d494cbc3cf637a462e36971f6f04c6b"
     },
     {
+      "path": "desktop/test/staging-preflight.test.cjs",
+      "bytes": 2551,
+      "sha256": "d63a07f24d09f584dd07b762414108cd9931fee0b2f530a8f29cd2b88ac1c81e"
+    },
+    {
       "path": "desktop/test/start-review-server.mjs",
       "bytes": 1267,
       "sha256": "3f9c380c8e355de8ebe3e0e0f381cdfa7319ca8fa0ae811fff9ea3e5ad596992"
     },
     {
       "path": "desktop/test/vault.test.cjs",
-      "bytes": 14293,
-      "sha256": "4fc375c865e93b52d5d5a64f71d165b861aedec2c5582939eade2946d6310e25"
+      "bytes": 14547,
+      "sha256": "5a7228694df0c23ee3aa72c359f6ef304504a0297f66033ae009de0fbd55f588"
+    },
+    {
+      "path": "desktop/test/window-state.test.cjs",
+      "bytes": 10898,
+      "sha256": "f90c39fa20e699b91ad41c23c649ec715ada72397855c5184a5c0eac665c6f62"
+    },
+    {
+      "path": "desktop/test/windows-release.test.cjs",
+      "bytes": 8997,
+      "sha256": "6f2745368ee998817c8f9170658c2254bd70a9cc5290012252efe55ce1f5bbe2"
     },
     {
       "path": "desktop/vault.cjs",
       "bytes": 5771,
       "sha256": "0a9765cf6b18c545817ee7671b047986255671a7714a433248d49d8014ffc93f"
+    },
+    {
+      "path": "desktop/window-state.cjs",
+      "bytes": 5716,
+      "sha256": "1de30a2d34ac84ab8b4704743be9eef12ed018ffc67fd57fa0f2d4d2ebdd872b"
     },
     {
       "path": "desktop/windows-build.workflow.yml",
@@ -165,8 +195,8 @@
     },
     {
       "path": "docs/DESKTOP.md",
-      "bytes": 8721,
-      "sha256": "1c187a0e6a946e5668f60037c978e80680913c2df9167c94ee4324058ef72b07"
+      "bytes": 10340,
+      "sha256": "e6d8e9cfe96c3758c2660906087646a634ee3ba9e0b514813ef81aafe010103e"
     },
     {
       "path": "docs/IMPLEMENTATION-STATUS.md",
@@ -177,6 +207,11 @@
       "path": "docs/MAIL-ADAPTER.md",
       "bytes": 10813,
       "sha256": "2bee1301166e3912c4b76508fbebfc745bdb799cd45a2cef4282962d6cc2dcb4"
+    },
+    {
+      "path": "docs/NATIVE-LINUX-v0.4-VALIDATION.zh-CN.md",
+      "bytes": 4504,
+      "sha256": "04e8c2e67f83a27f3e73197cd4fe7a3412e9cc91e205e865c149759a13570318"
     },
     {
       "path": "docs/QUICKSTART.zh-CN.md",
@@ -194,9 +229,24 @@
       "sha256": "63432f6498aaa6ccfe39e757f70ad9b3ebd1e58c8ece6399463f903e157f7626"
     },
     {
+      "path": "docs/UI-v0.4-CHANGELOG.zh-CN.md",
+      "bytes": 3499,
+      "sha256": "d3579607528963f7bd3751368e39534d879a16f5b0ff83453e357063eab9945c"
+    },
+    {
+      "path": "docs/UI-v0.4-VALIDATION.zh-CN.md",
+      "bytes": 4861,
+      "sha256": "48f99c3af015881af488954a526295812043aa1c34d65869cd535439aa20a8c7"
+    },
+    {
       "path": "docs/WINDOWS-BUILD-ATTEMPT.md",
       "bytes": 3371,
       "sha256": "b9bf7104811e2ef714d8855d935068b52448c909d1e8208f52194126998cc236"
+    },
+    {
+      "path": "docs/WINDOWS-PERMISSIONS.md",
+      "bytes": 4036,
+      "sha256": "8fad22209e7d68657d3b6f7c50c75db328115c1f03b1ece8f82ce13b1e0e0660"
     },
     {
       "path": "lib/agent-authority.mjs",
@@ -220,8 +270,8 @@
     },
     {
       "path": "lib/engine.mjs",
-      "bytes": 50494,
-      "sha256": "f25c1daac6e33b2b6db28bc7383d8b958fde7cbd9a026e62b171785414b33707"
+      "bytes": 51519,
+      "sha256": "5a2bc9e034b11cc5007e4a3717ce1b7ed3ba3f5a35ca23996229946ae251a97f"
     },
     {
       "path": "lib/fixture-client.js",
@@ -234,14 +284,19 @@
       "sha256": "f9c899b87987b73837c4661c5181f13be0a338f133aab6f381219ec37c342c4f"
     },
     {
+      "path": "lib/model-transport.mjs",
+      "bytes": 6514,
+      "sha256": "a2a31ab50fda6bd3802795153a94d7f2126d9f403ce8866d1aecb88df1186f81"
+    },
+    {
       "path": "lib/model.mjs",
-      "bytes": 7414,
-      "sha256": "2c5081449944f961cd953eb59418811487e4d0bf544669dbb3938c1943a712e4"
+      "bytes": 11477,
+      "sha256": "deb96c2cd290cbd2794f8221772a74c1439c155a9a6dadb61470a118bafb28ce"
     },
     {
       "path": "lib/office-artifacts.mjs",
-      "bytes": 26944,
-      "sha256": "06c70421bea58bb9c832a35914bd42376ae86123bc6e3fb370abe09e44e4ef1d"
+      "bytes": 27171,
+      "sha256": "5da770f75920c155ae67c6f51e413bd7d91a88c5e243f0d7e3dc673563dfe2e8"
     },
     {
       "path": "lib/paths.mjs",
@@ -252,6 +307,11 @@
       "path": "lib/persisted-credentials.mjs",
       "bytes": 4420,
       "sha256": "92ad8b241ff105a10b74756d92148c7ad269d01269c64fbb9c49503decf0b2ee"
+    },
+    {
+      "path": "lib/private-directory.mjs",
+      "bytes": 4224,
+      "sha256": "66322979447481443e666c9af7fdb40b3e9a4eb8d6118786234a56383296d4e2"
     },
     {
       "path": "lib/redact.mjs",
@@ -271,27 +331,37 @@
     {
       "path": "package-lock.json",
       "bytes": 21666,
-      "sha256": "f14d80e5ea6d829eadba135b0d1d5e49d4e36f03f464106165d0f3441cdcb3c4"
+      "sha256": "d4fe0bd42d6d425620542642565ce76204af75873330ee8d4d22a89eb23b4b71"
     },
     {
       "path": "package.json",
       "bytes": 543,
-      "sha256": "e457a0b7c34b93f7f74cdc813641fe9694779103f36a11717803cc8d570922eb"
+      "sha256": "224401dc5ff9dec32747d52b0cb27d14c0fa5c512b94a4120670b2dde32813f7"
+    },
+    {
+      "path": "public/agent-mark.svg",
+      "bytes": 855,
+      "sha256": "58d97ad8497eca0fdf5688a7147cb602b157dbdb378ba929296d42196a958715"
     },
     {
       "path": "public/app.js",
-      "bytes": 118877,
-      "sha256": "85a5fd1664aa2cb77c0a31378b29593640d7387a4ba6802a668eebc3fb185169"
+      "bytes": 125267,
+      "sha256": "5dc23c18d4103ac1f169b9d0210d8c0f1caca5eb640128a54461150464859f18"
     },
     {
       "path": "public/favicon.svg",
-      "bytes": 319,
-      "sha256": "18b90746d266e9fc0f49e2e772362a1c35d326db3e922f49d7a60581323ae71f"
+      "bytes": 855,
+      "sha256": "58d97ad8497eca0fdf5688a7147cb602b157dbdb378ba929296d42196a958715"
     },
     {
       "path": "public/index.html",
-      "bytes": 2428,
-      "sha256": "699e313c8a362b9ba6b22676d8cdc183bb2817dee37d834ea0233e628f62a2e7"
+      "bytes": 2248,
+      "sha256": "01b80f1c03453430455230ccb0f8a6ec787c2b77cc25a227d9dde2a3bcd4bba1"
+    },
+    {
+      "path": "public/ocean.css",
+      "bytes": 37185,
+      "sha256": "3765964affebaf2c0bb7739d7b1bbea450bec4254ea04d9c8d8f1db409a0fc51"
     },
     {
       "path": "public/styles.css",
@@ -309,14 +379,24 @@
       "sha256": "ca5673a069ff57661ef0909325944a228b123bf0f24e64983d064c42b09b74f3"
     },
     {
+      "path": "scripts/run-ui-recovery.sh",
+      "bytes": 139,
+      "sha256": "04c7e08191d3a10645f44ed888717477f79073706d330a79afe58ceb262dd135"
+    },
+    {
       "path": "scripts/verify-linux-release.mjs",
-      "bytes": 2664,
-      "sha256": "58972028ae987354e51d887ccbaf7875be15712c46ee2ba2af6037091f0fbafa"
+      "bytes": 3084,
+      "sha256": "91791078c40ddde97d873ec1b471132bb6067616eda6c99dd194809c1babe2f5"
+    },
+    {
+      "path": "scripts/verify-windows-release.mjs",
+      "bytes": 11111,
+      "sha256": "70433fc028cc527c917afa84d788834d2e1d65e7fc234ed49fec58075f777d7d"
     },
     {
       "path": "server.mjs",
-      "bytes": 36531,
-      "sha256": "fcf832e2ef836db32bf15390700d03b8c9fcf57914b67722ee7bf015ff164e89"
+      "bytes": 36917,
+      "sha256": "77a122395dd3096ff8ad0610d0d48f32e382b51095f150e40040c0111f80385c"
     },
     {
       "path": "tests/agent-authority.test.mjs",
@@ -349,6 +429,11 @@
       "sha256": "0492876a4a34b4ca1dd37427cf78867257c61c98b7860f427dee080aae88cf38"
     },
     {
+      "path": "tests/fixtures/windows-acl.mjs",
+      "bytes": 4401,
+      "sha256": "689a42af03e18f8053de005cf15a8bc17bb004f506e881d2b2c3591e14a51ead"
+    },
+    {
       "path": "tests/hardening.test.mjs",
       "bytes": 7071,
       "sha256": "f73d771b88cb99516e34a9db0110c79282bc5d51e7b20308168fc963526395b3"
@@ -369,9 +454,19 @@
       "sha256": "253e4499155844d4ef8df8283dcfd9508b1cb2fafe935518ea20474720750c4b"
     },
     {
+      "path": "tests/model-diagnostics.test.mjs",
+      "bytes": 8789,
+      "sha256": "620a5b821a6d0a8e1e329116c56fd3618976acc602e0f6fffd94aa63682fe053"
+    },
+    {
+      "path": "tests/model-transport.test.mjs",
+      "bytes": 9371,
+      "sha256": "60407f400a1356b9ca64fa39d814b24d1d62ace76ee50341ff948368e22cc2d0"
+    },
+    {
       "path": "tests/office-artifacts.test.mjs",
-      "bytes": 10335,
-      "sha256": "17d9ddc1d9185b79ba67ee7857ce10054a1374e0c568ab4df982a00cbcfaa492"
+      "bytes": 10859,
+      "sha256": "90960c6c3d7b44724b95dbc59fa249bdb1d4834ccabaf7962e1f7c0a84da61d3"
     },
     {
       "path": "tests/paths.test.mjs",
@@ -379,24 +474,49 @@
       "sha256": "63d8d4e995b3e3c3d882b7a5563d2d30b436625491b7832a19c675bc246d74eb"
     },
     {
+      "path": "tests/private-directory.test.mjs",
+      "bytes": 3948,
+      "sha256": "3801fa6c002abdbf3c5542300c7633afbe58a0ea6a3211bed84fc29390b83013"
+    },
+    {
       "path": "tests/schedules.test.mjs",
       "bytes": 18423,
       "sha256": "13d6ebd688b3fc92806317ce452c822f9554d27216228dbbe9b60fd807919dd2"
     },
     {
+      "path": "tests/task-idempotency.test.mjs",
+      "bytes": 3474,
+      "sha256": "e692038828dec8f8e04de17e4b5a5d879b9604c04547dda48338e7d2a4bf1627"
+    },
+    {
+      "path": "tests/ui-recovery.mjs",
+      "bytes": 15226,
+      "sha256": "b4518db9e21f22fb229e89b96c0e98121dab934a737ac9ab671d1e3b3dc2de9b"
+    },
+    {
+      "path": "tests/ui-recovery.test.mjs",
+      "bytes": 4665,
+      "sha256": "fcfcf5f5f749b7976bb6be73d5ed27259292a0d84f36de4ac34c17c0c654575d"
+    },
+    {
       "path": "tests/ui-smoke.mjs",
-      "bytes": 28091,
-      "sha256": "aab0365bb67a3bbbff888f0884da4be0e353145ffe74e9bc12fac59c03f5cfc6"
+      "bytes": 28307,
+      "sha256": "d02bc59369f43a2a84cf75bc0b122333fb9f05bf41edf29903000aef62e5f439"
     },
     {
       "path": "tests/ui-v03.mjs",
-      "bytes": 14159,
-      "sha256": "14b4d3fad5ce4a6def95de8137d24491b67c8855b921ed3c4f27b8bdf3ee7a43"
+      "bytes": 14681,
+      "sha256": "716382c0539e9bed6aed64b4ee89bab4c737c92bfa96040f571f9c2d13b79735"
+    },
+    {
+      "path": "tests/ui-v04.mjs",
+      "bytes": 8887,
+      "sha256": "966af781d64cb840848bab2f4e4f9b5048dac1e65b2192cfa77a1c6c61360bd3"
     },
     {
       "path": "tests/v03-integration.test.mjs",
-      "bytes": 6505,
-      "sha256": "1594732379a7f402c55e84c9c0531c11abf008a8ab041a0cca0c7628f58ee6bd"
+      "bytes": 6692,
+      "sha256": "6b1cebc68cde87e928143792a345653174b931f23b7e53404b915401278dc0ae"
     }
   ]
 }

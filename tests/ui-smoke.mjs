@@ -34,6 +34,7 @@ async function screenshot(name, fullPage = true) {
   await page.screenshot({path:join(outDir, name + '.png'), fullPage:fullPage&&!modalOpen, animations:'disabled'});
 }
 async function nav(name) {
+  if(['schedules','agents','knowledge','mail','browser','audit'].includes(name)&&await page.locator('#nav-tools').isHidden())await page.locator('[data-action="toggle-tools"]').click();
   await page.locator('#nav [data-nav="' + name + '"]').click();
   await page.waitForURL('**/#' + name);
 }
@@ -189,6 +190,7 @@ try {
   log('Mail workflow creates a visible local draft without sending');
 
   await nav('chat');
+  if(await page.locator('#home-overview').isHidden())await page.locator('.overview-toggle').click();
   await page.locator('.suggestion-card[data-action="reminder"]').click();
   await page.locator('#reminder-title').fill('UI 自动化提醒（虚构）');
   await page.locator('#reminder-form button[type="submit"]').click();
@@ -410,14 +412,14 @@ try {
   assert.ok(!(await page.locator('body').getAttribute('class')||'').includes('nav-open'));
   log('390px mobile home/tasks fit without horizontal overflow; drawer opens and dismisses');
   await page.locator('[data-action="toggle-nav"]').click();
-  await page.locator('#nav [data-nav="mail"]').click();
+  await nav('mail');
   await page.locator('[data-mail-tab="outbox"]').click();
   await page.locator('.mail-draft-detail').waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false,'mobile mail horizontal overflow');
   await screenshot('mobile-mail');
   if(process.env.UI_SKIP_CONTROLLED!=='1'){
     await page.locator('[data-action="toggle-nav"]').click();
-    await page.locator('#nav [data-nav="browser"]').click();
+    await nav('browser');
     await page.locator('.controlled-detail').waitFor();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false,'mobile controlled browser horizontal overflow');
     await screenshot('mobile-browser');

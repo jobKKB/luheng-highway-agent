@@ -1,6 +1,6 @@
 {
   "name": "highway-agent-desktop",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Local-first desktop shell for the Highway Agent prototype",
   "main": "main.cjs",
@@ -16,7 +16,7 @@
     "electron-builder": "26.15.3"
   },
   "engines": {
-    "node": ">=24"
+    "node": ">=24.5.0"
   },
   "license": "MIT"
 }

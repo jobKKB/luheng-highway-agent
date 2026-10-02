@@ -3,17 +3,18 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="theme-color" content="#183b3d" />
-<title>路衡 · 办公智能体 v0.3 本地原型</title>
+<meta name="theme-color" content="#eaf4ff" />
+<title>路衡 · 办公智能体 v0.4</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="stylesheet" href="/styles.css" />
+<link rel="stylesheet" href="/ocean.css" />
 </head>
 <body>
 <div class="app-shell">
   <aside class="sidebar" id="sidebar" aria-label="主导航">
-    <a class="brand" href="#chat" aria-label="路衡首页"><span class="brand-mark"><svg viewBox="0 0 36 36" fill="none" aria-hidden="true"><path d="M9 27 16 8h4l7 19M12 21h12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M18 10v3m0 4v3m0 4v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span>路衡<small>办公智能体</small></span><span class="brand-beta" title="v0.3 开发原型，非生产验收版">v0.3</span></a>
+    <a class="brand" href="#chat" aria-label="路衡首页"><span class="brand-mark"><img src="/agent-mark.svg" alt=""></span><span>路衡<small>公路办公智能体</small></span><span class="brand-beta" title="v0.4 界面更新，功能验收范围见说明">v0.4</span></a>
     <button class="new-task-button" data-action="new-task"><span>＋</span> 发起新任务 <kbd>⌘ K</kbd></button>
-    <div class="nav-label">工作空间</div>
+    <div class="nav-label">日常工作</div>
     <nav id="nav"></nav>
     <div class="sidebar-bottom"><div id="heartbeat-card"></div><div class="workspace-user"><div class="avatar">路</div><div><b>公路事务工作台</b><span>本地私有工作空间</span></div><span class="local-dot" title="本地运行"></span></div></div>
   </aside>

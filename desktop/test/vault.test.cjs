@@ -58,7 +58,9 @@ function fixture(t, options = {}) {
   const stateRoot = mkdtempSync(join(tmpdir(), 'highway-vault-test-'));
   t.after(() => rmSync(stateRoot, { recursive: true, force: true }));
   const safeStorage = options.safeStorage || safeStorageFixture(options);
-  const vault = new SecretVault({ safeStorage, stateRoot, platform: 'linux' });
+  // Filesystem round trips use this host's permission semantics. Linux-specific
+  // backend-policy cases below request Linux explicitly without decrypting files.
+  const vault = new SecretVault({ safeStorage, stateRoot, platform: options.platform || process.platform });
   return { vault, safeStorage, stateRoot, file: join(stateRoot, 'credentials.vault') };
 }
 
@@ -107,7 +109,7 @@ test('vault securely round-trips all credential kinds, including after reconstru
   assert.ok(safeStorage.calls.encrypt > 0);
   assert.deepEqual(await vault.load(), original);
 
-  const reopened = new SecretVault({ safeStorage, stateRoot, platform: 'linux' });
+  const reopened = new SecretVault({ safeStorage, stateRoot, platform: process.platform });
   assert.deepEqual(await reopened.load(), original);
   assertPublicStatus(await reopened.status(), original.entries.map(item => item.secret));
 
@@ -134,7 +136,7 @@ for (const [label, options] of [
   ['unavailable OS encryption', { available: false }],
 ]) {
   test(`vault refuses ${label}`, async t => {
-    const { vault, safeStorage, file } = fixture(t, options);
+    const { vault, safeStorage, file } = fixture(t, { ...options, platform: 'linux' });
     const status = await vault.status();
     assertPublicStatus(status);
     assert.equal(status.available, false);
@@ -147,7 +149,7 @@ for (const [label, options] of [
   });
 
   test(`vault will not decrypt existing credentials with ${label}`, async t => {
-    const { vault, safeStorage, file } = fixture(t, options);
+    const { vault, safeStorage, file } = fixture(t, { ...options, platform: 'linux' });
     const ciphertext = safeStorageFixture().encryptString(JSON.stringify(bundle()));
     writeFileSync(file, ciphertext, { mode: 0o600 });
     await assertRejectedWithoutSecret(() => vault.load());

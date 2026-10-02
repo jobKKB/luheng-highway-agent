@@ -33,7 +33,9 @@ function fakeSafeStorage(backend = 'gnome_libsecret') {
 async function fixture(t, options = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'luheng-desktop-integration-'));
   const dataDir = join(dir, 'data'); mkdirSync(dataDir);
-  const vault = new SecretVault({ stateRoot: dir, safeStorage: fakeSafeStorage(options.storageBackend), platform: 'linux' });
+  // Native filesystem semantics for persistence; explicit Linux only for the
+  // Linux basic_text policy fixture, which must never save/decrypt credentials.
+  const vault = new SecretVault({ stateRoot: dir, safeStorage: fakeSafeStorage(options.storageBackend), platform: options.storageBackend === 'basic_text' ? 'linux' : process.platform });
   let child, base, cookie, trayAvailable = options.trayAvailable !== false;
   let output = '', publicMessages = [], requests = [];
   const token = randomBytes(32).toString('hex');

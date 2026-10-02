@@ -13,7 +13,7 @@ test('Windows packaging configuration satisfies electron-builder schema', async 
   assert.equal(config.nsis.perMachine, false);
   assert.equal(config.nsis.deleteAppDataOnUninstall, false);
   assert.ok(config.extraResources.some(entry => entry.to === 'browser-runtime'));
-  for (const file of ['bridge.cjs', 'vault.cjs', 'lifecycle.cjs']) {
+  for (const file of ['bridge.cjs', 'vault.cjs', 'lifecycle.cjs', 'window-state.cjs']) {
     assert.ok(config.files.includes(file)); assert.ok(existsSync(join(__dirname, '..', file)));
   }
   assert.ok(config.files.includes('assets/**'));

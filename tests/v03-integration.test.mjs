@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { startServer } from '../server.mjs';
 import { validateCredentialBundle } from '../lib/persisted-credentials.mjs';
+const expectedVersion = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')).version;
 const wait = ms => new Promise(r => setTimeout(r, ms));
 async function fixture(t, options = {}) {
  const dataDir = await mkdtemp(join(tmpdir(), 'luheng-v03-')); let app, cookie;
@@ -18,7 +19,8 @@ async function fixture(t, options = {}) {
 
 test('desktop feature is unavailable in browser-only mode, explicit consent is required', async t => {
  const h=await fixture(t);const state=await h.json('/api/state');
- assert.equal(state.system.version,'0.3.0'); assert.equal(state.desktop.available,false);
+ assert.equal(state.system.version,expectedVersion);
+ assert.equal((await h.json('/health')).version,expectedVersion); assert.equal(state.desktop.available,false);
  assert.deepEqual(state.schedules,[]);
  await h.json('/api/desktop/preferences','POST',{backgroundEnabled:true},409);
  await h.json('/api/desktop/credentials/save','POST',{confirmed:true},409);

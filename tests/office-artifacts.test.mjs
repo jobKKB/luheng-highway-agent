@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, statSync, symlinkSync } from "node:fs";
+import { linkSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { inflateRawSync } from "node:zlib";
 import { generateWeeklyReport, generateTaskWorkbook, normalizeOfficeData, saveOfficeArtifact, OFFICE_MIME_TYPES } from "../lib/office-artifacts.mjs";
+import { assertPrivateWindowsAcl } from "./fixtures/windows-acl.mjs";
 
 const sample = () => ({
   title: "青岚高速养护工作周报", period: "2026年9月28日至10月4日", organization: "演示养护组", author: "演示经办人", demo: true,
@@ -124,7 +125,7 @@ test("500 rows and long summaries retain every record without oversized Excel st
   assert.ok([...xml.matchAll(/<t xml:space="preserve">(.*?)<\/t>/gs)].every(match => match[1].length <= 30000));
 });
 
-test("local save allows safe basename-only paths, rejects overwrites and symlinks, and applies private permissions", () => {
+test("local save allows safe basename-only paths, rejects overwrites and links, and applies private permissions", () => {
   const directory = mkdtempSync(join(tmpdir(), "office-artifacts-"));
   const destination = join(directory, "docs");
   try {
@@ -134,13 +135,20 @@ test("local save allows safe basename-only paths, rejects overwrites and symlink
     const metadata = saveOfficeArtifact({ directory: destination, filename: "养护周报.docx", format: "docx", data: sample() });
     assert.equal(metadata.mimeType, OFFICE_MIME_TYPES.docx);
     assert.equal(metadata.size, statSync(join(destination, metadata.filename)).size);
-    assert.equal(statSync(join(destination, metadata.filename)).mode & 0o777, 0o600);
-    assert.equal(statSync(destination).mode & 0o777, 0o700);
+    if (process.platform === "win32") {
+      assertPrivateWindowsAcl(destination, { directory: true });
+      assertPrivateWindowsAcl(join(destination, metadata.filename));
+    } else {
+      assert.equal(statSync(join(destination, metadata.filename)).mode & 0o777, 0o600);
+      assert.equal(statSync(destination).mode & 0o777, 0o700);
+    }
     assert.throws(() => saveOfficeArtifact({ directory: destination, filename: metadata.filename, format: "docx" }), /EEXIST/);
-    symlinkSync(join(destination, metadata.filename), join(destination, "linked.docx"));
+    // Windows hard links and directory junctions exercise no-follow/no-overwrite
+    // protection without requiring Developer Mode or administrator privileges.
+    (process.platform === "win32" ? linkSync : symlinkSync)(join(destination, metadata.filename), join(destination, "linked.docx"));
     assert.throws(() => saveOfficeArtifact({ directory: destination, filename: "linked.docx", format: "docx" }));
     const linkedDir = join(directory, "linked-directory");
-    symlinkSync(destination, linkedDir, "dir");
+    symlinkSync(destination, linkedDir, process.platform === "win32" ? "junction" : "dir");
     assert.throws(() => saveOfficeArtifact({ directory: linkedDir, filename: "x.docx", format: "docx" }), /符号链接/);
     assert.equal(unpack(readFileSync(join(destination, metadata.filename))).size, 6);
     assert.equal(saveOfficeArtifact({ directory: destination, filename: "清单.xlsx", format: "xlsx", data: sample() }).mimeType, OFFICE_MIME_TYPES.xlsx);

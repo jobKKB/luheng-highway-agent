@@ -1,12 +1,12 @@
 {
   "name": "luheng-office-agent",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "路衡办公智能体 · 单机可验证原型",
   "license": "MIT",
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=24.5.0"
   },
   "scripts": {
     "start": "node server.mjs",
