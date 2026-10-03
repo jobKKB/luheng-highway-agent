@@ -430,8 +430,8 @@
     },
     {
       "path": "public/app.js",
-      "bytes": 176264,
-      "sha256": "fa5caea83ba6b8eb5f5f0e8737a30231d3c432f66c4c2200b88f767aa2d2303a"
+      "bytes": 176294,
+      "sha256": "32d7cdc6fd87a2cc5675a2e2d39d02619e57c114abac434e949b06c62df4d9bd"
     },
     {
       "path": "public/chat.css",
@@ -617,6 +617,11 @@
       "path": "tests/mail-adapter.test.mjs",
       "bytes": 17323,
       "sha256": "edc23029ee274472c59f36fd6ae681437597bf7eb06f9920bb7881e81c493c36"
+    },
+    {
+      "path": "tests/mail-busy-controls.test.mjs",
+      "bytes": 1265,
+      "sha256": "059879afa4567839ae356d365cb61ab0b4934c6a9087c9356a7098084233e68c"
     },
     {
       "path": "tests/mail-engine.test.mjs",
