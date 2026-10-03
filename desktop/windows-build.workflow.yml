@@ -3,8 +3,12 @@
 name: Windows prototype installer
 on:
   push:
-    branches: [main]
+    branches: [main, "candidate/**"]
+  pull_request:
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -48,29 +52,47 @@ jobs:
       - run: npm --prefix desktop ci
       - run: npm --prefix desktop run install:runtime
       - run: npx playwright install chromium
+        id: ui_dependencies
+      - name: Parse exact native beta acceptance scripts with Windows PowerShell
+        shell: pwsh
+        run: |
+          $env:LUHENG_NATIVE_SCRIPT_ROOT = Join-Path $env:GITHUB_WORKSPACE 'scripts'
+          $parser = Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/powershell.exe'
+          & $parser -NoLogo -NoProfile -NonInteractive -Command '$ErrorActionPreference="Stop"; foreach($name in @("native-update-consent.ps1","owned-installer-wizard.ps1","verify-native-beta-update.ps1")) { $path=Join-Path $env:LUHENG_NATIVE_SCRIPT_ROOT $name; if(-not(Test-Path -LiteralPath $path)){throw "Native acceptance source missing"}; $errors=$null; $tokens=$null; [void][System.Management.Automation.Language.Parser]::ParseFile($path,[ref]$tokens,[ref]$errors); if($errors.Count){$errors | Format-List; exit 1} }; Write-Output "NATIVE_BETA_POWERSHELL_PARSE_PASSED: execution still pending"'
+          if ($LASTEXITCODE -ne 0) { throw 'Windows PowerShell rejected native acceptance source.' }
       - name: Test real 60-second idle and live DOM stability
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         shell: pwsh
         run: node tests/ui-stability-60s.mjs --require-windows --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-ui-stability-proof')
         timeout-minutes: 5
       - name: Test backend with serialized test files
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         run: node --test --test-concurrency=1 tests/*.test.mjs
       - run: npm --prefix desktop run check
-      - name: Test existing browser UI flows
-        run: node tests/ui-smoke.mjs
-        timeout-minutes: 8
-      - name: Test scheduled and desktop browser UI flows
-        run: node tests/ui-v03.mjs
-        timeout-minutes: 8
-      - name: Test responsive layout and navigation
-        run: node tests/ui-v04.mjs
-        timeout-minutes: 8
-      - name: Test interrupted UI recovery
-        run: node tests/ui-recovery.mjs
+      - name: Test generic chat, Skills, tools, attachments and responsive UI
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
+        run: node tests/generic-chat-ui.mjs
         timeout-minutes: 8
       - name: Test local file and command permission UI
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         shell: pwsh
         run: node tests/ui-local-access.mjs --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-ui-local-proof')
         timeout-minutes: 8
+      - name: Test existing mail and controlled-browser approval UI
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
+        shell: pwsh
+        run: node tests/existing-integrations-ui.mjs --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-existing-integrations-proof')
+        timeout-minutes: 10
+      - name: Test retained chat recovery, schedules, credentials and Office UI
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
+        shell: pwsh
+        run: node tests/retained-chat-settings-ui.mjs --require-windows --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-retained-ui-proof')
+        timeout-minutes: 12
+      - name: Test bounded live default public-web tools
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
+        shell: pwsh
+        run: node tests/public-web-live-smoke.mjs --require-windows --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-public-web-live-proof')
+        timeout-minutes: 3
       - name: Upload isolated UI evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -83,6 +105,9 @@ jobs:
             artifacts/recovery/
             ${{ runner.temp }}/luheng-ui-local-proof/
             ${{ runner.temp }}/luheng-ui-stability-proof/
+            ${{ runner.temp }}/luheng-existing-integrations-proof/
+            ${{ runner.temp }}/luheng-retained-ui-proof/
+            ${{ runner.temp }}/luheng-public-web-live-proof/
           if-no-files-found: warn
           retention-days: 14
       - run: npm --prefix desktop run package:win

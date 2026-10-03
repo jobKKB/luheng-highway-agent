@@ -9,7 +9,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = json.loads((ROOT/'package.json').read_text())['version']
 TOP_FILES = {'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'package.json', 'package-lock.json', '.gitignore', 'server.mjs'}
-DIRECTORIES = {'lib', 'public', 'tests', 'docs', 'scripts', 'desktop'}
+DIRECTORIES = {'lib', 'public', 'tests', 'docs', 'scripts', 'desktop', '.github'}
 DENY = {'node_modules', 'data', 'dist', 'bundle', 'bundle-win32-x64', '.runtime', '.git', '__pycache__', 'artifacts'}
 
 def allowed(path):

@@ -1,0 +1,82 @@
+name: Generic workspace candidate acceptance
+# Automatic candidate/PR verification. Does not publish, release or install.
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  verify-generic-workspace:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.21.0'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            desktop/package-lock.json
+      - name: Provide official Git OpenSSL for synthetic TLS fixtures
+        shell: pwsh
+        run: |
+          $openssl = Get-Command openssl -ErrorAction SilentlyContinue
+          if (-not $openssl) {
+            $gitOpenSSL = Join-Path $env:ProgramFiles 'Git\usr\bin\openssl.exe'
+            if (-not (Test-Path $gitOpenSSL)) { throw 'Trusted OpenSSL from Git for Windows is required.' }
+            Split-Path $gitOpenSSL | Out-File -FilePath $env:GITHUB_PATH -Append
+          }
+      - run: npm ci
+      - run: npm --prefix desktop ci
+      - run: npm --prefix desktop run install:runtime
+      - run: npx playwright install chromium
+        id: ui_dependencies
+      - name: Test complete backend and safety contracts
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
+        run: node --test --test-concurrency=1 tests/*.test.mjs
+      - name: Test desktop source and packaging contracts
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
+        run: npm --prefix desktop run check
+      - name: Verify generic conversation, tools, Skills and 360px layout
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
+        run: node tests/generic-chat-ui.mjs
+        timeout-minutes: 6
+      - name: Verify actual 60-second polling, native selection and permissions
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
+        shell: pwsh
+        run: node tests/ui-stability-60s.mjs --require-windows --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-generic-stability')
+        timeout-minutes: 5
+      - name: Verify real local permission UI flows
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
+        shell: pwsh
+        run: node tests/ui-local-access.mjs --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-generic-local-access')
+        timeout-minutes: 8
+      - name: Verify retained mail and controlled-browser approval UI
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
+        shell: pwsh
+        run: node tests/existing-integrations-ui.mjs --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-generic-existing-integrations')
+        timeout-minutes: 10
+      - name: Verify retained chat recovery, schedules, credentials and Office UI
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
+        shell: pwsh
+        run: node tests/retained-chat-settings-ui.mjs --require-windows --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-generic-retained-ui')
+        timeout-minutes: 12
+      - name: Upload candidate QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generic-workspace-proof-${{ github.sha }}
+          path: |
+            artifacts/screenshots/generic-chat/
+            ${{ runner.temp }}/luheng-generic-stability/
+            ${{ runner.temp }}/luheng-generic-local-access/
+            ${{ runner.temp }}/luheng-generic-existing-integrations/
+            ${{ runner.temp }}/luheng-generic-retained-ui/
+          if-no-files-found: warn
+          retention-days: 14

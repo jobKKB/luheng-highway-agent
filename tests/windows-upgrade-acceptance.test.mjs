@@ -270,11 +270,13 @@ test('repository Store migration 4 expands only unchanged enabled 0.4 defaults (
   for (const { label, agents, expected } of cases) {
     const { before, after, reopened } = await migrate(agents);
     assert.deepEqual(after.migrations.slice(0, 3), before.migrations, `${label}: migration rows rewritten`);
-    assert.deepEqual(after.migrations.map(m => m.version), [1, 2, 3, 4], label);
+    assert.deepEqual(after.migrations.map(m => m.version), [1, 2, 3, 4, 5], label);
     assert.deepEqual(reopened, after, `${label}: reopening is not idempotent`);
     assert.deepEqual(Object.fromEntries(Object.entries(after.records.agents || {}).map(([id, a]) => [id, a.permissions])), expected, `${label}: permissions`);
     assert.deepEqual(after.records.agents || {}, up.expectedMigration4(before.records.agents), `${label}: oracle disagrees with Store`);
-    for (const kind of ['settings', 'memories', 'tasks']) assert.deepEqual(after.records[kind], before.records[kind], `${label}: ${kind} changed`);
+    assert.deepEqual(after.records.settings,{main:{...before.records.settings.main,mode:'api'}},`${label}: only deprecated demo mode changes`);
+    for (const kind of ['memories', 'tasks']) assert.deepEqual(after.records[kind], before.records[kind], `${label}: ${kind} changed`);
+    for (const agent of Object.values(after.records.agents||{})) assert.equal(agent.permissions.includes('web.read'),false,`${label}: no implicit new permission`);
     for (const [id, agent] of Object.entries(after.records.agents || {})) assert.deepEqual({ ...agent, permissions: null }, { ...before.records.agents[id], permissions: null }, `${label}: ${id} other fields changed`);
   }
 });

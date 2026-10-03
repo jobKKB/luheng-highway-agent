@@ -63,7 +63,14 @@ test('schedule HTTP create edit pause resume cancel persists across restarts', a
 });
 
 test('completed task generates downloadable persistent DOCX/XLSX and retains text artifact', async t => {
- const h=await fixture(t);const task=await h.json('/api/tasks','POST',{prompt:'汇总演示养护待办并生成周报'},201);
+ const tc=(name,args,id)=>({id,type:'function',function:{name,arguments:JSON.stringify(args)}});
+ const h=await fixture(t,{completion:async request=>({message:{role:'assistant',content:null,tool_calls:request.messages.some(m=>m.role==='tool')
+   ?[tc('agent_finish',{status:'completed',summary:'已生成合成通用资料；所有内容仅用于测试。',claimType:'action',evidenceToolCallIds:['save-generic']},'finish-generic')]
+   :[tc('workspace_save',{name:'合成资料.txt',content:'SYNTHETIC generic document; no business template.'},'save-generic')]}})});
+ // Persistence is tested using an explicitly non-local role. Default local-capable
+ // role privacy is covered separately; this does not restore deterministic demos.
+ h.app.store.put('agents','coordinator',{...h.app.store.get('agents','coordinator'),permissions:['knowledge.read','workspace.write']});
+ const task=await h.json('/api/tasks','POST',{prompt:'创建一份合成测试资料'},201);
  let done;
  for(let i=0;i<200;i++){done=await h.json('/api/tasks/'+task.id);if(['failed','completed'].includes(done.status))break;await wait(20);}
  assert.equal(done.status,'completed',done.error);const original=done.artifact;

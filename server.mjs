@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { randomBytes, timingSafeEqual, createHash } from "node:crypto";
 import { Store, id, now, permissions } from "./lib/store.mjs";
 import { Engine } from "./lib/engine.mjs";
-import { BrowserBroker, fixtureHtml } from "./lib/browser.mjs";
+import { BrowserBroker } from "./lib/browser.mjs";
 import { callModel, validateEndpoint, modelErrorDiagnostic } from "./lib/model.mjs";
 import { isWithinDirectory } from "./lib/paths.mjs";
 import { RoleCredentialVault } from "./lib/agent-authority.mjs";
@@ -16,6 +16,7 @@ import { CredentialSnapshots } from "./lib/persisted-credentials.mjs";
 import { ScheduleService } from "./lib/schedules.mjs";
 import { saveOfficeArtifact } from "./lib/office-artifacts.mjs";
 import { LocalAccessService } from "./lib/local-access.mjs";
+import { SkillsService } from "./lib/skills.mjs";
 const root = dirname(fileURLToPath(import.meta.url));
 const applicationVersion = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
 const MIME = {
@@ -40,14 +41,14 @@ const safeEqual = (a, b) => {
     right = Buffer.from(b);
   return left.length === right.length && timingSafeEqual(left, right);
 };
-async function body(req) {
+async function body(req, maxBytes = 100000) {
   if (!req.headers["content-type"]?.includes("application/json"))
     throw new Error("请求必须使用JSON格式");
   let chunks = [],
     len = 0;
   for await (const part of req) {
     len += part.length;
-    if (len > 100000) throw new Error("请求内容超过100KB");
+    if (len > maxBytes) throw new Error("请求内容超过允许的大小");
     chunks.push(part);
   }
   try {
@@ -56,8 +57,8 @@ async function body(req) {
     throw new Error("JSON格式无效");
   }
 }
-async function objectBody(req, allowed) {
-  const value = await body(req);
+async function objectBody(req, allowed, maxBytes = 100000) {
+  const value = await body(req, maxBytes);
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error("请求内容必须为JSON对象");
   if (allowed && Object.keys(value).some(key => !allowed.includes(key)))
@@ -77,10 +78,12 @@ export async function startServer({
   persistedCredentials,
   scheduleOptions,
   localAccessOptions,
+  publicWebService,
 } = {}) {
   if (host !== "127.0.0.1")
     throw new Error("原型仅允许绑定127.0.0.1，不提供公网服务");
   const store = new Store(dataDir);
+  const skills = new SkillsService(store);
   const roleKeys = new RoleCredentialVault();
   let apiKey = "",
     keyOrigin = "",
@@ -88,6 +91,8 @@ export async function startServer({
     broker,
     baseUrl,
     closed = false,
+    updateGate = false,
+    inflightMutations = 0,
     schedules;
   const mail = new MailService(store, {
     ...mailOptions,
@@ -123,8 +128,7 @@ export async function startServer({
     available: true, ...(await desktopBridge.preferences()), credentialVault: await desktopBridge.status(),
   } : { available: false, backgroundEnabled: false, trayAvailable: false,
     credentialVault: { available: false, stored: false, backend: 'unavailable', reason: '仅桌面客户端提供系统加密存储。' } };
-  const authToken = randomBytes(32).toString("hex"),
-    fixtureToken = randomBytes(32).toString("hex");
+  const authToken = randomBytes(32).toString("hex");
   const authenticated = (req) =>
     req.headers.cookie
       ?.split(";")
@@ -155,9 +159,7 @@ export async function startServer({
       req.headers.origin !== baseUrl
     )
       return error(res, "修改操作必须来自本机客户端同源页面", 403);
-    const fixtureAuth =
-      authenticated(req) ||
-      safeEqual(req.headers["x-fixture-token"], fixtureToken);
+    let mutationClaimed = false;
     try {
       if (path === "/health")
         return json(res, {
@@ -166,69 +168,59 @@ export async function startServer({
           version: applicationVersion,
           localOnly: true,
         });
-      if (path.startsWith("/fixture/")) {
-        if (!fixtureAuth) return error(res, "请从客户端打开模拟OA", 401);
-        if (req.method === "GET" && path === "/fixture/script.js") {
-          res.setHeader("Content-Type", "text/javascript; charset=utf-8");
-          return res.end(readFileSync(join(root, "lib", "fixture-client.js")));
-        }
-        const session = store.get("sessions", url.searchParams.get("session"));
-        if (!session) return error(res, "模拟会话不存在", 404);
-        if (req.method === "GET" && path === "/fixture/oa") {
-          res.setHeader("Content-Type", "text/html; charset=utf-8");
-          return res.end(fixtureHtml(session));
-        }
-        if (req.method === "POST" && path === "/fixture/oa/submit") {
-          const b = await body(req);
-          const automatic = safeEqual(
-            req.headers["x-fixture-token"],
-            fixtureToken,
-          );
-          const task = store.get("tasks", session.taskId);
-          if (automatic) {
-            if (
-              !session.writeLease ||
-              session.status !== "agent" ||
-              task.status !== "running"
-            )
-              return error(res, "尚未批准，禁止自动写入", 403);
-            if (b.title !== session.plannedTitle)
-              return error(res, "内容与审批不一致", 403);
-          } else if (session.status !== "manual")
-            return error(res, "请先在客户端点击接管", 403);
-          if (!b.title?.trim() || b.title.length > 300)
-            return error(res, "标题须为1至300字符");
-          const record = {
-            id: id(),
-            title: b.title,
-            createdAt: now(),
-            author: automatic ? "agent-approved" : "manual",
-          };
-          store.transaction(() => {
-            const s = store.get("sessions", session.id);
-            if (automatic && !s.writeLease)
-              throw new Error("本次写入凭据已使用");
-            store.put("sessions", s.id, {
-              ...s,
-              writeLease: false,
-              records: [...s.records, record],
-            });
-            store.audit(
-              "fixture.saved",
-              `${automatic ? "审批执行" : "人工保存"}：${b.title}`,
-              task.id,
-            );
-          });
-          return json(res, record);
-        }
-        return error(res, "未找到模拟页面", 404);
-      }
+      if (path.startsWith("/fixture/")) return error(res, "内置演示页面已移除", 404);
       if (path.startsWith("/api/")) {
         if (!apiAuthenticated(req))
           return error(res, "本地会话已失效，请刷新客户端", 401);
+        // The renderer can only address the main-owned updater through these
+        // fixed RPC methods. No paths, URLs, flags or claimed approvals cross it.
+        const updateRoute = path.match(/^\/api\/desktop\/update(?:\/(check|download|cancel|install))?$/);
+        if (updateRoute) {
+          if (url.search) throw new Error("更新接口不接受查询参数");
+          const command = updateRoute[1];
+          if (!command && req.method === "GET") {
+            if (typeof desktopBridge?.updateStatus !== "function") return json(res, {
+              supported: false, currentVersion: applicationVersion, channel: "stable", phase: "unsupported",
+              reason: "客户端内更新仅支持已打包的 Windows x64 当前用户安装；Mac 与网页模式暂不支持。",
+            });
+            try { return json(res, await desktopBridge.updateStatus()); }
+            catch { return error(res, "更新状态暂不可用，请稍后重试", 503); }
+          }
+          if (!command || req.method !== "POST") return error(res, "更新接口不存在", 404);
+          const candidateCommand = ["download", "install"].includes(command);
+          const input = await objectBody(req, candidateCommand ? ["candidateId"] : command === "check" ? ["channel"] : [], 256);
+          if (command === "check" && Object.hasOwn(input, "channel") &&
+              !["stable", "preview"].includes(input.channel))
+            throw new Error("更新渠道无效，只可选择正式版或测试版");
+          if (candidateCommand && (Object.keys(input).length !== 1 ||
+              typeof input.candidateId !== "string" || !/^[a-f0-9]{32}$/.test(input.candidateId)))
+            throw new Error("更新候选标识无效，请重新检查更新");
+          const method = { check: "checkUpdate", download: "downloadUpdate", cancel: "cancelUpdate", install: "installUpdate" }[command];
+          if (typeof desktopBridge?.[method] !== "function" || typeof desktopBridge?.updateStatus !== "function")
+            return error(res, "此更新功能仅在受支持的 Windows 桌面客户端可用", 409);
+          try {
+            if ((await desktopBridge.updateStatus()).supported !== true)
+              return error(res, "当前安装不支持客户端内更新；请使用官方安装包手动更新", 409);
+            // Install is only a request: main still requires native confirmation
+            // and obtains this backend's atomic readiness gate itself.
+            return json(res, await (candidateCommand || command === "check" ? desktopBridge[method](input) : desktopBridge[method]()));
+          } catch { return error(res, "更新操作暂不可用，请检查状态后重试", 503); }
+        }
+        // Claim synchronously, before parsing a body or awaiting anything. A
+        // partially received mutation is busy too and cannot race installation.
+        // These GETs reconcile/expire state or perform browser observation writes.
+        const mutatesBackend = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method) ||
+          req.method === "GET" && (["/api/state", "/api/local-access/state", "/api/tools/capabilities"].includes(path) ||
+            /^\/api\/controlled-browser\/[^/]+\/read$/.test(path));
+        if (closed || updateGate && mutatesBackend)
+          return error(res, "正在准备安装更新，请等待或取消更新后再操作", 409);
+        if (mutatesBackend) { inflightMutations++; mutationClaimed = true; }
+        if (req.method === "GET" && path === "/api/tools/capabilities") return json(res, engine.capabilities(new URL(req.url, "http://127.0.0.1").searchParams.get("agentId") || "coordinator"));
+        if (path.startsWith("/api/browser/")) return error(res, "旧版模拟浏览器已移除，请配置真实网页目标", 410);
         if (req.method === "GET" && path === "/api/state") {
           engine.reconcileLocalAccess();
           return json(res, {
+            capabilities: engine.capabilities(),
             tasks: store.all("tasks").map((t) => t.localContext ? t : engine.task(t.id)),
             agents: store
               .all("agents")
@@ -237,6 +229,8 @@ export async function startServer({
                 ...agent,
                 hasApiKey: roleKeys.has(agent.id),
               })),
+            skills: skills.list(),
+            seedArchiveCount: store.all("seed_archive").length,
             memories: store.all("memories"),
             reminders: store.all("reminders"),
             schedules: schedules.list(),
@@ -265,12 +259,12 @@ export async function startServer({
               platform: process.platform,
               node: process.versions.node,
               localOnly: true,
-              browser: "隔离Chromium：内置模拟OA与用户明确配置的目标白名单",
+              browser: "隔离Chromium：仅用户明确配置的真实网页目标白名单",
               sandbox:
                 "应用层本地授权与角色权限；不是操作系统级沙箱。本机命令使用当前账户权限，目录范围不能隔离进程行为",
               mail: mail.getPublicConfig().length
                 ? "真实邮件适配器已配置；每次发送必须完整审批"
-                : "真实IMAP/SMTP适配器尚未配置；演示任务仅本地草稿",
+                : "真实IMAP/SMTP适配器尚未配置",
               lastHeartbeat: engine.lastHeartbeat
                 ? new Date(engine.lastHeartbeat).toISOString()
                 : null,
@@ -285,7 +279,7 @@ export async function startServer({
                 controlledBrowser: true,
                 privateRoleMemory: true,
                 perAgentModels: true,
-                browserFixture: true,
+                browserFixture: false,
                 apiText: true,
                 apiToolLoop: true,
                 windowsTested: false,
@@ -541,6 +535,20 @@ export async function startServer({
           }
           return json(res, await mail.decideSend(mailMatch[1], b.decision));
         }
+        if (req.method === "GET" && path === "/api/skills") return json(res, {skills:skills.list()});
+        if (req.method === "POST" && path === "/api/skills/import") return json(res, skills.importPackage(await objectBody(req,["files"],600000)),201);
+        const skillMatch = path.match(/^\/api\/skills\/([a-f0-9]{64})$/);
+        if (req.method === "GET" && skillMatch) return json(res, skills.view(skillMatch[1]));
+        if (req.method === "GET" && path === "/api/seed-archive") return json(res,{records:store.all("seed_archive")});
+        if (req.method === "POST" && path === "/api/seed-archive/restore") {
+          const {id:archiveId} = await objectBody(req,["id"]);
+          const record = typeof archiveId === "string" ? store.get("seed_archive",archiveId) : null;
+          if (!record || !["memories","mail"].includes(record.kind)) throw new Error("归档记录不存在");
+          if (store.get(record.kind,record.originalId)) throw new Error("原位置已有资料，不会覆盖任何现有内容");
+          store.transaction(() => {store.put(record.kind,record.originalId,record.payload);store.put("seed_archive",archiveId,{...record,restoredAt:now()});});
+          store.audit("seed.restored","用户恢复一条旧版归档资料");
+          return json(res,{restored:true,id:archiveId});
+        }
         if (req.method === "POST" && path === "/api/tasks")
           return json(res, engine.create(await body(req)), 201);
         let m;
@@ -721,7 +729,7 @@ export async function startServer({
           const b = await body(req),
             old = store.get("settings", "main");
           if (!["demo", "api"].includes(b.mode))
-            throw new Error("模式须为demo或api");
+            throw new Error("仅支持API模式；旧配置标记可迁移为api");
           if (typeof b.endpoint !== "string" || b.endpoint.length > 500)
             throw new Error("API地址无效");
           if (b.mode === "api") await validateEndpoint(b.endpoint);
@@ -749,7 +757,7 @@ export async function startServer({
           }
           const settings = {
             ...old,
-            mode: b.mode,
+            mode: "api",
             endpoint: b.endpoint.replace(/\/$/, ""),
             model: b.model.trim(),
             budget: Math.max(
@@ -771,12 +779,6 @@ export async function startServer({
         if (req.method === "POST" && path === "/api/settings/test") {
           await body(req);
           const s = store.get("settings", "main");
-          if (s.mode === "demo")
-            return json(res, {
-              ok: true,
-              message:
-                "演示模式无需API；确定性规则引擎可用。没有连接真实大模型。",
-            });
           let out;
           try {
             out = await callModel({
@@ -889,6 +891,8 @@ export async function startServer({
     } catch (e) {
       if (!res.headersSent) error(res, e.message || "处理请求失败");
       else res.end();
+    } finally {
+      if (mutationClaimed) inflightMutations--;
     }
   });
   await new Promise((ok, fail) => {
@@ -897,7 +901,7 @@ export async function startServer({
   });
   port = server.address().port;
   baseUrl = `http://${host}:${port}`;
-  broker = new BrowserBroker(store, { baseUrl, fixtureToken });
+  broker = new BrowserBroker(store);
   engine = new Engine(store, broker, {
     getKey: (endpoint, credentialAgentId) =>
       credentialAgentId
@@ -909,6 +913,8 @@ export async function startServer({
     mailService: mail,
     controlledBrowser,
     localAccess,
+    skillsService: skills,
+    publicWebService,
     delay: stepDelay,
     completion,
   });
@@ -927,6 +933,35 @@ export async function startServer({
     localAccess,
     schedules,
     url: baseUrl,
+    version: applicationVersion,
+    prepareForUpdate() {
+      if (closed) return { ready: false };
+      // No await is allowed between closing dispatch and checking activity.
+      updateGate = true;
+      engine.setUpdateGate(true);
+      schedules.setUpdateGate(true);
+      // Even an idle live page can initiate a background network request after
+      // this check. Require it closed rather than race its next request or abort
+      // an in-progress external action during update shutdown.
+      const browserBusy = controlledBrowser.inflight.size > 0 || controlledBrowser.live.size > 0;
+      const busy = inflightMutations > 0 || engine.running.size > 0 ||
+        localAccess.running.size > 0 || localAccess.inflight.size > 0 || browserBusy ||
+        mail.active.size > 0 || mail.inboxLocks.size > 0 || mail.readControllers.size > 0;
+      if (busy) {
+        // A refused installation must not strand tasks or settings behind a gate.
+        updateGate = false;
+        engine.setUpdateGate(false);
+        schedules.setUpdateGate(false);
+        return { ready: false };
+      }
+      return { ready: true };
+    },
+    releaseUpdateGate() {
+      if (closed || !updateGate) return;
+      updateGate = false;
+      engine.setUpdateGate(false);
+      schedules.setUpdateGate(false);
+    },
     async close() {
       if (closed) return;
       closed = true;

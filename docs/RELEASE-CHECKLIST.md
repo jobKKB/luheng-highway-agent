@@ -38,3 +38,13 @@
 ## 本次演示访问边界
 
 Linux 原生 Electron 窗口与本机环回服务已运行。`127.0.0.1:4318` 不是公网链接；用户自己电脑访问同一地址不会连接到此云主机。当前云 CDP 浏览器拒绝打开该环回 URL（ERR_BLOCKED_BY_CLIENT），未绕过此限制或公开服务。因此先交付静态截图、测试证据与源码；公开/私有托管目的地待用户确认，不能把本机地址包装成可远程打开的在线演示。
+
+## 带客户端更新器的新发布
+
+- [ ] 根/desktop/lock/UI真实版本一致；不改 appId/dataRoot，正式版标签为严格 vN.N.N；测试版渠道可显式使用严格 vN.N.N-beta.2 类标签并标记 GitHub prerelease=true
+- [ ] 在发布固定仓库前核实精确 EXE 名、uploaded、正整数 bytes、GitHub sha256 digest 与本地一致；不替换已发布同版本包
+- [ ] updater 模块在 asar 内，current-user-install.nsh 进入构建输入；v26 配置固定当前用户且不打包 elevation helper
+- [ ] Linux 模块/IPC/API/UI合同及全量回归通过；环境未跑或失败项明确列出
+- [ ] 两份包含更新器的更高/更低不同版本产物完成 [UPDATE-SECURITY.md](UPDATE-SECURITY.md) 实际在线/可见安装/MOTW/DACL/安全提示/用户数据验收；不能用旧0.5.1首次手动安装代替
+- [ ] Release notes 如实标注未签名测试版、首次手动基线安装、hash仅完整性、内存凭据退出后清空、无自动回滚，以及真实验收范围
+- [ ] 重新生成最终 SOURCE-MANIFEST；签名、metadata、CI通过和发布分别核实，不把静态或模拟通过称作实际在线更新已完成

@@ -236,7 +236,7 @@ function makeServer() {
   const clone = v => JSON.parse(JSON.stringify(v));
   s.count = (prefix) => s.requests.filter(r => r.startsWith(prefix)).length;
   s.state = () => ({
-    settings: { mode: 'demo', budget: 20, heartbeat: true },
+    settings: { mode: 'api', model: 'synthetic-test-model', hasApiKey: true, budget: 20, heartbeat: true },
     system: { name: '路衡办公智能体', version: '0.5.1', heartbeat: true, lastHeartbeat: new Date(Date.UTC(2026, 0, 1, 0, 0, 0, 500 * ++s.tick)).toISOString() },
     tasks: clone(s.tasks), schedules: [], agents: [{ id: 'coordinator', name: '办公助手', enabled: true, permissions: ['knowledge.read'] }], memories: [], reminders: [], audit: [], approvals: clone(s.approvals),
     notifications: [], mail: [], mailAccounts: [], mailOutbox: [], mailApprovals: [], realInbox: [], browserTargets: [], controlledSessions: [], browserApprovals: [], desktop: { available: false },
@@ -347,9 +347,11 @@ test('task progress patches only changed task regions; composer node, draft and 
   await f.poll(POLLS / 2, async i => { const n = POLLS / 2 + i + 1; if (!f.$('.execution-disclosure summary span')?.textContent.includes(`${n} 个步骤`)) stale++; if (n < POLLS) step(n); });
   const focused = f.delta(before);
   await f.poll(1);
-  // Outside the task message only the status-derived recent list and overview counters may change.
-  const ops = f.mainLog(mark), outsideTask = ops.filter(r => !article.contains(r.target) && !f.$('.recent-section').contains(r.target) && !f.$('#home-overview').contains(r.target)).length;
-  const composerOps = ops.filter(r => form.contains(r.target) || f.$('.home-toolbar').contains(r.target) || f.$('.composer-note').contains(r.target)).length;
+  // Generic chat disables sending a follow-up while the current turn runs.
+  // Only the existing send button's disabled attribute may change on completion.
+  const permittedSendState = r => r.type === 'attr' && r.node === 'disabled' && r.target === form.querySelector('button[type="submit"]');
+  const ops = f.mainLog(mark), outsideTask = ops.filter(r => !article.contains(r.target) && !permittedSendState(r)).length;
+  const composerOps = ops.filter(r => !permittedSendState(r) && (form.contains(r.target) || f.$('.home-toolbar').contains(r.target) || f.$('.composer-note').contains(r.target))).length;
   metric('task-progress', { polls: POLLS, unfocusedMainInnerHTML: unfocused.mainInnerHTML, focusedMainInnerHTML: focused.mainInnerHTML, homeMainInserted: unfocused.homeMainInserted + focused.homeMainInserted, staleProgressPolls: stale, promptSame: f.$('#prompt-input') === prompt, articleSame: f.$('.task-detail') === article, taskOps: ops.filter(r => article.contains(r.target)).length, composerOps, opsOutsideTaskStatusAreas: outsideTask });
   assert.equal(unfocused.mainInnerHTML + focused.mainInnerHTML, 0); assert.equal(unfocused.homeMainInserted + focused.homeMainInserted, 0);
   assert.equal(stale, 0, 'every progress change was visible on its poll, including while typing');
@@ -357,8 +359,9 @@ test('task progress patches only changed task regions; composer node, draft and 
   same(f.doc.activeElement, prompt, 'focus stays on the composer'); assert.equal(prompt.value, '下一项：起草协调邮件'); assert.equal(prompt.valueWrites, 0);
   same(f.$('.prompt-block').firstChild, promptText, 'an unchanged region keeps its text node');
   assert.match(f.$('.task-detail .badge').textContent, /已完成/); assert.match(f.$('.task-result').textContent, /完成/);
-  assert.equal(composerOps, 0, 'no composer, toolbar or composer-note operation');
-  assert.equal(outsideTask, 0, 'outside the task message only the recent-task badge and overview counters changed');
+  assert.equal(composerOps, 0, 'no composer, toolbar or composer-note operation except existing send disabled state');
+  assert.equal(form.querySelector('button[type="submit"]').disabled, false, 'completed turn enables the non-empty follow-up draft');
+  assert.equal(outsideTask, 0, 'outside the task message only the existing send disabled state changed');
 });
 
 test('submitting from the composer clears the draft in the same node and shows the new task message', async () => {

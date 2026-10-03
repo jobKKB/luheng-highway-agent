@@ -34,7 +34,7 @@ test("tool schema rejects incorrect optional types and inherited-property names"
   assert.throws(() => parseTool(call('{"__proto__":"x"}')), /未获允许/);
   assert.equal(parseTool(call('{"query":"养护"}')).query, "养护");
 });
-async function synthetic({ completion, getKey = () => "", broker } = {}) {
+async function synthetic({ completion, getKey = () => "", broker, controlledBrowser } = {}) {
   const dir = await mkdtemp(join(tmpdir(), "luheng-hardening-"));
   const store = new Store(dir);
   store.put("settings", "main", {
@@ -43,7 +43,7 @@ async function synthetic({ completion, getKey = () => "", broker } = {}) {
     model: "fake",
   });
   const b = broker || { async stop() {}, async close() {} };
-  const engine = new Engine(store, b, { getKey, delay: 1, completion });
+  const engine = new Engine(store, b, { getKey, delay: 1, completion, controlledBrowser });
   return {
     dir,
     store,
@@ -106,7 +106,7 @@ test("provider-echoed key never reaches SQLite task, state or audit; provider er
     await h.close();
   }
 });
-test("cancellation while browser creation is in flight closes the eventual context", async () => {
+test("cancellation while real controlled-browser opening is in flight closes the eventual context", async () => {
   let release,
     started,
     closed = 0;
@@ -114,16 +114,17 @@ test("cancellation while browser creation is in flight closes the eventual conte
   const startedPromise = new Promise((r) => (started = r));
   const gate = new Promise((r) => (release = r));
   const broker = {
-    async create(taskId) {
+    listTargets() { return [{id:"synthetic",enabled:true}]; },
+    async open(taskId) {
       started();
       await gate;
       active.add("s1");
-      return { id: "s1" };
+      return { session:{id:"s1"}, observation:{text:"fixture"} };
     },
     async read() {
       return "fixture";
     },
-    async stop(id) {
+    async cancel(id) {
       active.delete(id);
       closed++;
     },
@@ -133,7 +134,7 @@ test("cancellation while browser creation is in flight closes the eventual conte
   };
   let n = 0;
   const h = await synthetic({
-    broker,
+    controlledBrowser: broker,
     completion: async () =>
       n++
         ? { message: { role: "assistant", content: "done" } }
@@ -145,7 +146,7 @@ test("cancellation while browser creation is in flight closes the eventual conte
                 {
                   id: "browser",
                   type: "function",
-                  function: { name: "browser_read", arguments: "{}" },
+                  function: { name: "browser_open_target", arguments: '{"targetId":"synthetic"}' },
                 },
               ],
             },
@@ -153,7 +154,7 @@ test("cancellation while browser creation is in flight closes the eventual conte
   });
   try {
     const task = h.engine.create({ prompt: "read" });
-    await startedPromise;
+    await Promise.race([startedPromise,wait(1500).then(()=>{throw new Error("controlled open did not start");})]);
     h.engine.cancel(task.id);
     release();
     const result = await done(h, task);
@@ -165,18 +166,19 @@ test("cancellation while browser creation is in flight closes the eventual conte
     await h.close();
   }
 });
-test("successful read-only browser task releases its context at completion", async () => {
+test("successful real controlled-browser read-only task releases its context at completion", async () => {
   let n = 0;
   const active = new Set();
   const broker = {
-    async create() {
+    listTargets() { return [{id:"synthetic",enabled:true}]; },
+    async open() {
       active.add("s1");
-      return { id: "s1" };
+      return { session:{id:"s1"}, observation:{text:"fixture"} };
     },
     async read() {
       return "fixture";
     },
-    async stop(id) {
+    async cancel(id) {
       active.delete(id);
     },
     async close() {
@@ -184,7 +186,7 @@ test("successful read-only browser task releases its context at completion", asy
     },
   };
   const h = await synthetic({
-    broker,
+    controlledBrowser: broker,
     completion: async () =>
       n++
         ? { message: { role: "assistant", content: "read complete" } }
@@ -196,7 +198,7 @@ test("successful read-only browser task releases its context at completion", asy
                 {
                   id: "browser",
                   type: "function",
-                  function: { name: "browser_read", arguments: "{}" },
+                  function: { name: "browser_open_target", arguments: '{"targetId":"synthetic"}' },
                 },
               ],
             },

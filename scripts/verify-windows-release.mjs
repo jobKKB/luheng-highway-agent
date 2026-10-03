@@ -7,7 +7,7 @@ import { readFileSync, readdirSync, lstatSync, realpathSync, writeFileSync } fro
 import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 const defaultSource = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-export const desktopFiles = ['main.cjs', 'security.cjs', 'backend-process.mjs', 'bridge.cjs', 'vault.cjs', 'lifecycle.cjs', 'window-state.cjs', 'assets/tray.png', 'package.json'];
+export const desktopFiles = ['main.cjs', 'security.cjs', 'backend-process.mjs', 'bridge.cjs', 'vault.cjs', 'lifecycle.cjs', 'window-state.cjs', 'update-policy.cjs', 'update-transport.cjs', 'update-files.cjs', 'update-manager.cjs', 'assets/tray.png', 'package.json'];
 const json = file => JSON.parse(readFileSync(file, 'utf8'));
 const sha256 = file => createHash('sha256').update(readFileSync(file)).digest('hex');
 const within = (root, file) => { const r = relative(root, file); return r !== '..' && !r.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) && !isAbsolute(r); };

@@ -11,6 +11,7 @@ const desktop = bridge.createDesktopClient(send);
 let backend;
 let started = false;
 let closing = false;
+let updatePrepared = false;
 
 async function close(code = 0) {
   if (closing) return;
@@ -25,6 +26,24 @@ async function close(code = 0) {
 
 async function receive(message) {
   if (desktop.receive(message)) return;
+  if (['update:prepare', 'update:release', 'update:shutdown'].includes(message?.type)) {
+    if (!Number.isSafeInteger(message.id) || message.id <= 0 || Object.keys(message).sort().join(',') !== 'id,type' || !backend || closing) return;
+    if (message.type === 'update:prepare') {
+      try { const state = backend.prepareForUpdate?.(); updatePrepared = state?.ready === true; send({ type: 'update:prepared', id: message.id, ready: updatePrepared }); }
+      catch { send({ type: 'update:prepared', id: message.id, ready: false }); }
+      return;
+    }
+    if (message.type === 'update:release') {
+      updatePrepared = false; backend.releaseUpdateGate?.(); send({ type: 'update:released', id: message.id }); return;
+    }
+    // Update shutdown has no force-kill timer and no success acknowledgement
+    // until every backend close/flush promise resolves. Exit is checked by main.
+    if (!updatePrepared) { send({ type: 'update:closed', id: message.id, ok: false }); return; }
+    closing = true; desktop.close();
+    try { await backend.close(); send({ type: 'update:closed', id: message.id, ok: true }); process.exit(0); }
+    catch { send({ type: 'update:closed', id: message.id, ok: false }); process.exit(1); }
+    return;
+  }
   if (message?.type === 'shutdown') return close();
   if (message?.type !== 'start' || started) return;
   started = true;
@@ -53,7 +72,7 @@ async function receive(message) {
     if (!Number.isInteger(backend.port) || backend.port < 1 || backend.port > 65535) {
       throw new Error('The backend did not return a valid local port.');
     }
-    send({ type: 'ready', port: backend.port, node: process.versions.node });
+    send({ type: 'ready', port: backend.port, node: process.versions.node, version: backend.version });
   } catch (error) {
     // Keep returned errors bounded and never return settings/request bodies.
     send({ type: 'error', message: safeStartupError });

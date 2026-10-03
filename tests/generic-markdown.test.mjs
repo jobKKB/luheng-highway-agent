@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
+const source=await readFile(new URL('../public/app.js',import.meta.url),'utf8');
+const start=source.indexOf('function inlineMarkdown(text)'),end=source.indexOf('\nfunction artifactInfo',start);
+const context=vm.createContext({URL});vm.runInContext(`const esc = v => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const str=v=>typeof v==='string'?v:JSON.stringify(v);${source.slice(start,end)}`,context);
+const render=value=>{context.value=value;return vm.runInContext('formatOutput(value)',context);};
+test('Markdown headings, bold, ordered/unordered lists, fenced code and line breaks render safely',()=>{const html=render('# Heading\n\n**bold**\n- first\n- second\n\n1. one\n2. two\n\n```js\n<script>x</script>\n```');assert.match(html,/<h2>Heading<\/h2>/);assert.match(html,/<strong>bold<\/strong>/);assert.match(html,/<ul><li>first<\/li><li>second<\/li><\/ul>/);assert.match(html,/<ol><li>one<\/li><li>two<\/li><\/ol>/);assert.match(html,/<pre><code>&lt;script&gt;x&lt;\/script&gt;<\/code><\/pre>/);assert.ok(!html.includes('<script>'));});
+test('raw HTML, credential-bearing URLs, javascript/data links and markdown images cannot execute',()=>{const html=render('<img src=x onerror=alert(1)>\n[unsafe](javascript:alert)\n[data](data:text/html,x)\n[credentials](https://user:pass@example.com/)\n[good](https://example.com/source)\n![image](https://example.com/image.png)');assert.ok(!html.includes('<img'));assert.ok(!html.includes('href="javascript:'));assert.ok(!html.includes('href="data:'));assert.ok(!html.includes('href="https://user:pass'));assert.match(html,/href="https:\/\/example.com\/source"/);assert.match(html,/rel="noopener noreferrer"/);});
+test('inline plain text keeps direct text-node structure for stable answer selection',()=>{assert.equal(render('Intro RESULT THAT MATTERS'), 'Intro RESULT THAT MATTERS');assert.equal(render('hello\nworld'),'hello\nworld');});

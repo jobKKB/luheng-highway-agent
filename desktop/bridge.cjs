@@ -1,10 +1,11 @@
 'use strict';
 
 const { exactKeys, validateBundle } = require('./vault.cjs');
+const { publicUpdateState, updateInput, checkUpdateInput } = require('./update-manager.cjs');
 
 // This RPC channel exists only between the main and utility processes. There is
 // deliberately no ipcMain handler, preload, contextBridge, or renderer API.
-const METHODS = new Set(['status', 'preferences', 'saveCredentials', 'forgetCredentials', 'setPreferences', 'selectFolders']);
+const METHODS = new Set(['status', 'preferences', 'saveCredentials', 'forgetCredentials', 'setPreferences', 'selectFolders', 'updateStatus', 'checkUpdate', 'downloadUpdate', 'cancelUpdate', 'installUpdate']);
 const ERRORS = Object.freeze({
   unavailable: '桌面安全功能暂不可用，请重新打开应用。',
   timeout: '桌面安全操作超时，请检查状态后重试。',
@@ -12,6 +13,7 @@ const ERRORS = Object.freeze({
   vault: '系统安全密钥库操作失败；未使用明文回退，请检查凭据保存状态。',
   tray: '系统托盘不可用，关闭窗口将退出应用。',
   preferences: '桌面偏好保存失败，请重试。',
+  update: '更新操作暂不可用或已过期，请重新检查版本。',
   folders: '文件夹选择暂不可用；未授予任何权限，请重试或填写绝对路径。',
 });
 
@@ -43,7 +45,7 @@ function validRequest(message) {
     && message.type === 'desktop:request';
 }
 
-function createDesktopHandler({ vault, preferences, tray, getRestoreError = () => false, clearRestoreError = () => {}, selectFolders }) {
+function createDesktopHandler({ vault, preferences, tray, getRestoreError = () => false, clearRestoreError = () => {}, selectFolders, updater }) {
   const readPreferences = () => publicPreferences({ backgroundEnabled: preferences.backgroundEnabled, trayAvailable: tray.available() });
   return async function handle(message) {
     if (message?.type !== 'desktop:request' || !Number.isSafeInteger(message.id) || message.id <= 0) return null;
@@ -52,9 +54,16 @@ function createDesktopHandler({ vault, preferences, tray, getRestoreError = () =
     try {
       if (!validRequest(message)) throw new Error('invalid');
       const hasPayload = Object.hasOwn(message, 'payload');
-      if (!['saveCredentials', 'setPreferences'].includes(message.method) && hasPayload) throw new Error('invalid');
+      if (!['saveCredentials', 'setPreferences', 'downloadUpdate', 'installUpdate', 'checkUpdate'].includes(message.method) && hasPayload) throw new Error('invalid');
       let result;
-      if (message.method === 'selectFolders') {
+      if (['updateStatus', 'checkUpdate', 'downloadUpdate', 'cancelUpdate', 'installUpdate'].includes(message.method)) {
+        if (['downloadUpdate', 'installUpdate'].includes(message.method)) updateInput(message.payload);
+        if (message.method === 'checkUpdate') checkUpdateInput(message.payload);
+        code = 'update';
+        if (!updater) throw new Error('update');
+        const method = message.method === 'updateStatus' ? 'status' : message.method;
+        result = publicUpdateState(updater[method](message.payload));
+      } else if (message.method === 'selectFolders') {
         code = 'folders';
         if (typeof selectFolders !== 'function') throw new Error('folders');
         result = publicFolders(await selectFolders());
@@ -109,7 +118,7 @@ function createDesktopClient(send, { timeoutMs = 8000 } = {}) {
     if (message.ok !== true) entry.reject(new Error(ERRORS[message.error?.code] || ERRORS.unavailable));
     else {
       try {
-        entry.resolve(entry.method === 'selectFolders' ? publicFolders(message.result) : ['preferences', 'setPreferences'].includes(entry.method) ? publicPreferences(message.result) : publicStatus(message.result));
+        entry.resolve(['updateStatus', 'checkUpdate', 'downloadUpdate', 'cancelUpdate', 'installUpdate'].includes(entry.method) ? publicUpdateState(message.result) : entry.method === 'selectFolders' ? publicFolders(message.result) : ['preferences', 'setPreferences'].includes(entry.method) ? publicPreferences(message.result) : publicStatus(message.result));
       } catch { entry.reject(new Error(ERRORS.invalid)); }
     }
     return true;
@@ -122,6 +131,11 @@ function createDesktopClient(send, { timeoutMs = 8000 } = {}) {
   return {
     receive, close,
     api: Object.freeze({
+      updateStatus: () => request('updateStatus'),
+      checkUpdate: input => { checkUpdateInput(input); return request('checkUpdate', input); },
+      downloadUpdate: input => { updateInput(input); return request('downloadUpdate', input); },
+      cancelUpdate: () => request('cancelUpdate'),
+      installUpdate: input => { updateInput(input); return request('installUpdate', input); },
       status: () => request('status'),
       preferences: () => request('preferences'),
       saveCredentials: bundle => { validateBundle(bundle); return request('saveCredentials', bundle); },

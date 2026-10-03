@@ -1,12 +1,37 @@
 {
   "name": "路衡办公智能体",
-  "version": "0.5.2",
+  "version": "0.6.0-beta.1",
   "type": "source-only-not-installer",
   "files": [
     {
+      "path": ".github/release/publish_verified_release.py",
+      "bytes": 21653,
+      "sha256": "af4f55f0ac7556e4bb20eab67b0cd6ed91a8a2d56c72e84c35d45cb4e588733b"
+    },
+    {
+      "path": ".github/release/release-lock.json",
+      "bytes": 15768,
+      "sha256": "7e6e6f80691bbf9e8fa6ac7df3c429a2227c3d766640735107ded8d34a0e2ad7"
+    },
+    {
+      "path": ".github/release/test_publish_verified_release.py",
+      "bytes": 10854,
+      "sha256": "dbb698673f4b16d79d3d7c54aa39f90779e92759a8836a5e08e77bf14e7cc0bb"
+    },
+    {
+      "path": ".github/workflows/generic-workspace-acceptance.yml",
+      "bytes": 3836,
+      "sha256": "dd398ab701791f227afbea60e974adbc53c7c04eec864a69011d6947a5c0cc96"
+    },
+    {
+      "path": ".github/workflows/verified-release.yml",
+      "bytes": 2822,
+      "sha256": "8734fe0b1658c198dcf8bd863cae1876418e148a0c05fe52fff57d800be07796"
+    },
+    {
       "path": ".github/workflows/windows-build.yml",
-      "bytes": 4344,
-      "sha256": "2622966cbe02d0352e64ce7ecb1d48d49c003b50b2d990a7fbda4e1e74a82b72"
+      "bytes": 6724,
+      "sha256": "2ea9c1846213063a304c3d25c697c44489eba0a0bad48894c76d651eaed3107c"
     },
     {
       "path": ".github/workflows/windows-upgrade-acceptance.yml",
@@ -25,8 +50,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 13735,
-      "sha256": "ab78131fd2bbfe4ba57f12b27377a7f7218e7a721ffa225beb616fb6957ece0d"
+      "bytes": 3919,
+      "sha256": "1683245a9b026992c24e569301135d75f0e778a30cdb35f41b9e70875d04419b"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -45,18 +70,23 @@
     },
     {
       "path": "desktop/backend-process.mjs",
-      "bytes": 2951,
-      "sha256": "d4ad2ed1811ae3e424f5d059ce06b6f3ae11fac15a94f4b5f7ffd7c805ce543b"
+      "bytes": 4243,
+      "sha256": "a32e95cf4e621c81ea56dde98f3900829659b105bf21e1d43de219c8ed07eeda"
     },
     {
       "path": "desktop/bridge.cjs",
-      "bytes": 7071,
-      "sha256": "bd9d55bc1752a70cc63082b17560709acc9c268b5380b7261a578eec59950af6"
+      "bytes": 8460,
+      "sha256": "1572f54f345b7b78c248bfb012f348ca1d4c90ec8da505bbac18adc723cd0e9d"
+    },
+    {
+      "path": "desktop/current-user-install.nsh",
+      "bytes": 631,
+      "sha256": "1b7ffd4b7d26d62af84dd60a2d9fa8ea99cd9dc4d305e2fde79cb46d698b9edc"
     },
     {
       "path": "desktop/electron-builder.cjs",
-      "bytes": 1973,
-      "sha256": "dc68d6536efab401b111f28d7967fe7737701bce2dc4b10230bc8fa4b302c6cc"
+      "bytes": 2180,
+      "sha256": "08c075a9eed03d8be4a21b7f398ce462269090a511888fc019f22971606b4fd5"
     },
     {
       "path": "desktop/launch.cmd",
@@ -70,13 +100,13 @@
     },
     {
       "path": "desktop/main.cjs",
-      "bytes": 10064,
-      "sha256": "116649d6215cf6598864d4bb5074eb8346aeac98bff58f8b2c677c4e1b3b3a45"
+      "bytes": 16567,
+      "sha256": "14be04e5d7b17d9d710d374efed3a90280f44a5f67a726a52f97bff8e745c751"
     },
     {
       "path": "desktop/package-lock.json",
-      "bytes": 127648,
-      "sha256": "66a0904c3acf550bfdb0303f6da7fa26529c0c8c4d650ffb0488e9205f38a115"
+      "bytes": 127662,
+      "sha256": "c1989fe0e330f2ebe45b8bbe7b792056b1edf04673d4e6e674ac2932b4900759"
     },
     {
       "path": "desktop/package-windows.cjs",
@@ -85,8 +115,8 @@
     },
     {
       "path": "desktop/package.json",
-      "bytes": 722,
-      "sha256": "dfd0a76618d7a420187b522c27288d9da4e11bec93c49c88c39db5553c7d817a"
+      "bytes": 868,
+      "sha256": "2410eddc084c389f8a2e5f5ac65089f639afdf616aadf6803c5b1ad38fc68754"
     },
     {
       "path": "desktop/security.cjs",
@@ -114,6 +144,11 @@
       "sha256": "c62f7664557da928bafa6e072f83f1b5fcc99e77d1829c29e059301692a5cc26"
     },
     {
+      "path": "desktop/test/fixtures/release052-public-snapshot.json",
+      "bytes": 7231,
+      "sha256": "b4ef44de0d9e7cb1af5232b5b5c8aba4ac118206a53df10e75d1455fd6f84bd5"
+    },
+    {
       "path": "desktop/test/launch-cmd.test.cjs",
       "bytes": 1294,
       "sha256": "0553c62525c3771dd2cf6ef5969b2869c3f5301f72085703735f88ea041898eb"
@@ -135,8 +170,8 @@
     },
     {
       "path": "desktop/test/packaging.test.cjs",
-      "bytes": 1506,
-      "sha256": "e0be264fabdd022e326b786213d66d32b4bf00b74ac17b90c30b86ee55560162"
+      "bytes": 1914,
+      "sha256": "6767551002bb7d768993a9d19bcfaccbf65662d42f5cac25807886c77a8ec9ca"
     },
     {
       "path": "desktop/test/real-backend.test.cjs",
@@ -169,6 +204,26 @@
       "sha256": "3f9c380c8e355de8ebe3e0e0f381cdfa7319ca8fa0ae811fff9ea3e5ad596992"
     },
     {
+      "path": "desktop/test/update-channel-policy-snapshot.test.cjs",
+      "bytes": 1233,
+      "sha256": "61d0a35d2ca5153007d9b28e6c6faa63f6931a182a82bc348da38b50e4b2d8d5"
+    },
+    {
+      "path": "desktop/test/update-manager.test.cjs",
+      "bytes": 20974,
+      "sha256": "7a77b659b2d81fa54f0d30c6e7c0092177747d4a139e3495f86d9bbd73f01efe"
+    },
+    {
+      "path": "desktop/test/update-policy.test.cjs",
+      "bytes": 36478,
+      "sha256": "64f36e7557a2cc35b4422384d358d5c4eeb362ff330d4fb9d93551741bc2e2ae"
+    },
+    {
+      "path": "desktop/test/update-sidecar.test.cjs",
+      "bytes": 4407,
+      "sha256": "9c09290d61d99041f520d8d20a477a307b997121502d25dfbc37ef9bfc6d87dc"
+    },
+    {
       "path": "desktop/test/vault.test.cjs",
       "bytes": 14547,
       "sha256": "5a7228694df0c23ee3aa72c359f6ef304504a0297f66033ae009de0fbd55f588"
@@ -184,6 +239,26 @@
       "sha256": "e9b7a33825822c476ca69d1d4d9dade00956f3966bc9917d41527f72e8e3bebc"
     },
     {
+      "path": "desktop/update-files.cjs",
+      "bytes": 12604,
+      "sha256": "3c2e7e220e931e7b5f23ac01373f867ab2c17faa9100179e2337f200298c05f1"
+    },
+    {
+      "path": "desktop/update-manager.cjs",
+      "bytes": 17075,
+      "sha256": "6967984e9eb6a844be86f6d10ceea8255bb33f85501feac411794f137341dcd9"
+    },
+    {
+      "path": "desktop/update-policy.cjs",
+      "bytes": 12965,
+      "sha256": "fae26d3cf64da33dc8b1dbd9a865f3a81ae053983302c51be473e644215ccb4e"
+    },
+    {
+      "path": "desktop/update-transport.cjs",
+      "bytes": 16188,
+      "sha256": "a27987f69ee68992dd13526845fde436082257f6d3360d32941baf2477a6145b"
+    },
+    {
       "path": "desktop/vault.cjs",
       "bytes": 5771,
       "sha256": "0a9765cf6b18c545817ee7671b047986255671a7714a433248d49d8014ffc93f"
@@ -195,8 +270,8 @@
     },
     {
       "path": "desktop/windows-build.workflow.yml",
-      "bytes": 4344,
-      "sha256": "2622966cbe02d0352e64ce7ecb1d48d49c003b50b2d990a7fbda4e1e74a82b72"
+      "bytes": 6724,
+      "sha256": "2ea9c1846213063a304c3d25c697c44489eba0a0bad48894c76d651eaed3107c"
     },
     {
       "path": "docs/CONTROLLED-BROWSER.md",
@@ -205,8 +280,13 @@
     },
     {
       "path": "docs/DESKTOP.md",
-      "bytes": 10769,
-      "sha256": "22ecbcd6d5f99b5722fef6895e544e019b39fa954fdcfc97647f0c64200c1c2d"
+      "bytes": 11436,
+      "sha256": "2a540f87caa16e0b26f9909ef9467e85d6b632ef4f7a2e1d14176f3521ca4434"
+    },
+    {
+      "path": "docs/GENERIC-WORKSPACE.md",
+      "bytes": 5780,
+      "sha256": "cbde72ca9496dfdba49d81dbf2f105236ecf6b64c02440d67b91c11f22e1722a"
     },
     {
       "path": "docs/IMPLEMENTATION-STATUS.md",
@@ -240,8 +320,8 @@
     },
     {
       "path": "docs/RELEASE-CHECKLIST.md",
-      "bytes": 2546,
-      "sha256": "2614cfe613d308411583841debb30d7fb1f76f97242ecbcb61f7b0540ad34e70"
+      "bytes": 3718,
+      "sha256": "297908dc96b193a664446ed38e41e6d6c9048de85cabba00e44ac303752b3519"
     },
     {
       "path": "docs/RUNTIME-RELIABILITY.zh-CN.md",
@@ -264,6 +344,11 @@
       "sha256": "48f99c3af015881af488954a526295812043aa1c34d65869cd535439aa20a8c7"
     },
     {
+      "path": "docs/UPDATE-SECURITY.md",
+      "bytes": 9030,
+      "sha256": "cd15461bf52c62e318ccf2eb8b620e311e44d3c14d1b62b91d07f9f067b529c5"
+    },
+    {
       "path": "docs/WINDOWS-BUILD-ATTEMPT.md",
       "bytes": 3371,
       "sha256": "b9bf7104811e2ef714d8855d935068b52448c909d1e8208f52194126998cc236"
@@ -279,14 +364,19 @@
       "sha256": "0932f64a2dc0f99b0f1d051def0b6d084730a2d2582136d77d54ae13648c2cf9"
     },
     {
+      "path": "lib/agent-registry.mjs",
+      "bytes": 5802,
+      "sha256": "ca69299150a3b4c62d833a3ff1276e7defd228e8943917d8ed525779bc0abb73"
+    },
+    {
       "path": "lib/agent-tools.mjs",
-      "bytes": 7743,
-      "sha256": "54a9163ed290a7d786e2a0e019c8afa521a8b07ab114a30997e64983f80b5218"
+      "bytes": 8301,
+      "sha256": "e1d4d33a64b04760350839d4de87cc0a23a42b157ff91b0044d82037513b3730"
     },
     {
       "path": "lib/browser.mjs",
-      "bytes": 7673,
-      "sha256": "a5b3d323228be88b648a40d4d27e8ff237955fc162f0f898fa7f8342655a1eff"
+      "bytes": 800,
+      "sha256": "c40e83e9db9b9dea9b6060ef7bd61ae14a6f1697417b737a154bd6623a837b42"
     },
     {
       "path": "lib/controlled-browser.mjs",
@@ -295,13 +385,8 @@
     },
     {
       "path": "lib/engine.mjs",
-      "bytes": 84714,
-      "sha256": "0e55137b4d667f7ebde8ba4487831d4df36d4c550e1779fe7339e45345a13077"
-    },
-    {
-      "path": "lib/fixture-client.js",
-      "bytes": 704,
-      "sha256": "c9363c6736c20cedf9dc6fb82c3a83c211f1f8908e5c95f2834e2a647095d553"
+      "bytes": 80304,
+      "sha256": "5c785233eacc3c4c70234e37c47150419056cc30b9e797ae8d3749349c78ef13"
     },
     {
       "path": "lib/knowledge-search.mjs",
@@ -335,8 +420,8 @@
     },
     {
       "path": "lib/office-artifacts.mjs",
-      "bytes": 27171,
-      "sha256": "5da770f75920c155ae67c6f51e413bd7d91a88c5e243f0d7e3dc673563dfe2e8"
+      "bytes": 27147,
+      "sha256": "6ff255f7e3d076bd13008d644ba28b9662533243dc02841b23f2100dd48664b8"
     },
     {
       "path": "lib/paths.mjs",
@@ -359,6 +444,16 @@
       "sha256": "5883ee3c4c957466db659638833fd37730f991adbd9e9c71f8df558dbcfc43bc"
     },
     {
+      "path": "lib/public-web-transport.mjs",
+      "bytes": 7859,
+      "sha256": "3587386ead3060fdfebd526f02bb0821ebf3d2d8b259d44c7ac341c081330b72"
+    },
+    {
+      "path": "lib/public-web.mjs",
+      "bytes": 22518,
+      "sha256": "ddf56a575be0a7c1a8859f6c14574c3261bf40a39c31501f13ccf28de6a347ea"
+    },
+    {
       "path": "lib/redact.mjs",
       "bytes": 1337,
       "sha256": "75c11ad658981c615c6f56903373d1e4399b403eb6ff9d71d73dba1124db3647"
@@ -370,23 +465,38 @@
     },
     {
       "path": "lib/schedules.mjs",
-      "bytes": 19107,
-      "sha256": "cfce9bc02df623608c8cabcb9df59baf3ecc7171971408224a37fab6646ee343"
+      "bytes": 19427,
+      "sha256": "ac93694562a65dbb12e43e4ef4e444e88ec1f4eb0948f3d1a97aaa8adbc533cd"
+    },
+    {
+      "path": "lib/skills.mjs",
+      "bytes": 6081,
+      "sha256": "648bfa00f4cc77290be55de72839cc65cb6ba62cd914b74e1b5d0ea6041682de"
     },
     {
       "path": "lib/store.mjs",
-      "bytes": 7237,
-      "sha256": "4bca2efdd4e89b62894689efb8849eea835e3d69d531cebefd5a376bd549629e"
+      "bytes": 8225,
+      "sha256": "5a8f863490581d974af68dd8103d6e3104ffdb8d4c10f52b4b798302dd4647db"
+    },
+    {
+      "path": "lib/task-outcome.mjs",
+      "bytes": 12502,
+      "sha256": "9fbd56512ec51a50cb2b77111bb6d9a4573242dfbc25c2c37580a29130a62c07"
+    },
+    {
+      "path": "lib/tool-registry.mjs",
+      "bytes": 5385,
+      "sha256": "01f31d55c3f2e280b8e0bcc4dc046b402b828676ebf7f62c9b91d649ca93e48e"
     },
     {
       "path": "package-lock.json",
-      "bytes": 21666,
-      "sha256": "a57248ff1565f0b01c42f9a32191515d72fd3764dc6d4f0180f61b792f4e8de0"
+      "bytes": 21680,
+      "sha256": "162a81b911eb56bcbc4ad383cf66dc6c6c0d4fa94b1dc99f41028e6de172a16c"
     },
     {
       "path": "package.json",
-      "bytes": 543,
-      "sha256": "af5461f390770b2ef144ca5c22ebb0366dad7ead35687d17168ab20f89d01e3a"
+      "bytes": 611,
+      "sha256": "ab6b10dcfc9f472ee111df638739b8a082e4a38b00f310bedf220d7db98c0e2b"
     },
     {
       "path": "public/agent-mark.svg",
@@ -395,8 +505,13 @@
     },
     {
       "path": "public/app.js",
-      "bytes": 170507,
-      "sha256": "df2d3169b7b228fa34794fc1266ee36d3b155bbe58aa6672f5ee19b9612690ca"
+      "bytes": 187380,
+      "sha256": "45bffc2dcb841f803de4dc38c85713d60e57abceb7e49ff54ad51b2ae3821ab6"
+    },
+    {
+      "path": "public/chat.css",
+      "bytes": 14751,
+      "sha256": "2bf582e491eca20f48cb2b931385d81d394d2ee2829e6916a16e27011b3120e7"
     },
     {
       "path": "public/favicon.svg",
@@ -405,13 +520,13 @@
     },
     {
       "path": "public/index.html",
-      "bytes": 2254,
-      "sha256": "9a6551521709707aca2c785383dad6036d98ad4c7761af6342231a4dbe4a97f7"
+      "bytes": 2315,
+      "sha256": "aaea29ca3b758944982bdd8658986e76017f99d533d89dabf08fdf9cc8a3fb95"
     },
     {
       "path": "public/ocean.css",
-      "bytes": 49691,
-      "sha256": "919f011e1da1746cb9b38194f93dccdf38906a871293767f286618945aa1ae9a"
+      "bytes": 50627,
+      "sha256": "1fed0bf405b56a93726a44f6504e3b2c381b4fa958eb1775b53e73ba5d38196c"
     },
     {
       "path": "public/styles.css",
@@ -419,9 +534,19 @@
       "sha256": "5564e3e53ae93c2e767ef8723ad00a9686aae5d69a84410b1a6045cf3c9e5e30"
     },
     {
+      "path": "scripts/native-update-consent.ps1",
+      "bytes": 2484,
+      "sha256": "f91d3887673d934403eb81d50f88060c4be6a0ce4d362366fa6ef34436bb85e3"
+    },
+    {
+      "path": "scripts/owned-installer-wizard.ps1",
+      "bytes": 47236,
+      "sha256": "736f1ded8f0994b7050d62b31a7e03c8a5ae79fdbf299810702cddc61b94ef8c"
+    },
+    {
       "path": "scripts/package-source.py",
-      "bytes": 2319,
-      "sha256": "e324f06309325c7d700b3b5fa8f5c25529ed2e87f315148b6508e8bdc9c629dc"
+      "bytes": 2330,
+      "sha256": "389a5fd3beefce962c5c39e7dfdf3e2d899dec273262a51b6b8cbf473e6b2a19"
     },
     {
       "path": "scripts/run-desktop.sh",
@@ -439,19 +564,34 @@
       "sha256": "91791078c40ddde97d873ec1b471132bb6067616eda6c99dd194809c1babe2f5"
     },
     {
+      "path": "scripts/verify-native-beta-update.ps1",
+      "bytes": 10196,
+      "sha256": "d6c322345a13b7f2f12bea0d4f96baab7c8066c3953d3e552170bf1dd7cf43ca"
+    },
+    {
+      "path": "scripts/verify-native-beta-updater.mjs",
+      "bytes": 19916,
+      "sha256": "98629557f6d1fe14489930dc811714ab8301772eb0f3d4ceefb95ea38cba14f8"
+    },
+    {
       "path": "scripts/verify-windows-native.mjs",
-      "bytes": 15262,
-      "sha256": "0e09f7ce3ca3eaeb0cd30ebb532a4101807d3e9853ec6403cf51215f666863f0"
+      "bytes": 16580,
+      "sha256": "a59691b87f6227a5b0ea137b9fdcb0b306e0c9d6a9ee7bf06bdafc3bd7676b01"
     },
     {
       "path": "scripts/verify-windows-native.ps1",
-      "bytes": 11493,
-      "sha256": "26a895ccaba96a55b77f718ee6237a8960872488f99e2c38a3498c9e9c43691c"
+      "bytes": 11553,
+      "sha256": "2125087ba312b410e6c1c79b7582a6c0bf2e84de393c5eb49788617016d7a7e3"
+    },
+    {
+      "path": "scripts/verify-windows-online-update.mjs",
+      "bytes": 2399,
+      "sha256": "3f0f9d2329af2dd138884005900fe522c1ee8e5e8c63a882da77cf947b06eba8"
     },
     {
       "path": "scripts/verify-windows-release.mjs",
-      "bytes": 11403,
-      "sha256": "dbfb5cea7749b200d8c7baa78b0a927d02a3f35f837fb9e8dfe08166fc0bece4"
+      "bytes": 11490,
+      "sha256": "43e624cb612096de89dd9287705b617b79183e5efcd95e59e2dd17d8c4b94f23"
     },
     {
       "path": "scripts/verify-windows-upgrade.mjs",
@@ -470,18 +610,28 @@
     },
     {
       "path": "server.mjs",
-      "bytes": 43159,
-      "sha256": "4fd4d866432ea9253257e080f536f91f4530d94a4acf167f1bc9a0ba7d542d2a"
+      "bytes": 47350,
+      "sha256": "5ad478548af82d1a1a2eabcfdf12f823d01c074b7e2239a3cf98b79a7bf976bf"
     },
     {
       "path": "tests/agent-authority.test.mjs",
-      "bytes": 10367,
-      "sha256": "54c1ac8e41799e879c2b3c724ae825fd9490d3a34d5db6e82ba9e9ce66b7362f"
+      "bytes": 11206,
+      "sha256": "52ebac946b5b35d117dcfd1feba679ed83fc7022ac7b27c93d82a808ee46de5b"
     },
     {
       "path": "tests/agent-loop.test.mjs",
-      "bytes": 9760,
-      "sha256": "55c9806c7b604808053e4bfadf27d8ce5811aca171f654bd84173bc378ff2348"
+      "bytes": 11640,
+      "sha256": "8f30d66489b6231bd25f9c9cc88832e8210ef848582aee656a16830d0d117ccc"
+    },
+    {
+      "path": "tests/backend-update.test.mjs",
+      "bytes": 12645,
+      "sha256": "eb9bed659e915185b252f993f8b762f397bd1b90ba5517ab75b5bedf6c5a0135"
+    },
+    {
+      "path": "tests/completion-integrity.test.mjs",
+      "bytes": 11841,
+      "sha256": "8c8335d5c0b409ff39c3c1c9c7e2af07bce54a294ce43802b8c2db234192231d"
     },
     {
       "path": "tests/controlled-browser.test.mjs",
@@ -495,8 +645,13 @@
     },
     {
       "path": "tests/core.test.mjs",
-      "bytes": 25500,
-      "sha256": "18d2ef83eeda98b94eddef47a37a778be2682ed66c206e4620b04275005022e0"
+      "bytes": 33178,
+      "sha256": "bc386019d8f72767b1ab76be3d1ff7e5c72a053098dd21386a42a3d6c9e629cb"
+    },
+    {
+      "path": "tests/existing-integrations-ui.mjs",
+      "bytes": 46548,
+      "sha256": "cfbcf38708b750cb437ec4c5d870435de912c35a7e9ecb8d10c0bae6c942a6b9"
     },
     {
       "path": "tests/fixtures/controlled-sites.mjs",
@@ -509,14 +664,34 @@
       "sha256": "417369c0a682b86a10aeb72ed546df9201ecd2d65aade678268550c0afec622a"
     },
     {
+      "path": "tests/generic-chat-ui.mjs",
+      "bytes": 15304,
+      "sha256": "4d5cde839b4f0b930ecb57faf9de33ea3ffb0cc55611adc0ec9f0713ecec9f50"
+    },
+    {
+      "path": "tests/generic-local-controls.test.mjs",
+      "bytes": 2126,
+      "sha256": "6c8483e9ba5369c1e4905e0ec31763e077746c44834993950bd1ac38bd5935b6"
+    },
+    {
+      "path": "tests/generic-markdown.test.mjs",
+      "bytes": 2087,
+      "sha256": "df844e6074735c914828d7cd06b1737ee5e75b6f51d1cbcc82bcc778caece6b5"
+    },
+    {
+      "path": "tests/generic-skills.test.mjs",
+      "bytes": 9285,
+      "sha256": "64b4b721386dc58f09d2171cdb31cfa22bd7ab7eb24b503f2c76bb15f1265668"
+    },
+    {
       "path": "tests/hardening.test.mjs",
-      "bytes": 7071,
-      "sha256": "f73d771b88cb99516e34a9db0110c79282bc5d51e7b20308168fc963526395b3"
+      "bytes": 7529,
+      "sha256": "33a237f2f37826331c1e5575d50af1467dcf5fd72bd251670ee7b84924429d04"
     },
     {
       "path": "tests/local-access-integration.test.mjs",
-      "bytes": 33919,
-      "sha256": "b04598a30bf22aa9ba09f9afd292c121cfe6a0df4c8840c945206ec0bfd65830"
+      "bytes": 34089,
+      "sha256": "f9dff547d5510e2a58c046173e9713c9a1b9ee74ebb7ddabcb434329dc7b7468"
     },
     {
       "path": "tests/local-access-security-review.test.mjs",
@@ -526,7 +701,7 @@
     {
       "path": "tests/local-access-ui.test.mjs",
       "bytes": 12610,
-      "sha256": "cd3db41bde6a68a08d6749177f742a28199157244fbaba2898e6ec84b219fd02"
+      "sha256": "e9063144ddb083fca8d58d8dadf795c1f2a19f164f37ffe897a0501f694354e9"
     },
     {
       "path": "tests/local-access.test.mjs",
@@ -547,6 +722,11 @@
       "path": "tests/mail-adapter.test.mjs",
       "bytes": 17323,
       "sha256": "edc23029ee274472c59f36fd6ae681437597bf7eb06f9920bb7881e81c493c36"
+    },
+    {
+      "path": "tests/mail-busy-controls.test.mjs",
+      "bytes": 1265,
+      "sha256": "059879afa4567839ae356d365cb61ab0b4934c6a9087c9356a7098084233e68c"
     },
     {
       "path": "tests/mail-engine.test.mjs",
@@ -580,8 +760,8 @@
     },
     {
       "path": "tests/new-task-focus.test.mjs",
-      "bytes": 8141,
-      "sha256": "c2786e42a843adc7748af6377a03c94ee0367937bfd48ef3d92af495823b8613"
+      "bytes": 8198,
+      "sha256": "e49a79b6099f4d04e9b0a12a98f682d1f89053025750d036a40a0a47cd7c658a"
     },
     {
       "path": "tests/office-artifacts.test.mjs",
@@ -599,9 +779,44 @@
       "sha256": "ecc8981d504a000f3241664b84c7b8e57a92c9f4b9944e3381821a6363aea72d"
     },
     {
+      "path": "tests/public-web-engine.test.mjs",
+      "bytes": 13708,
+      "sha256": "ec8fb47d78531f3269450a5634c4b7b1410af759b0af4b27ccf04103d9606f7a"
+    },
+    {
+      "path": "tests/public-web-live-smoke.mjs",
+      "bytes": 21373,
+      "sha256": "42e700dce893c9cee034a64398dd14923e5cfc5834bbd8ca47dc4e4940aef422"
+    },
+    {
+      "path": "tests/public-web-revocation.test.mjs",
+      "bytes": 24760,
+      "sha256": "f3b384401888a56473b02992c355909f9a7e950066d0b4d3e16c192790c03214"
+    },
+    {
+      "path": "tests/public-web.test.mjs",
+      "bytes": 32489,
+      "sha256": "07f92b4ff15f22f00057612e0110f3768da0c4941d7734d5723a84c5d330b13c"
+    },
+    {
+      "path": "tests/real-idle-duration.mjs",
+      "bytes": 1063,
+      "sha256": "bef2fee11f81a128921f30cb0c08ee39c0e5b358ec594855456c446e188ddcbc"
+    },
+    {
+      "path": "tests/render-view-idempotency.test.mjs",
+      "bytes": 1308,
+      "sha256": "ae0532511222dd86054077fca81032b8d3028e9aafcf42862703bff8bdacf802"
+    },
+    {
+      "path": "tests/retained-chat-settings-ui.mjs",
+      "bytes": 53042,
+      "sha256": "87d6a56184e16107be55daf94f474003846440b5c5ad86b18b60074e199a03b3"
+    },
+    {
       "path": "tests/runtime-reliability.test.mjs",
-      "bytes": 23445,
-      "sha256": "a9463f2c21b58fbcd1584590332d64e8893f03287abf43d06205dca536dde8ea"
+      "bytes": 27388,
+      "sha256": "0145dc429d6d57cd4767211cb921e90dccb9ba2ff19cb0921d7b73495c9e2ec1"
     },
     {
       "path": "tests/schedules.test.mjs",
@@ -610,18 +825,18 @@
     },
     {
       "path": "tests/settings-flash-v051.test.mjs",
-      "bytes": 26045,
-      "sha256": "a9ed85c702846bb24a5adb5101baa3f0a81a7a5990fadfd0c9354e620120f808"
+      "bytes": 31386,
+      "sha256": "bd19eedfd01ab438243f2fa640b657534d51cf287523144c1342c05d0d696927"
     },
     {
       "path": "tests/stability-http-contract.test.mjs",
-      "bytes": 3316,
-      "sha256": "02d5ea312581957c713bc1cd677d0f960eb24c600c1e46ef581871984f006563"
+      "bytes": 4031,
+      "sha256": "249d091a4205c018a565542c0e0b15b2ec4e456a77cee54561ccd7f06f5f1794"
     },
     {
       "path": "tests/stable-dom-flicker.test.mjs",
-      "bytes": 37927,
-      "sha256": "8fca729e7a60ea413c7e47b3338c149eb71df67c642db60b72e7e78a3bb37c0a"
+      "bytes": 38291,
+      "sha256": "a3aedd9e76a6dafe4bde515943b3f6eb5c1a2a4b67320ad5126065e5e2013dcd"
     },
     {
       "path": "tests/stable-dom-selection.test.mjs",
@@ -634,9 +849,14 @@
       "sha256": "e692038828dec8f8e04de17e4b5a5d879b9604c04547dda48338e7d2a4bf1627"
     },
     {
+      "path": "tests/ui-idle-duration.test.mjs",
+      "bytes": 2152,
+      "sha256": "560e53857a85cff30a5d162891e8d3a62ed732a30d90c1929cd182a3d6d46215"
+    },
+    {
       "path": "tests/ui-local-access.mjs",
-      "bytes": 11469,
-      "sha256": "d712e380631ae1ce4fb4ed81067a9baf01750790189f39511eef621920638da1"
+      "bytes": 11576,
+      "sha256": "4321a9c677ebd39848c7cbd1c62b662e73621fab56a0995f95fd00c96f3ebb6f"
     },
     {
       "path": "tests/ui-recovery.mjs",
@@ -645,8 +865,8 @@
     },
     {
       "path": "tests/ui-recovery.test.mjs",
-      "bytes": 4665,
-      "sha256": "fcfcf5f5f749b7976bb6be73d5ed27259292a0d84f36de4ac34c17c0c654575d"
+      "bytes": 4889,
+      "sha256": "2d3087e97e84414f0e795a0abb1c853b6e08c4b7f647ac4d01ca49a0cda78263"
     },
     {
       "path": "tests/ui-smoke.mjs",
@@ -655,8 +875,13 @@
     },
     {
       "path": "tests/ui-stability-60s.mjs",
-      "bytes": 14352,
-      "sha256": "6470612bd2564ad717908807ed6cd358b9f6a7e06c59196239fe689072c6ab4d"
+      "bytes": 15181,
+      "sha256": "657d7f6b91175416e37ff542b4180ca11da8e057b18a463fd14b9ca67bf0ed73"
+    },
+    {
+      "path": "tests/ui-submitted-task-wait.test.mjs",
+      "bytes": 1170,
+      "sha256": "5ddf5deb07c3e2222c776e7c120fe0f5c0dddda2cf34599b61fb40b1a347d281"
     },
     {
       "path": "tests/ui-v03.mjs",
@@ -669,19 +894,24 @@
       "sha256": "5449d4386f43e1c134f9e014a0efb7104f509c492c7153254e8b55e3b5378d69"
     },
     {
+      "path": "tests/update-ui-source.test.mjs",
+      "bytes": 14589,
+      "sha256": "14f25b8c1383d6a422ceda25ec91d819727a5a1fb834f9d8a9f70c999a995817"
+    },
+    {
       "path": "tests/v03-integration.test.mjs",
-      "bytes": 6692,
-      "sha256": "6b1cebc68cde87e928143792a345653174b931f23b7e53404b915401278dc0ae"
+      "bytes": 7528,
+      "sha256": "6a395703850cd8076099dfe9552c0feef358398acfc163f0f81955d4c90654b4"
     },
     {
       "path": "tests/windows-native-smoke.test.mjs",
-      "bytes": 6379,
-      "sha256": "38338ba5a06043752d3f970fea3b82d22b2944442b0cbe2388318d6fa7c65413"
+      "bytes": 7423,
+      "sha256": "73e98e91d94c1c2b48d0d5a857811e8376702c11a737f85c1cb08fa3296dec6e"
     },
     {
       "path": "tests/windows-upgrade-acceptance.test.mjs",
-      "bytes": 69385,
-      "sha256": "b64ac01bee48a9d56fa0a3777e52116f62b16c9b6b2156a66f5cc50a9102b08a"
+      "bytes": 69684,
+      "sha256": "6c65f659dda622cbdc1b7a0736c7c6a5689d26280454ff3e7ab70f12654ac34f"
     }
   ]
 }
