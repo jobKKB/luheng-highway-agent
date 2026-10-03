@@ -25,6 +25,7 @@ Var installMode
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "English"
 
+Var fixtureArgc
 Var fixtureRoot
 Var fixtureNonce
 Var fixtureMarker
@@ -107,6 +108,7 @@ Function FixtureParseArguments
   StrCpy $4 0
   System::Call 'kernel32::GetCommandLineW() p .r0'
   System::Call 'shell32::CommandLineToArgvW(p r0, *i 0 r2) p .r1'
+  StrCpy $fixtureArgc $2
   ${If} $1 == 0
   ${OrIf} $2 != 4
     StrCpy $fixtureGateError "Expected exactly /S /ROOT=... /NONCE=..."
@@ -572,6 +574,8 @@ Function .onInit
   ${EndIf}
   ${If} $fixtureGateError != ""
     DetailPrint "$fixtureGateError"
+    ; Own fixture diagnostic only. Without /SD this stays visible under /S.
+    MessageBox MB_OK|MB_ICONSTOP "Luheng functional fixture front gate:$\r$\n$fixtureGateError$\r$\n$\r$\nargc=$fixtureArgc$\r$\nROOT=$fixtureRoot$\r$\nTEMP=$TEMP$\r$\nNONCE=$fixtureNonce"
     Call FixtureCloseOwnedHandles
     SetErrorLevel 20
     Quit

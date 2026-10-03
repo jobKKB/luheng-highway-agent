@@ -6,6 +6,8 @@
   "compiled": false,
   "windowsRuntimeExecuted": false,
   "helperSHA256": "b7190fdd950c88c94d421d33d60a3cc344f1a64b16c1c3ad6dcd6bda3afc9f2f",
-  "fixtureSHA256": "36f3724c91e2050aee3653ac62d09002ddbebff8eea2917024cad45effc2139f",
-  "scope": "Read-only valid TokenUser original/corrected destination comparison plus exact direct helper flow. Fixed TEMP/nonce/product absence/owner/DACL/identity gates retained. No installer executed locally."
+  "fixtureSHA256": "b29d01e57949f1ec174eb8cbe4b872b459a24942e6a5bb2aea5d59fdea41ce33",
+  "scope": "Read-only valid TokenUser original/corrected destination comparison plus exact direct helper flow. Fixed TEMP/nonce/product absence/owner/DACL/identity gates retained. No installer executed locally.",
+  "extraTestOnlyObserverSHA256": "5250bfc7642de1b7a5ac3bcb01b776dd23439393fd168d6e4b0be7cd61dc7a3a",
+  "note": "Source contracts only; raw-byte restore and own front-gate observer unexecuted"
 }

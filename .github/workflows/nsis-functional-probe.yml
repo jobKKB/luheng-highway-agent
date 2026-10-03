@@ -16,7 +16,7 @@ jobs:
       - name: Restore exact committed LF fixture bytes and check source contracts
         shell: pwsh
         run: |
-          git -c core.autocrlf=false checkout HEAD -- tests/nsis-directory-functional
+          node -e "const fs=require('node:fs'),cp=require('node:child_process');for(const p of cp.execFileSync('git',['ls-files','-z','tests/nsis-directory-functional']).toString().split('\0').filter(Boolean)){fs.writeFileSync(p,cp.execFileSync('git',['show','HEAD:'+p],{maxBuffer:1024*1024}));}"
           Set-Location tests/nsis-directory-functional
           node --test tests/*.test.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Source contracts failed' }
@@ -51,18 +51,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Real fixture preparation refused' }
           $prepared | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath prepared.json -Encoding utf8
           "NSIS_FIXTURE_ROOT=$($prepared.root)" >> $env:GITHUB_ENV
-          $info=[Diagnostics.ProcessStartInfo]::new()
-          $info.FileName=$prepared.executable
-          $info.UseShellExecute=$false
-          foreach($argument in $prepared.argv){$info.ArgumentList.Add([string]$argument)}
-          $process=[Diagnostics.Process]::Start($info)
-          $held=$process.Handle
-          $completed=$process.WaitForExit(30000)
-          $actual=[ordered]@{pid=$process.Id;waitCompleted=$completed;actualWindows=$true;sourceCommit=$env:GITHUB_SHA;args=$prepared.argv}
-          if($completed){$fixtureExit=$process.ExitCode;$actual.exitCode=$fixtureExit}
-          $actual | ConvertTo-Json | Set-Content -LiteralPath runtime-execution.json -Encoding utf8
-          if(-not $completed){throw 'Actual owned fixture did not exit; no forced process termination'}
-          if(-not (Test-Path -LiteralPath (Join-Path $prepared.evidence 'trace.ini'))){throw "Actual fixture exited $fixtureExit before trace creation"}
+          $compiled=Get-Content -LiteralPath compile.json -Raw|ConvertFrom-Json
+          & (Join-Path $PSHOME 'pwsh.exe') -NoProfile -File ./scripts/observe-fixture.ps1 -Executable $prepared.executable -ExpectedHash $compiled.fixture -Root $prepared.root -Nonce $prepared.nonce -Output runtime-execution.json
+          $observerExit=$LASTEXITCODE
+          $actual=Get-Content -LiteralPath runtime-execution.json -Raw|ConvertFrom-Json
+          $actual|ConvertTo-Json -Depth 10
+          if($observerExit -ne 0){throw 'Own fixture observation/cleanup failed'}
+          $fixtureExit=$actual.exitCode
+          if(-not (Test-Path -LiteralPath (Join-Path $prepared.evidence 'trace.ini'))){throw "Actual fixture exited $fixtureExit before trace creation; see exact own front gate text"}
           node scripts/fixture.mjs report --root $prepared.root --nonce $prepared.nonce --github-actions
           $reportExit=$LASTEXITCODE
           Copy-Item -LiteralPath $prepared.evidence -Destination actual-evidence -Recurse
