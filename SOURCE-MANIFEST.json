@@ -620,8 +620,8 @@
     },
     {
       "path": "scripts/verify-native-beta-updater.mjs",
-      "bytes": 20883,
-      "sha256": "2a29201d041d93ed7e333db410425308c06a2aad2f35435b535c6606862bf9d1"
+      "bytes": 23491,
+      "sha256": "c929988f0546895fbd1ee600698fadc290ce469abd42c2ea4e642b4cffad0a78"
     },
     {
       "path": "scripts/verify-windows-native.mjs",
