@@ -55,6 +55,10 @@ jobs:
         shell: pwsh
         run: node tests/existing-integrations-ui.mjs --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-generic-existing-integrations')
         timeout-minutes: 10
+      - name: Verify retained chat recovery, schedules, credentials and Office UI
+        shell: pwsh
+        run: node tests/retained-chat-settings-ui.mjs --require-windows --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-generic-retained-ui')
+        timeout-minutes: 12
       - name: Upload candidate QA evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -65,5 +69,6 @@ jobs:
             ${{ runner.temp }}/luheng-generic-stability/
             ${{ runner.temp }}/luheng-generic-local-access/
             ${{ runner.temp }}/luheng-generic-existing-integrations/
+            ${{ runner.temp }}/luheng-generic-retained-ui/
           if-no-files-found: warn
           retention-days: 14

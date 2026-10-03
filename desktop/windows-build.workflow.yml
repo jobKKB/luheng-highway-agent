@@ -70,6 +70,14 @@ jobs:
         shell: pwsh
         run: node tests/existing-integrations-ui.mjs --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-existing-integrations-proof')
         timeout-minutes: 10
+      - name: Test retained chat recovery, schedules, credentials and Office UI
+        shell: pwsh
+        run: node tests/retained-chat-settings-ui.mjs --require-windows --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-retained-ui-proof')
+        timeout-minutes: 12
+      - name: Test bounded live default public-web tools
+        shell: pwsh
+        run: node tests/public-web-live-smoke.mjs --require-windows --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-public-web-live-proof')
+        timeout-minutes: 3
       - name: Upload isolated UI evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -83,6 +91,8 @@ jobs:
             ${{ runner.temp }}/luheng-ui-local-proof/
             ${{ runner.temp }}/luheng-ui-stability-proof/
             ${{ runner.temp }}/luheng-existing-integrations-proof/
+            ${{ runner.temp }}/luheng-retained-ui-proof/
+            ${{ runner.temp }}/luheng-public-web-live-proof/
           if-no-files-found: warn
           retention-days: 14
       - run: npm --prefix desktop run package:win

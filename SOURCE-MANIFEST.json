@@ -5,13 +5,13 @@
   "files": [
     {
       "path": ".github/workflows/generic-workspace-acceptance.yml",
-      "bytes": 2930,
-      "sha256": "a56d25b63088e93739480643908ee1852783c25932c86c59dd428eaffc746bb9"
+      "bytes": 3262,
+      "sha256": "fc1dd31ea1d9c7d6dcfac7e3e3d5c651fd7394e0b6896db44e3dc1043becabed"
     },
     {
       "path": ".github/workflows/windows-build.yml",
-      "bytes": 4520,
-      "sha256": "8ebe58783ede06f9501b0ad19311bcff9f3dbb86fde174e37db3c04b8b341a66"
+      "bytes": 5152,
+      "sha256": "566dafe2b01ed9d7d59e3743a3c7385e7c26206ccf60c0cc293420726dd31ffc"
     },
     {
       "path": ".github/workflows/windows-upgrade-acceptance.yml",
@@ -200,8 +200,8 @@
     },
     {
       "path": "desktop/windows-build.workflow.yml",
-      "bytes": 4520,
-      "sha256": "8ebe58783ede06f9501b0ad19311bcff9f3dbb86fde174e37db3c04b8b341a66"
+      "bytes": 5152,
+      "sha256": "566dafe2b01ed9d7d59e3743a3c7385e7c26206ccf60c0cc293420726dd31ffc"
     },
     {
       "path": "docs/CONTROLLED-BROWSER.md",
@@ -560,8 +560,8 @@
     },
     {
       "path": "tests/generic-chat-ui.mjs",
-      "bytes": 13499,
-      "sha256": "415a908da895fae4f53169626fd4455860dace9596b928fda7a08eeef7a5f40e"
+      "bytes": 13989,
+      "sha256": "68e8f6cd0d5e14c20ed045aa0196c7ade89e33ea493733f6c56476bd39b5e78c"
     },
     {
       "path": "tests/generic-local-controls.test.mjs",
@@ -674,6 +674,11 @@
       "sha256": "ec8fb47d78531f3269450a5634c4b7b1410af759b0af4b27ccf04103d9606f7a"
     },
     {
+      "path": "tests/public-web-live-smoke.mjs",
+      "bytes": 21373,
+      "sha256": "6e36bc2dd14fbe8648c4c0e8f0f045e1bef6ce468e0627f440ff1e234a8f4497"
+    },
+    {
       "path": "tests/public-web-revocation.test.mjs",
       "bytes": 24760,
       "sha256": "f3b384401888a56473b02992c355909f9a7e950066d0b4d3e16c192790c03214"
@@ -682,6 +687,11 @@
       "path": "tests/public-web.test.mjs",
       "bytes": 32489,
       "sha256": "07f92b4ff15f22f00057612e0110f3768da0c4941d7734d5723a84c5d330b13c"
+    },
+    {
+      "path": "tests/retained-chat-settings-ui.mjs",
+      "bytes": 52904,
+      "sha256": "aee3856577d5d79618b3f4bd03fe7de64ada9e8c97f2ba26ac40a6ff29564e09"
     },
     {
       "path": "tests/runtime-reliability.test.mjs",
