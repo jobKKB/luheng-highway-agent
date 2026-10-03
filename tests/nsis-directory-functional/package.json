@@ -1,0 +1,11 @@
+{
+  "name": "luheng-independent-nsis-directory-fixture",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "contract": "node scripts/fixture.mjs contract",
+    "compile": "node scripts/fixture.mjs compile"
+  },
+  "engines": { "node": ">=20" }
+}

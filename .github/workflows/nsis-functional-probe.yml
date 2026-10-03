@@ -1,0 +1,65 @@
+name: Actual fixed NSIS directory helper function probe
+on:
+  push:
+    branches: ['probe/nsis-directory-functional']
+permissions:
+  contents: read
+jobs:
+  exact-helper:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.21.0'
+      - name: Restore exact committed LF fixture bytes and check source contracts
+        shell: pwsh
+        run: |
+          git -c core.autocrlf=false checkout HEAD -- tests/nsis-directory-functional
+          Set-Location tests/nsis-directory-functional
+          node --test tests/*.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Source contracts failed' }
+          node scripts/fixture.mjs contract
+          if ($LASTEXITCODE -ne 0) { throw 'Exact helper binding failed' }
+      - name: Install locked official build dependencies without Electron application execution
+        working-directory: desktop
+        run: npm ci --ignore-scripts
+      - name: Compile exact fixture with same official builder NSIS toolset
+        shell: pwsh
+        run: |
+          $resolved = node -e "require('./desktop/node_modules/app-builder-lib/out/toolsets/windows.js').getMakeNsisPath('1.2.1').then(x=>process.stdout.write(JSON.stringify(x)))" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Official pinned NSIS resolution failed' }
+          Set-Location tests/nsis-directory-functional
+          & $resolved.path /V3 fixture.nsi
+          if ($LASTEXITCODE -ne 0) { throw 'Actual fixture compilation failed' }
+          if (-not (Test-Path -LiteralPath fixture.exe)) { throw 'Fixture executable missing' }
+          $compiled = [ordered]@{actualWindows=$true;compiler=$resolved.path;fixture=(Get-FileHash -LiteralPath fixture.exe).Hash.ToLowerInvariant();helper=(Get-FileHash -LiteralPath helper/current-user-install-directory.nsh).Hash.ToLowerInvariant();sourceCommit=$env:GITHUB_SHA}
+          $compiled | ConvertTo-Json | Set-Content -LiteralPath compile.json -Encoding utf8
+      - name: Execute only fresh owned helper fixture using unchanged default token
+        shell: pwsh
+        run: |
+          Set-Location tests/nsis-directory-functional
+          $env:PSModulePath = Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/Modules'
+          $prepared = node scripts/fixture.mjs prepare --github-actions | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Real fixture preparation refused' }
+          $prepared | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath prepared.json -Encoding utf8
+          "NSIS_FIXTURE_ROOT=$($prepared.root)" >> $env:GITHUB_ENV
+          $fixtureArgs = @($prepared.argv)
+          & $prepared.executable @fixtureArgs
+          $fixtureExit=$LASTEXITCODE
+          node scripts/fixture.mjs report --root $prepared.root --nonce $prepared.nonce --github-actions
+          $reportExit=$LASTEXITCODE
+          Get-Content -LiteralPath (Join-Path $prepared.evidence 'trace.ini') -Raw
+          if ($reportExit -ne 0) { throw 'Evidence validation failed' }
+          if ($fixtureExit -ne 0) { throw "Actual helper fixture failed $fixtureExit" }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: actual-nsis-helper-${{ github.sha }}
+          path: |
+            tests/nsis-directory-functional/compile.json
+            tests/nsis-directory-functional/prepared.json
+            ${{ env.NSIS_FIXTURE_ROOT }}/evidence/
+          if-no-files-found: warn
+          retention-days: 14

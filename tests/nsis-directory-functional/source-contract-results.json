@@ -1,0 +1,24 @@
+{
+  "kind": "source-contract-only",
+  "tests": 14,
+  "passed": 14,
+  "failed": 0,
+  "commands": [
+    "node --test tests/*.test.mjs",
+    "node scripts/fixture.mjs contract",
+    "node --check scripts/fixture.mjs"
+  ],
+  "helperSHA256": "fcfaf03a4f140ced8839cee5f81c6639d52fb2cf0963c48720e5795dae9684c4",
+  "fixtureSHA256": "f769c9989544758fe4dd42602db26d888b61e6d528151625c78c88f86f2cfbb7",
+  "compiled": false,
+  "windowsRuntimeExecuted": false,
+  "unrun": [
+    "makensis compilation",
+    "PowerShell actual-Windows preflight",
+    "actual Windows helper flow",
+    "native owner/DACL/identity readback",
+    "handle-bound empty-directory cleanup"
+  ],
+  "compilerAvailability": "No makensis found in this Linux workspace",
+  "scope": "New independent artifact only; no existing checkout/helper/version/manifest or GitHub change; no installer executed"
+}
