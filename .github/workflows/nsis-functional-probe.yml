@@ -42,6 +42,11 @@ jobs:
         run: |
           Set-Location tests/nsis-directory-functional
           $env:PSModulePath = Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/Modules'
+          $tempBefore=[ordered]@{TEMP=$env:TEMP;TMP=$env:TMP;nodeTemp=(node -p 'require("node:os").tmpdir()');dotNetTemp=[IO.Path]::GetTempPath();runnerTemp=$env:RUNNER_TEMP}
+          if (-not (Test-Path -LiteralPath $env:RUNNER_TEMP -PathType Container)) { throw 'Existing runner temporary parent required' }
+          $env:TEMP=$env:RUNNER_TEMP
+          $env:TMP=$env:RUNNER_TEMP
+          $tempBefore | ConvertTo-Json | Set-Content -LiteralPath temp-environment.json -Encoding utf8
           $prepared = node scripts/fixture.mjs prepare --github-actions | ConvertFrom-Json
           if ($LASTEXITCODE -ne 0) { throw 'Real fixture preparation refused' }
           $prepared | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath prepared.json -Encoding utf8
@@ -62,6 +67,7 @@ jobs:
           path: |
             tests/nsis-directory-functional/compile.json
             tests/nsis-directory-functional/prepared.json
+            tests/nsis-directory-functional/temp-environment.json
             tests/nsis-directory-functional/actual-evidence/
           if-no-files-found: warn
           retention-days: 14
