@@ -31,8 +31,10 @@ async function seedProfile(l){
   const task=await post('/api/tasks',{prompt:'Synthetic upgrade fixture without a configured API key '+marker,agentId:'coordinator',budget:2,skillIds:[skill.id],submissionId:crypto.randomUUID()});
   return {skillId:skill.id,memoryId:memory.id,reminderId:reminder.id,scheduleId:schedule.id,taskId:task.id};
  },l.runMarker);
- await until(async()=>{const s=await page.evaluate(()=>api('/api/state'));const t=s.tasks.find(x=>x.id===records.taskId);return t?.status==='needs_attention';},'Unconfigured model task ends truthfully without network or success');
- const s=await page.evaluate(()=>api('/api/state'));const task=s.tasks.find(x=>x.id===records.taskId);assert.equal(task.modelUsageCalls.length,0);assert.equal(s.schedules.find(x=>x.id===records.scheduleId).runCount,0);
+ report.fixture={...records};await writeFile(join(out,'fixture-records.json'),JSON.stringify(report.fixture,null,2));
+ await until(async()=>{const t=await page.evaluate(id=>api('/api/tasks/'+id),records.taskId);report.fixtureTaskObserved={id:t.id,status:t.status,error:t.error||'',modelUsageCallCount:t.modelUsageCalls?.length,artifact:t.artifact||null};return ['failed','completed','cancelled','rejected','needs_attention'].includes(t.status);},'Unconfigured model task reaches its real terminal state without a model call');
+ const task=await page.evaluate(id=>api('/api/tasks/'+id),records.taskId);assert.equal(task.status,'failed','Unconfigured model is a truthful failure, not an uncertain local side effect');assert.match(task.error,/API Key|模型名称/);assert.equal(task.output,'');assert.equal(task.artifact,null);assert.deepEqual(task.modelUsageCalls,[],'No model call may execute for the unconfigured fixture');
+ const s=await page.evaluate(()=>api('/api/state'));assert.equal(s.schedules.find(x=>x.id===records.scheduleId).runCount,0);
  const bundle=await readFile(join(l.stateRoot,'skills',records.skillId,'bundle.json'));report.fixture={...records,skillBundleSha256:sha(bundle)};await writeFile(join(out,'fixture-records.json'),JSON.stringify(report.fixture,null,2));
  check('Real installed backend created owned Skill, knowledge, future reminder, paused schedule and no-key task');
  assert.equal(s.desktop.credentialVault.available,true,'Actual Windows OS encryption must be available');assert.equal(s.desktop.credentialVault.backend,'dpapi');assert.equal(s.desktop.credentialVault.stored,false);
