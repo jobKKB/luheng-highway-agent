@@ -614,6 +614,11 @@
       "sha256": "a9ed85c702846bb24a5adb5101baa3f0a81a7a5990fadfd0c9354e620120f808"
     },
     {
+      "path": "tests/stability-http-contract.test.mjs",
+      "bytes": 3316,
+      "sha256": "02d5ea312581957c713bc1cd677d0f960eb24c600c1e46ef581871984f006563"
+    },
+    {
       "path": "tests/stable-dom-flicker.test.mjs",
       "bytes": 37927,
       "sha256": "8fca729e7a60ea413c7e47b3338c149eb71df67c642db60b72e7e78a3bb37c0a"
@@ -650,8 +655,8 @@
     },
     {
       "path": "tests/ui-stability-60s.mjs",
-      "bytes": 12975,
-      "sha256": "f9f139f6e02a097518023903d2e467129852a4b7d9c07b5696c07ad82a9fff80"
+      "bytes": 13005,
+      "sha256": "ad8794deff8fc879285c897b2e04bd4c33b94e0276c13d2a5531d356f866056e"
     },
     {
       "path": "tests/ui-v03.mjs",

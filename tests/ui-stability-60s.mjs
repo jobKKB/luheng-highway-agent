@@ -37,7 +37,7 @@ async function shot(name) {
   report.frames.push(filename);
 }
 async function post(path, data) {
-  const response = await page.request.post(app.url + path, { data });
+  const response = await page.request.post(app.url + path, { data, headers: { origin: app.url } });
   assert.ok(response.ok(), path + ': ' + response.status() + ' ' + await response.text());
   return response.json();
 }
