@@ -36,26 +36,34 @@ jobs:
       - run: npm --prefix desktop ci
       - run: npm --prefix desktop run install:runtime
       - run: npx playwright install chromium
+        id: ui_dependencies
       - name: Test complete backend and safety contracts
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         run: node --test --test-concurrency=1 tests/*.test.mjs
       - name: Test desktop source and packaging contracts
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         run: npm --prefix desktop run check
       - name: Verify generic conversation, tools, Skills and 360px layout
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         run: node tests/generic-chat-ui.mjs
         timeout-minutes: 6
       - name: Verify actual 60-second polling, native selection and permissions
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         shell: pwsh
         run: node tests/ui-stability-60s.mjs --require-windows --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-generic-stability')
         timeout-minutes: 5
       - name: Verify real local permission UI flows
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         shell: pwsh
         run: node tests/ui-local-access.mjs --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-generic-local-access')
         timeout-minutes: 8
       - name: Verify retained mail and controlled-browser approval UI
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         shell: pwsh
         run: node tests/existing-integrations-ui.mjs --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-generic-existing-integrations')
         timeout-minutes: 10
       - name: Verify retained chat recovery, schedules, credentials and Office UI
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         shell: pwsh
         run: node tests/retained-chat-settings-ui.mjs --require-windows --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-generic-retained-ui')
         timeout-minutes: 12

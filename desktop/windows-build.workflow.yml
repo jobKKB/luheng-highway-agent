@@ -52,29 +52,37 @@ jobs:
       - run: npm --prefix desktop ci
       - run: npm --prefix desktop run install:runtime
       - run: npx playwright install chromium
+        id: ui_dependencies
       - name: Test real 60-second idle and live DOM stability
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         shell: pwsh
         run: node tests/ui-stability-60s.mjs --require-windows --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-ui-stability-proof')
         timeout-minutes: 5
       - name: Test backend with serialized test files
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         run: node --test --test-concurrency=1 tests/*.test.mjs
       - run: npm --prefix desktop run check
       - name: Test generic chat, Skills, tools, attachments and responsive UI
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         run: node tests/generic-chat-ui.mjs
         timeout-minutes: 8
       - name: Test local file and command permission UI
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         shell: pwsh
         run: node tests/ui-local-access.mjs --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-ui-local-proof')
         timeout-minutes: 8
       - name: Test existing mail and controlled-browser approval UI
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         shell: pwsh
         run: node tests/existing-integrations-ui.mjs --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-existing-integrations-proof')
         timeout-minutes: 10
       - name: Test retained chat recovery, schedules, credentials and Office UI
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         shell: pwsh
         run: node tests/retained-chat-settings-ui.mjs --require-windows --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-retained-ui-proof')
         timeout-minutes: 12
       - name: Test bounded live default public-web tools
+        if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         shell: pwsh
         run: node tests/public-web-live-smoke.mjs --require-windows --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-public-web-live-proof')
         timeout-minutes: 3
