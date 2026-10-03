@@ -8,7 +8,7 @@
 param(
   [Parameter(Mandatory = $true)][string]$ExpectedInstaller,
   [Parameter(Mandatory = $true)][ValidatePattern('^[a-fA-F0-9]{64}$')][string]$ExpectedHash,
-  [Parameter(Mandatory = $true)][ValidateSet('0.6.0-beta.2')][string]$Version,
+  [Parameter(Mandatory = $true)][ValidateSet('0.6.0-beta.2','0.6.0-beta.4')][string]$Version,
   [Parameter(Mandatory = $true)][string]$ExpectedInstallDirectory,
   [Parameter(Mandatory = $true)][string]$OutputDirectory,
   [Parameter(Mandatory = $true)][string]$StartedAfterUtc,

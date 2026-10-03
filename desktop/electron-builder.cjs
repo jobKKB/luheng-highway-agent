@@ -23,6 +23,7 @@ module.exports = {
     if (manifest.target !== context.electronPlatformName || manifest.arch !== arch) {
       throw new Error('Staged browser target does not match the installer target. Run the matching staging command first.');
     }
+    if (context.electronPlatformName === 'win32') require('./nsis-template-adapter.cjs').activateBoundNsisTemplates();
   },
   npmRebuild: false,
   publish: null,

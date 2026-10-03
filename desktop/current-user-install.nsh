@@ -1,5 +1,6 @@
 # electron-builder 26.x assisted install: force the established current-user
 # template, and refuse a command-line request for the unsupported all-user mode.
+!include "${__FILEDIR__}\current-user-install-directory.nsh"
 !macro customInit
   ${GetParameters} $R0
   ${GetOptions} $R0 "/allusers" $R1
@@ -10,6 +11,10 @@
   StrCpy $hasPerMachineInstallation "0"
   StrCpy $hasPerUserInstallation "1"
   !insertmacro setInstallModePerUser
+!macroend
+
+!macro customInstall
+  !insertmacro luhengFinishInstallDirectory
 !macroend
 
 !macro customInstallMode

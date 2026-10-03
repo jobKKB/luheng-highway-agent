@@ -152,7 +152,7 @@ async function prepareWithoutSockets() {
   const [serverSource, appSource, html] = await Promise.all([
     readFile(join(root, 'server.mjs'), 'utf8'), readFile(join(root, 'public/app.js'), 'utf8'), readFile(join(root, 'public/index.html'), 'utf8'),
   ]);
-  assert.equal(version, '0.6.0-beta.2');
+  assert.equal(version, '0.6.0-beta.3');
   for (const endpoint of ['/api/tasks', '/api/settings', '/api/schedules', '/api/desktop/preferences']) assert.ok(serverSource.includes(endpoint), endpoint + ' source endpoint exists');
   assert.ok(serverSource.includes('credentials\\/(save|forget)'), 'Regex desktop credential save/forget route exists');
   for (const id of ['task-form', 'schedule-form', 'reminder-form', 'desktop-credential-consent', 'desktop-save-credentials', 'settings-form']) assert.ok(appSource.includes(id), id + ' markup exists');

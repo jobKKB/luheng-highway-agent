@@ -18,7 +18,7 @@ if (Test-Path -LiteralPath $ReportDirectory) { throw 'Report directory already e
 [void](New-Item -ItemType Directory -Path $ReportDirectory)
 $work = Join-Path $env:RUNNER_TEMP ('luheng-native-' + [Guid]::NewGuid().ToString('N'))
 [void](New-Item -ItemType Directory -Path $work)
-$install = Join-Path $work 'installed'
+$install = Join-Path $work 'Luheng Office Agent'
 $data = Join-Path $env:APPDATA 'LuhengOfficeAgent'
 $sentinel = Join-Path $data 'ci-preserve-synthetic.txt'
 $sentinelText = 'Synthetic CI data only: ' + [Guid]::NewGuid().ToString('N')
@@ -31,7 +31,7 @@ $probeScript = Join-Path $SourceRoot 'scripts/verify-windows-native.mjs'
 $uninstaller = Join-Path $install 'Uninstall Luheng Office Agent.exe'
 $uninstallerCopy = Join-Path $work 'uninstall-ci.exe'
 $report = [ordered]@{
-  status = 'native-smoke-failed'; checkedAt = [DateTime]::UtcNow.ToString('o'); version = '0.6.0-beta.2'
+  status = 'native-smoke-failed'; checkedAt = [DateTime]::UtcNow.ToString('o'); version = '0.6.0-beta.3'
   commit = $env:GITHUB_SHA; runnerOS = $env:RUNNER_OS; runnerImage = $env:ImageOS; runnerImageVersion = $env:ImageVersion
   stages = [ordered]@{}; installer = $null; error = $null; cleanupError = $null
   deliverableReady = $false
@@ -77,7 +77,7 @@ try {
   $existing = @(Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -like 'Luheng Office Agent*' })
   if ($existing.Count) { throw 'Existing per-user Luheng installation found; refusing upgrade/uninstall.' }
   $version = (Get-Content -LiteralPath (Join-Path $SourceRoot 'package.json') -Raw | ConvertFrom-Json).version
-  if ($version -ne '0.6.0-beta.2') { throw 'This smoke gate is pinned to exact generic candidate 0.6.0-beta.2.' }
+  if ($version -ne '0.6.0-beta.3') { throw 'This smoke gate is pinned to exact generic candidate 0.6.0-beta.3.' }
   $release = Join-Path $SourceRoot 'desktop/dist/win-unpacked'
   $installer = Join-Path $SourceRoot "desktop/dist/Luheng-Office-Agent-$version-windows-x64.exe"
   $installerItem = Get-Item -LiteralPath $installer
@@ -113,10 +113,10 @@ try {
   do {
     if ($ui.HasExited) { throw "Desktop exited before showing its window (code $($ui.ExitCode))." }
     $ui.Refresh()
-    if ($ui.MainWindowHandle -ne 0 -and $ui.MainWindowTitle -match '路衡.*办公智能体.*v0\.6\.0-beta\.2$') { break }
+    if ($ui.MainWindowHandle -ne 0 -and $ui.MainWindowTitle -match '路衡.*办公智能体.*v0\.6\.0-beta\.3$') { break }
     Start-Sleep -Milliseconds 250
   } while ([DateTime]::UtcNow -lt $deadline)
-  if ($ui.MainWindowHandle -eq 0 -or $ui.MainWindowTitle -notmatch '路衡.*办公智能体.*v0\.6\.0-beta\.2$') { throw 'Expected v0.6.0-beta.2 application window was not shown.' }
+  if ($ui.MainWindowHandle -eq 0 -or $ui.MainWindowTitle -notmatch '路衡.*办公智能体.*v0\.6\.0-beta\.3$') { throw 'Expected v0.6.0-beta.3 application window was not shown.' }
   $report.stages.desktopWindow = @{ title = $ui.MainWindowTitle; pid = $ui.Id; plainLaunch = $true }
   if (-not $ui.CloseMainWindow()) { throw 'Native WM_CLOSE could not be sent to the app window.' }
   Wait-OwnedProcess $ui 20

@@ -11,7 +11,7 @@
 5. 后端明确完成 engine/mail/browser/SQLite 关闭并正常退出，才由 Electron shell.openPath 通过正常 Windows Shell 打开带 Zone.Identifier Internet zone 的安装包。没有 /S、runas、自动提权或裸 EXE spawn；系统提示由用户决定
 6. Shell 接受打开请求只代表向系统提交打开，界面不会显示安装成功。正常 NSIS 向导完成后由 runAfterFinish 启动新版；只有随后启动的 app.getVersion 与后端 /health.version 均等于目标版本，才报告更新已核对
 
-安装器未签名。GitHub 同源 digest 与 HTTPS 只能验证下载/传输完整性，不能独立认证发布者。没有关闭 Authenticode 校验、绕过 SmartScreen、清除来源标记、修改系统安全策略、证书采购、账户或访问权限修改。
+安装器未签名。GitHub 同源 digest 与 HTTPS 只能验证下载/传输完整性，不能独立认证发布者。没有关闭 Authenticode 校验、绕过 SmartScreen、清除来源标记、修改系统安全策略、证书采购或账户修改。仅初始化应用新建的私有文件和专属安装目录；不修改系统、用户或未知已有目录的权限。
 
 互联网标记/ACL/路径检查失败时停止安装并给出错误。Windows Shell 返回打开错误时清除待确认标记并重新启动本地后端；仅内存中的凭据需重填。关闭握手未成功绝不启动安装器。Shell/System UI 请求尚未完成时锁定重复安装，不超时启动第二份安装器。
 
@@ -30,6 +30,8 @@
 - 每跳 HTTPS 手动校验，最多 5 跳，只允许精确 GitHub 下载 URL 与已观测 CDN release-assets.githubusercontent.com/github-production-release-asset/1400818714/UUID。2026-10-03 HEAD 验证 GitHub302 → 此 CDN200，未转移二进制正文
 - 超时：首字节15秒、空闲30秒、下载总30分钟；严格有界流式写入与背压，独占 partial、fsync、原子改名；不做 Range/断点续传
 - 使用当前用户私有新目录的固定 DACL 脚本和读回，拒绝符号链接/junction/reparse/异常 hardlink。原生真实 DACL 与 MOTW 行为在 Linux 无法证明
+- 下载 partial 和 pending 临时文件在独占新建、原句柄仍持有且文件为空时，绑定 bigint 文件身份后只设置并读回当前 TokenUser owner；保留原 DACL、完整性和 MOTW 检查。不能接管已有文件
+- 安装构建要求 electron-builder 26.15.3 的完整 24 文件模板摘要一致，才使用临时模板副本；正常 uninstaller 生成和签名路径保留。最终安装目录在卸旧前完成现有记录/owner 和可完成的创建预检，卸旧后在解包前用原生 FILE_CREATE 创建、持有并核回当前 TokenUser owner、私有 DACL 与身份。未知已有目录或其他 owner 不修复、不接管；取消与失败只关闭本次持有资源
 - 设置面板独立更新文本、进度和按钮，不替换模型设置表单，不保存 Key 或用户草稿
 - 只扩展 main ↔ utility 私有固定 RPC 与固定控制消息，没有 ipcMain/preload/renderer 任意文件执行接口
 
@@ -44,6 +46,7 @@
 真实交互验收必须逐项记录：
 
 - 当前标准用户、HKCU 安装、无自动提权；NSIS 当前用户选择被固定（v26 include customInstallMode/customInit）
+- 新建安装目录、已知当前用户安装升级、自定义中文/空格父目录、未知既有目录明确拒绝；改动旧版本前取消后仍可打开，预检失败不先卸载旧版，后期失败有手动重新安装提示
 - 当前账户缓存 DACL/owner、祖先 reparse 拒绝、NTFS Zone.Identifier=3，以及正常 Shell/Attachment Manager 实际安全提示。禁止 Unblock-File、策略调整或裸 EXE 启动来“通过”
 - 确认取消无退出/安装；下载取消/错误/重试；任务/邮件/本机/网页活动拒绝安装；关闭超时从不打开安装器
 - 真实在线 asset 精确 bytes/hash，后端正常关闭后才打开可见 NSIS；Shell/OS 拒绝不误报成功；重复点击只有一份安装器
