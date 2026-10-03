@@ -98,7 +98,7 @@ test('generic native gate is pinned to candidate version and refuses old or suff
   const version=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version;
   const ps=readFileSync(new URL('../scripts/verify-windows-native.ps1',import.meta.url),'utf8');
   const js=readFileSync(new URL('../scripts/verify-windows-native.mjs',import.meta.url),'utf8');
-  assert.equal(version,'0.6.0-beta.1');
+  assert.equal(version,'0.6.0-beta.2');
   assert.ok(ps.includes("$version -ne '"+version+"'"));
   assert.ok(js.includes("assert.equal(expected.version, '"+version+"'"));
   const pattern=ps.match(/MainWindowTitle -notmatch '([^']+)'/)[1], title=new RegExp(pattern);
