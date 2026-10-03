@@ -9,6 +9,11 @@
       "sha256": "4cdc3d699c6d949927cb4807d54b90b0c0a0bff1f1cf9acdf9182fc30919b4b7"
     },
     {
+      "path": ".github/workflows/windows-upgrade-acceptance.yml",
+      "bytes": 2481,
+      "sha256": "12960ad83ffde78a68f86e69932de758d64a59ea23132127927fce97a7a03868"
+    },
+    {
       "path": ".gitignore",
       "bytes": 99,
       "sha256": "3e004ddc4e33e791a32538d5d30630dfb0755829718db22077346e6f4ca6ad22"
@@ -449,6 +454,21 @@
       "sha256": "dbfb5cea7749b200d8c7baa78b0a927d02a3f35f837fb9e8dfe08166fc0bece4"
     },
     {
+      "path": "scripts/verify-windows-upgrade.mjs",
+      "bytes": 87896,
+      "sha256": "b0434d8a2f6dec1b7c7b7c3690fec6dfdd85f0fd59f2dda76556b8e30a66b3c9"
+    },
+    {
+      "path": "scripts/verify-windows-upgrade.ps1",
+      "bytes": 40805,
+      "sha256": "289cd2b5cab5f778b58e6263fa5a6b7ed5faaf968814e35eac9031d48e08ea6c"
+    },
+    {
+      "path": "scripts/windows-upgrade-lock.json",
+      "bytes": 1289,
+      "sha256": "ff79b3a52a5f9171c217a60d291c2fa78111af1e9881ab3c609b6f8224082c81"
+    },
+    {
       "path": "server.mjs",
       "bytes": 43159,
       "sha256": "4fd4d866432ea9253257e080f536f91f4530d94a4acf167f1bc9a0ba7d542d2a"
@@ -637,6 +657,11 @@
       "path": "tests/windows-native-smoke.test.mjs",
       "bytes": 6379,
       "sha256": "38338ba5a06043752d3f970fea3b82d22b2944442b0cbe2388318d6fa7c65413"
+    },
+    {
+      "path": "tests/windows-upgrade-acceptance.test.mjs",
+      "bytes": 67075,
+      "sha256": "4e071bbce503877bd6749f30ce850a0dfa21a77cad5573c243b1dbaad08cb1e4"
     }
   ]
 }

@@ -3,7 +3,7 @@
 // windows-upgrade-acceptance workflow; nothing here touches the user's profile or network.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -158,44 +158,81 @@ test('locked installer extraction fails closed and never leaves partial output',
 });
 
 // ------------------------------------------------------------------ static workflow / driver checks
-test('workflow is manual-only, read-only, token scoped to the fetch step, no release', () => {
-  const block = key => { const m = WORKFLOW.match(new RegExp(`^${key}:\\n((?:[ #].*\\n?)*)`, 'm')); return m ? m[1].split('\n').filter(l => l.trim() && !l.trim().startsWith('#')).map(l => l.trimEnd()) : null; };
+// Text checks run on an in-memory LF view (a Windows checkout may be CRLF); file bytes and the lock are never rewritten.
+const lf = text => text.replace(/\r\n/g, '\n');
+const crlf = text => lf(text).replace(/\n/g, '\r\n');
+function checkWorkflowText(raw) {
+  const text = lf(raw);
+  const block = key => { const m = text.match(new RegExp(`^${key}:\\n((?:[ #].*\\n?)*)`, 'm')); return m ? m[1].split('\n').filter(l => l.trim() && !l.trim().startsWith('#')).map(l => l.trimEnd()) : null; };
   assert.deepEqual(block('on'), ['  workflow_dispatch:']);
   assert.deepEqual(block('permissions'), ['  contents: read', '  actions: read']);
-  assert.doesNotMatch(WORKFLOW, /secrets\.|action-gh-release|gh release|\/releases|contents:\s*write|packages:\s*write|id-token|pull_request|schedule:|\bpush:/);
-  assert.match(WORKFLOW, /persist-credentials: false/);
-  const steps = WORKFLOW.split('\n      - ').slice(1);
+  assert.doesNotMatch(text, /secrets\.|action-gh-release|gh release|\/releases|contents:\s*write|packages:\s*write|id-token|pull_request|schedule:|\bpush:/);
+  assert.match(text, /persist-credentials: false/);
+  const steps = text.split('\n      - ').slice(1);
   const tokenSteps = steps.filter(s => /github\.token|GH_TOKEN|GITHUB_TOKEN/.test(s));
   assert.equal(tokenSteps.length, 1); assert.match(tokenSteps[0], /^name: Fetch and verify locked installers/);
-  assert.equal((WORKFLOW.match(/\$\{\{\s*github\.token\s*\}\}/g) || []).length, 1);
-  assert.match(WORKFLOW, /verify-windows-upgrade\.mjs fetch --lock scripts\/windows-upgrade-lock\.json/);
-  assert.match(WORKFLOW, /\.\/scripts\/verify-windows-upgrade\.ps1 -InputDirectory/);
-});
-test('PowerShell driver: guards, fail-closed enumeration, owned cleanup, locked arguments', () => {
+  assert.equal((text.match(/\$\{\{\s*github\.token\s*\}\}/g) || []).length, 1);
+  assert.match(text, /verify-windows-upgrade\.mjs fetch --lock scripts\/windows-upgrade-lock\.json/);
+  assert.match(text, /\.\/scripts\/verify-windows-upgrade\.ps1 -InputDirectory/);
+}
+test('workflow is manual-only, read-only, token scoped to the fetch step, no release', () => checkWorkflowText(WORKFLOW));
+let modes;
+const toolModes = () => (modes ??= spawnSync(process.execPath, [tool], { encoding: 'utf8', env: cleanEnv() }).stderr.match(/Usage: ([^\n]+?) --option/)[1].split(' | '));
+function checkDriverText(raw) {
+  const text = lf(raw);
   for (const guard of ["-not $IsWindows", "$env:GITHUB_ACTIONS -ne 'true'", "$env:RUNNER_OS -ne 'Windows'", "$env:RUNNER_ENVIRONMENT -ne 'github-hosted'",
-    "Existing Luheng app data found; refusing", "Existing per-user Luheng installation found; refusing", "A Luheng Office Agent process is already running; refusing"]) assert.ok(PS1.includes(guard), guard);
-  assert.doesNotMatch(PS1, /SilentlyContinue|Get-ItemProperty|\bGet-Process\b|\bTest-Path\b(?!Strict)|Invoke-WebRequest|Invoke-RestMethod|\bcurl\b|\bwget\b|taskkill/i);
+    "Existing Luheng app data found; refusing", "Existing per-user Luheng installation found; refusing", "A Luheng Office Agent process is already running; refusing"]) assert.ok(text.includes(guard), guard);
+  assert.doesNotMatch(text, /SilentlyContinue|Get-ItemProperty|\bGet-Process\b|\bTest-Path\b(?!Strict)|Invoke-WebRequest|Invoke-RestMethod|\bcurl\b|\bwget\b|taskkill/i);
   for (const needle of ["[Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall', $false)",
     "[Diagnostics.Process]::GetProcessesByName('Luheng Office Agent')", "Get-CimInstance -ClassName Win32_Process", ".Kill($true)", "catch [System.Management.Automation.ItemNotFoundException]",
     "GetFileSystemInfos()", "[IO.FileAttributes]::ReparsePoint", "$expires -is [DateTime]", "[DateTimeOffset]::Parse(", "commandLineSha256", "Assert-RealDirectoryChain $runnerTemp"])
-    assert.ok(PS1.includes(needle), needle);
-  assert.match(PS1, /-RawArguments "\/S \/currentuser \/D=\$install"\)/);
-  assert.match(PS1, /-RawArguments "\/S \/currentuser _\?=\$install"\)/);
-  assert.match(PS1, /function Install-Locked\(\[string\]\$Installer\) \{\n  Assert-OwnedWork\n/);
-  assert.match(PS1, /function Invoke-Uninstall \{\n  Assert-OwnedWork\n/);
-  const removals = PS1.split('\n').filter(line => /Remove-Item/.test(line));
+    assert.ok(text.includes(needle), needle);
+  assert.match(text, /-RawArguments "\/S \/currentuser \/D=\$install"\)/);
+  assert.match(text, /-RawArguments "\/S \/currentuser _\?=\$install"\)/);
+  assert.match(text, /function Install-Locked\(\[string\]\$Installer\) \{\n  Assert-OwnedWork\n/);
+  assert.match(text, /function Invoke-Uninstall \{\n  Assert-OwnedWork\n/);
+  const removals = text.split('\n').filter(line => /Remove-Item/.test(line));
   assert.equal(removals.length, 3);
   assert.ok(removals.some(l => /Assert-OwnedData; Remove-Item -LiteralPath \$data -Recurse -Force/.test(l)));
   assert.ok(removals.some(l => /Assert-OwnedWork; Remove-Item -LiteralPath \$work -Recurse -Force/.test(l)));
   assert.ok(removals.some(l => /Remove-Item -LiteralPath \$uninstallerCopy -Force/.test(l)));
-  assert.equal((PS1.match(/Assert-ProfileAcl '/g) || []).length, 3);
-  for (const run of [1, 2]) assert.ok(PS1.includes('"verify-recovery-v04-run$run"') && PS1.includes(`foreach ($run in @(1, 2))`));
-  assert.ok(PS1.includes("'verify-recovery-v04-run3'") && PS1.includes("'--manifest', $upgradeReport"));
+  assert.equal((text.match(/Assert-ProfileAcl '/g) || []).length, 3);
+  for (const run of [1, 2]) assert.ok(text.includes('"verify-recovery-v04-run$run"') && text.includes(`foreach ($run in @(1, 2))`));
+  assert.ok(text.includes("'verify-recovery-v04-run3'") && text.includes("'--manifest', $upgradeReport"));
   // Every mode the driver invokes must exist in the Node tool.
-  const usage = spawnSync(process.execPath, [tool], { encoding: 'utf8', env: cleanEnv() }).stderr.match(/Usage: ([^\n]+?) --option/)[1].split(' | ');
-  const invoked = [...PS1.matchAll(/@\(\$tool, '([a-z0-9-]+)'|@\('([a-z0-9-]+)', '--install'/g)].map(m => m[1] || m[2]);
+  const usage = toolModes();
+  const invoked = [...text.matchAll(/@\(\$tool, '([a-z0-9-]+)'|@\('([a-z0-9-]+)', '--install'/g)].map(m => m[1] || m[2]);
   assert.ok(invoked.length >= 8); for (const mode of invoked) assert.ok(usage.includes(mode), `driver uses unknown mode ${mode}`);
   for (const mode of ['seed-recovery-v04', 'verify-recovery-v04', 'scan']) assert.ok(usage.includes(mode));
+}
+test('PowerShell driver: guards, fail-closed enumeration, owned cleanup, locked arguments', () => checkDriverText(PS1));
+test('static text checks: same content passes as LF and CRLF; tampered security content fails in both; raw bytes untouched', () => {
+  const tamper = (text, from, to) => { assert.ok(text.includes(from), `tamper anchor missing: ${from}`); return text.replace(from, to); };
+  const wf = lf(WORKFLOW), ps = lf(PS1);
+  const workflowTampers = [
+    ['push trigger', tamper(wf, 'on:\n  workflow_dispatch:\n', 'on:\n  workflow_dispatch:\n  push:\n')],
+    ['reusable-workflow trigger', tamper(wf, 'on:\n  workflow_dispatch:\n', 'on:\n  workflow_dispatch:\n  workflow_call:\n')],
+    ['write permission', tamper(wf, '  contents: read\n', '  contents: write\n')],
+    ['persisted credentials', tamper(wf, 'persist-credentials: false', 'persist-credentials: true')],
+    ['token in a second step', tamper(wf, '      - name: Upgrade, interrupted recovery and reinstall acceptance\n', '      - name: Upgrade, interrupted recovery and reinstall acceptance\n        env:\n          GH_TOKEN: ${{ github.token }}\n')],
+  ];
+  const driverTampers = [
+    ['Install-Locked without ownership check', tamper(ps, 'function Install-Locked([string]$Installer) {\n  Assert-OwnedWork\n', 'function Install-Locked([string]$Installer) {\n')],
+    ['Invoke-Uninstall without ownership check', tamper(ps, 'function Invoke-Uninstall {\n  Assert-OwnedWork\n', 'function Invoke-Uninstall {\n')],
+    ['silent enumeration', tamper(ps, 'Get-CimInstance -ClassName Win32_Process -ErrorAction Stop', 'Get-CimInstance -ClassName Win32_Process -ErrorAction SilentlyContinue')],
+    ['extra deletion', `${ps}Remove-Item -LiteralPath $env:APPDATA -Recurse -Force\n`],
+    ['quoted install directory', tamper(ps, '-RawArguments "/S /currentuser /D=$install")', '-RawArguments "/S /currentuser /D=`"$install`"")')],
+  ];
+  for (const form of [lf, crlf]) {
+    const name = form === lf ? 'LF' : 'CRLF';
+    assert.equal(form(wf).includes('\r\n'), form === crlf, `${name} control is not ${name}`);
+    checkWorkflowText(form(wf)); checkDriverText(form(ps));
+    for (const [label, text] of workflowTampers) assert.throws(() => checkWorkflowText(form(text)), assert.AssertionError, `${name}: ${label} was accepted`);
+    for (const [label, text] of driverTampers) assert.throws(() => checkDriverText(form(text)), assert.AssertionError, `${name}: ${label} was accepted`);
+  }
+  assert.equal(readFileSync(join(repo, '.github', 'workflows', 'windows-upgrade-acceptance.yml'), 'utf8'), WORKFLOW, 'workflow bytes changed');
+  assert.equal(readFileSync(join(repo, 'scripts', 'verify-windows-upgrade.ps1'), 'utf8'), PS1, 'driver bytes changed');
+  assert.deepEqual(JSON.parse(readFileSync(join(repo, 'scripts', 'windows-upgrade-lock.json'), 'utf8')), LOCK, 'lock changed');
 });
 
 // ------------------------------------------------------------------ migration 4 on a raw 0.4-schema database
@@ -335,22 +372,48 @@ test('SMTP boundary is reachable with the same account (positive control: a repl
     assert.deepEqual(up.scanForSentinels(join(dir, 'data'), up.scanNeedles({ markers: [password, up.smtpAuthMarker(password)] })), []);
   } finally { await app.close(); rmSync(dir, { recursive: true, force: true }); }
 });
-function crashSeed(dir, variant) {
+// Seed-side hook (runs inside the seed): persist the seed; for a supervised (Windows full) seed, ask the supervisor to
+// bind the in-flight command and block until it has. Only then does it return, so the helper's crashNow() SIGKILLs.
+const seededHook = (seedFile, bind) => `s => {
+  const { existsSync, renameSync, writeFileSync } = process.getBuiltinModule('node:fs');
+  writeFileSync(${JSON.stringify(seedFile)}, JSON.stringify(s), { flag: 'wx' });
+  const bind = ${JSON.stringify(bind)};
+  if (!bind) return;
+  if (!s.childPid) process.exit(3);
+  writeFileSync(bind.requestFile + '.tmp', JSON.stringify({ childPid: s.childPid, effects: s.effects, sentinel: s.sentinels.command }), { flag: 'wx' });
+  renameSync(bind.requestFile + '.tmp', bind.requestFile);
+  const pause = new Int32Array(new SharedArrayBuffer(4)), deadline = Date.now() + bind.waitMs;
+  while (!existsSync(bind.boundFile)) { if (Date.now() > deadline) process.exit(3); Atomics.wait(pause, 0, 0, 50); }
+}`;
+async function crashSeed(dir, variant) {
   const files = join(dir, `recovery-${variant}`, 'files'), data = join(dir, `recovery-${variant}`, 'data'), seedFile = join(dir, `seed-${variant}.json`);
   mkdirSync(files, { recursive: true });
-  const code = `const lib = await import(${JSON.stringify(pathToFileURL(tool).href)}); const { writeFileSync } = await import('node:fs');
+  // Windows: the product spawns commands non-detached, so libuv's kill-on-close job ends them with the seed. The full
+  // variant's in-flight command is therefore bound (held handle + full identity) BEFORE the seed may crash.
+  const bind = process.platform === 'win32' && variant === 'full'
+    ? { requestFile: join(dir, 'bind-request.json'), boundFile: join(dir, 'bound.json'), consumeFile: join(dir, 'consume'), waitMs: 90000 } : null;
+  const code = `const lib = await import(${JSON.stringify(pathToFileURL(tool).href)});
     await lib.seedRecovery({ backendDir: ${JSON.stringify(repo)}, dataDir: ${JSON.stringify(data)}, filesDir: ${JSON.stringify(files)}, variant: ${JSON.stringify(variant)},
-      expectVersion: ${JSON.stringify(REPO_VERSION)}, commandExecutable: process.execPath, onSeeded: s => writeFileSync(${JSON.stringify(seedFile)}, JSON.stringify(s), { flag: 'wx' }) });`;
+      expectVersion: ${JSON.stringify(REPO_VERSION)}, commandExecutable: process.execPath, onSeeded: ${seededHook(seedFile, bind)} });`;
   const notBeforeMs = Date.now();
-  const child = spawnSync(process.execPath, ['--input-type=module', '-e', code], { encoding: 'utf8', timeout: 120000, env: cleanEnv() });
-  const hardKilled = child.signal === 'SIGKILL' || (process.platform === 'win32' && child.status === 1);
-  assert.ok(hardKilled, `seed ${variant} did not end in its deliberate hard kill: status=${child.status} signal=${child.signal} ${child.stderr?.slice(-800)}`);
-  return { seed: JSON.parse(readFileSync(seedFile, 'utf8')), data, seedPid: child.pid, notBeforeMs };
+  const child = spawn(process.execPath, ['--input-type=module', '-e', code], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true, env: cleanEnv() });
+  let stderr = ''; child.stdout.resume(); child.stderr.setEncoding('utf8').on('data', d => { stderr += d; });
+  const supervisor = bind ? startSupervisor(dir, child.pid, notBeforeMs, bind) : null;
+  let timedOut = false; const timer = setTimeout(() => { timedOut = true; child.kill(); }, 120000);
+  const [status, signal] = await new Promise(resolve => child.on('close', (code, sig) => resolve([code, sig])));
+  clearTimeout(timer);
+  try {
+    const hardKilled = !timedOut && (signal === 'SIGKILL' || (process.platform === 'win32' && status === 1));
+    assert.ok(hardKilled, `seed ${variant} did not end in its deliberate hard kill: status=${status} signal=${signal} timedOut=${timedOut} ${stderr.slice(-800)}`);
+    return { seed: JSON.parse(readFileSync(seedFile, 'utf8')), data, seedPid: child.pid, notBeforeMs, supervisor };
+  } catch (error) { if (supervisor) error.message += ` [supervisor: ${await supervisor.finish()}]`; throw error; }
 }
-// In-flight command cleanup: one-shot and never by a bare PID. Windows: the driver's own Register-OrphanCommand /
-// Stop-OrphanCommand / Stop-IdentifiedProcess run in pwsh 7 and kill only through a held, re-verified handle.
-// POSIX: Node has no pidfd API, so verify-then-kill(pid) cannot be made race-free; the command is never signalled and
-// is left to its own 600 s timer (its only write target is effects.log, whose directory the test deletes).
+// In-flight command cleanup: one-shot and never by a bare PID.
+// Windows: a test-only pwsh supervisor binds the command BEFORE the crash (driver's own Open-ProcessHandle +
+// Register-OrphanCommand, handle StartTime = CIM creation); afterwards only that held handle is trusted: a terminal
+// HasExited, or Stop-IdentifiedProcess through the same handle if it is still alive.
+// POSIX: Node has no pidfd API, so verify-then-kill(pid) cannot be made race-free; the (setsid) command is never
+// signalled and is left to its own 600 s timer (its only write target is effects.log, whose directory the test deletes).
 const PWSH = (() => {
   const dirs = [...(process.platform === 'win32' && process.env.ProgramFiles ? [join(process.env.ProgramFiles, 'PowerShell', '7')] : []), ...(process.env.PATH || '').split(delimiter)];
   for (const dir of dirs) { const file = join(dir, process.platform === 'win32' ? 'pwsh.exe' : 'pwsh'); if (isAbsolute(dir) && existsSync(file)) return file; }
@@ -369,64 +432,137 @@ function runPwsh(body, env) {
   assert.ok(PWSH, 'pwsh 7 is required for handle-held process cleanup on Windows');
   const dir = temp('pwsh'), file = join(dir, 'driver-functions.ps1');
   try {
-    writeFileSync(file, `Set-StrictMode -Version Latest\n$ErrorActionPreference = 'Stop'\n$utf8 = [Text.UTF8Encoding]::new($false)\n${body}`);
+    writeFileSync(file, psScript(body));
     const r = spawnSync(PWSH, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', file], { encoding: 'utf8', timeout: 120000, windowsHide: true, env: cleanEnv(env) });
     assert.equal(r.status, 0, `pwsh failed: ${r.error || ''} ${r.stderr?.slice(-1500)}`);
     return r.stdout.trim();
   } finally { rmSync(dir, { recursive: true, force: true }); }
 }
-const ORPHAN_FUNCTIONS = ['Get-ProcessIdentity', 'Open-ProcessHandle', 'Stop-IdentifiedProcess', 'Register-OrphanCommand', 'Stop-OrphanCommand'];
-const orphanCleanupScript = () => `${ORPHAN_FUNCTIONS.map(psFunction).join('')}
-$t = $env:LUHENG_ORPHAN_TARGET | ConvertFrom-Json
-$node = [string]$t.node; $orphans = [Collections.Generic.List[object]]::new()
-$seedRecord = [pscustomobject]@{ Id = [int]$t.seedPid; StartTimeUtc = [DateTime]::UnixEpoch.AddMilliseconds([double]$t.notBeforeMs) }
-$seed = [pscustomobject]@{ childPid = [int]$t.pid; effects = [string]$t.effects; sentinels = [pscustomobject]@{ command = [string]$t.sentinel } }
-try { $record = Register-OrphanCommand $seedRecord $seed } catch { 'refused: ' + $_.Exception.Message; exit 0 }
-try { Stop-OrphanCommand $record } catch { 'refused: ' + $_.Exception.Message }
+const psScript = body => `Set-StrictMode -Version Latest\n$ErrorActionPreference = 'Stop'\n$utf8 = [Text.UTF8Encoding]::new($false)\n${body}`;
+const SUPERVISOR_FUNCTIONS = ['Get-ProcessIdentity', 'Open-ProcessHandle', 'Stop-IdentifiedProcess', 'Register-OrphanCommand'];
+const SUPERVISOR_PS = `function Wait-File([string]$Path, [int]$Seconds, [string]$Abort = '') {
+  $deadline = [DateTime]::UtcNow.AddSeconds($Seconds)
+  while (-not [IO.File]::Exists($Path)) {
+    if (($Abort -and [IO.File]::Exists($Abort)) -or [DateTime]::UtcNow -gt $deadline) { return $false }
+    Start-Sleep -Milliseconds 50
+  }
+  return $true
+}
+function Invoke-SupervisedCommand($T) {
+  if (-not (Wait-File $T.requestFile 170 $T.consumeFile)) { return 'refused: the seed never asked for a bind' }
+  $req = [IO.File]::ReadAllText($T.requestFile) | ConvertFrom-Json
+  try { $held = Open-ProcessHandle ([int]$req.childPid) } catch [ArgumentException], [InvalidOperationException] { return "refused: in-flight command PID $($req.childPid) was not running before the bind" }
+  try {
+    $seedRecord = [pscustomobject]@{ Id = [int]$T.seedPid; StartTimeUtc = [DateTime]::UnixEpoch.AddMilliseconds([double]$T.notBeforeMs) }
+    $record = Register-OrphanCommand $seedRecord ([pscustomobject]@{ childPid = [int]$req.childPid; effects = [string]$req.effects; sentinels = [pscustomobject]@{ command = [string]$req.sentinel } })
+    $created = [DateTime]::Parse($record.creationDateUtc, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind)
+    if ($held.HasExited -or [Math]::Abs(($held.StartTime.ToUniversalTime() - $created).Ticks) -gt 10000) { return 'refused: the held handle is not the registered in-flight command' }
+    $bound = [ordered]@{ pid = $record.pid; parentProcessId = $record.parentProcessId; creationDateUtc = $record.creationDateUtc; executablePath = $record.executablePath; commandLineSha256 = $record.commandLineSha256 }
+    [IO.File]::WriteAllText("$($T.boundFile).tmp", (ConvertTo-Json -Compress -InputObject $bound), $utf8)
+    [IO.File]::Move("$($T.boundFile).tmp", [string]$T.boundFile)
+    [void](Wait-File $T.consumeFile 290)
+    if ($held.HasExited) { return 'exited-after-bind' }
+    return Stop-IdentifiedProcess $record $held
+  } catch { return 'refused: ' + $_.Exception.Message } finally { $held.Dispose() }
+}
 `;
-function releaseOrphan(target, { platform = process.platform, runPs = runPwsh } = {}) {
+const supervisorScript = () => `${SUPERVISOR_FUNCTIONS.map(psFunction).join('')}${SUPERVISOR_PS}
+$t = $env:LUHENG_SUPERVISE | ConvertFrom-Json
+$node = [string]$t.node; $orphans = [Collections.Generic.List[object]]::new()
+Invoke-SupervisedCommand $t
+`;
+function startSupervisor(dir, seedPid, notBeforeMs, files) {
+  assert.ok(PWSH, 'pwsh 7 is required to bind the in-flight command before the crash on Windows');
+  const script = join(dir, 'supervisor.ps1'); writeFileSync(script, psScript(supervisorScript()));
+  const target = { seedPid, notBeforeMs, node: realpathSync.native(process.execPath), ...files };
+  const child = spawn(PWSH, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true, env: cleanEnv({ LUHENG_SUPERVISE: JSON.stringify(target) }) });
+  let out = '', err = ''; child.stdout.setEncoding('utf8').on('data', d => { out += d; }); child.stderr.setEncoding('utf8').on('data', d => { err += d; });
+  const closed = new Promise(resolve => { child.on('error', e => { err += String(e); resolve(-1); }); child.on('close', code => resolve(code)); });
+  let finished = null;
+  return {
+    bound: () => (existsSync(files.boundFile) ? JSON.parse(readFileSync(files.boundFile, 'utf8')) : null),
+    finish: () => (finished ??= (async () => {
+      writeFileSync(files.consumeFile, '', { flag: 'wx' });
+      const code = await closed;
+      return code === 0 ? out.trim().split(/\r?\n/).pop() : `refused: supervisor exited ${code} ${err.slice(-800)}`;
+    })()),
+  };
+}
+const WINDOWS_RELEASED = ['exited-after-bind', 'exited-before-kill', 'killed-after-identity-recheck'];
+async function releaseOrphan(target, { platform = process.platform } = {}) {
   if (platform !== 'win32') return 'left-running-not-signalled';
-  const verdict = runPs(orphanCleanupScript(), { LUHENG_ORPHAN_TARGET: JSON.stringify(target) });
-  if (!['killed-after-identity-recheck', 'exited-before-kill'].includes(verdict)) throw new Error(`in-flight command cleanup refused (${verdict})`);
+  if (!target.supervisor) throw new Error('in-flight command cleanup refused (no handle was bound before the crash)');
+  const verdict = await target.supervisor.finish(), bound = target.supervisor.bound();
+  if (!bound) throw new Error(`in-flight command cleanup refused (no handle was bound before the crash; ${verdict})`);
+  if (bound.pid !== target.pid || bound.parentProcessId !== target.seedPid) throw new Error(`in-flight command cleanup refused (bound PID ${bound.pid}/parent ${bound.parentProcessId} is not command ${target.pid} of seed ${target.seedPid})`);
+  if (!WINDOWS_RELEASED.includes(verdict)) throw new Error(`in-flight command cleanup refused (${verdict})`);
   return verdict;
 }
-function orphanCleanup({ seed, seedPid, notBeforeMs }, release = releaseOrphan) {
+function orphanCleanup({ seed, seedPid, notBeforeMs, supervisor = null }, release = releaseOrphan) {
   let state = 'none';
   if (seed.childPid) {
     assert.match(readFileSync(seed.effects, 'utf8'), new RegExp(`^C2-START ${seed.childPid}$`, 'm'), 'effects log does not name this in-flight command');
     state = 'pending';
   }
-  const target = { pid: seed.childPid, seedPid, notBeforeMs, effects: seed.effects, sentinel: seed.sentinels?.command, node: realpathSync.native(process.execPath) };
+  const target = { pid: seed.childPid, seedPid, notBeforeMs, effects: seed.effects, sentinel: seed.sentinels?.command, supervisor };
   return {
     get state() { return state; },
-    consume() {
+    async consume() {
       if (state !== 'pending') throw new Error(`in-flight command cleanup is ${state}; refusing a second attempt`);
-      state = 'consuming'; state = release(target); return state;
+      state = 'consuming'; state = await release(target); return state;
     },
   };
 }
-test('in-flight command cleanup is one-shot, identity-gated and never signals a bare PID (fake kill, no real process)', () => {
+test('in-flight command cleanup is one-shot, bound before the crash and never signals a bare PID (fake kill, no real process)', async () => {
   const dir = temp('orphan-control'), realKill = process.kill, signalled = [];
   process.kill = (...args) => { signalled.push(args); return true; };
   try {
     const effects = join(dir, 'effects.log'); writeFileSync(effects, 'C2-START 7001\n');
-    const crashed = { seed: { childPid: 7001, effects, sentinels: { command: 'SENTINEL-7001' } }, seedPid: 900, notBeforeMs: 1 };
-    const posix = orphanCleanup(crashed, t => releaseOrphan(t, { platform: 'linux' }));
-    assert.equal(posix.consume(), 'left-running-not-signalled');
-    assert.throws(() => posix.consume(), /refusing a second attempt/);   // a finally re-run after PID reuse
-    const scripts = [], fakePs = verdict => (script, env) => { scripts.push([script, JSON.parse(env.LUHENG_ORPHAN_TARGET)]); return verdict; };
-    const reused = orphanCleanup(crashed, t => releaseOrphan(t, { platform: 'win32', runPs: fakePs('refused: PID 7001 no longer matches its recorded creationDateUtc; refusing to kill it.') }));
-    assert.throws(() => reused.consume(), /cleanup refused/);
-    assert.equal(reused.state, 'consuming'); assert.throws(() => reused.consume(), /refusing a second attempt/);
-    const owned = orphanCleanup(crashed, t => releaseOrphan(t, { platform: 'win32', runPs: fakePs('killed-after-identity-recheck') }));
-    assert.equal(owned.consume(), 'killed-after-identity-recheck'); assert.throws(() => owned.consume(), /refusing a second attempt/);
-    assert.equal(scripts.length, 2);
-    for (const [script, target] of scripts) {
-      for (const name of ORPHAN_FUNCTIONS) assert.ok(script.includes(psFunction(name)), `cleanup script lacks the driver's ${name}`);
-      assert.deepEqual([target.pid, target.seedPid, target.sentinel, target.effects], [7001, 900, 'SENTINEL-7001', effects]);
+    const seed = { childPid: 7001, effects, sentinels: { command: 'SENTINEL-7001' } }, crashed = supervisor => ({ seed, seedPid: 900, notBeforeMs: 1, supervisor });
+    const fake = (bound, verdict) => { const calls = []; return { calls, bound: () => bound, finish: async () => { calls.push(verdict); return verdict; } }; };
+    const BOUND = { pid: 7001, parentProcessId: 900 };
+    const posix = orphanCleanup(crashed(null), t => releaseOrphan(t, { platform: 'linux' }));
+    assert.equal(await posix.consume(), 'left-running-not-signalled');
+    await assert.rejects(posix.consume(), /refusing a second attempt/);   // a finally re-run after PID reuse
+    for (const [label, supervisor, pattern] of [
+      ['no supervisor', null, /no handle was bound before the crash/],
+      ['never bound', fake(null, 'refused: the seed never asked for a bind'), /no handle was bound before the crash/],
+      ['stale bound PID', fake({ pid: 7002, parentProcessId: 900 }, 'exited-after-bind'), /is not command 7001 of seed 900/],
+      ['foreign bound parent', fake({ pid: 7001, parentProcessId: 8001 }, 'exited-after-bind'), /is not command 7001 of seed 900/],
+      ['gone before bind', fake(BOUND, 'refused: in-flight command PID 7001 was not running before the bind'), /cleanup refused \(refused: in-flight command PID 7001 was not running/],
+      ['changed after bind', fake(BOUND, 'refused: PID 7001 no longer matches its recorded creationDateUtc; refusing to kill it.'), /cleanup refused \(refused: PID 7001/],
+      ['unknown verdict', fake(BOUND, 'already-exited'), /cleanup refused \(already-exited\)/],
+    ]) {
+      const cleanup = orphanCleanup(crashed(supervisor), t => releaseOrphan(t, { platform: 'win32' }));
+      await assert.rejects(cleanup.consume(), pattern, label);
+      assert.equal(cleanup.state, 'consuming', label); await assert.rejects(cleanup.consume(), /refusing a second attempt/, label);
+      if (supervisor) assert.equal(supervisor.calls.length, 1, label);
     }
+    for (const verdict of ['exited-after-bind', 'killed-after-identity-recheck']) {
+      const supervisor = fake(BOUND, verdict), cleanup = orphanCleanup(crashed(supervisor), t => releaseOrphan(t, { platform: 'win32' }));
+      assert.equal(await cleanup.consume(), verdict); await assert.rejects(cleanup.consume(), /refusing a second attempt/);
+      assert.equal(supervisor.calls.length, 1);
+    }
+    // Source binding: the supervisor is the driver's functions verbatim + glue that binds before it releases the seed.
+    const script = supervisorScript();
+    for (const name of SUPERVISOR_FUNCTIONS) assert.ok(script.includes(psFunction(name)), `supervisor lacks the driver's ${name}`);
+    const at = needle => { const index = SUPERVISOR_PS.indexOf(needle); assert.ok(index >= 0, needle); return index; };
+    assert.ok(at('Open-ProcessHandle ([int]$req.childPid)') < at('Register-OrphanCommand $seedRecord') && at('Register-OrphanCommand $seedRecord') < at('[IO.File]::Move(')
+      && at('[IO.File]::Move(') < at('Wait-File $T.consumeFile 290') && at('Wait-File $T.consumeFile 290') < at("if ($held.HasExited) { return 'exited-after-bind' }"));
+    // Seed-side hook, executed: it returns (letting crashNow kill the seed) only once the bound marker exists.
+    const hook = { requestFile: join(dir, 'request.json'), boundFile: join(dir, 'bound.json'), consumeFile: join(dir, 'consume'), waitMs: 400 };
+    const runHook = (name, bind, value = seed) => spawnSync(process.execPath, ['-e', `(${seededHook(join(dir, name), bind)})(${JSON.stringify(value)}); console.log('returned')`], { encoding: 'utf8', timeout: 30000, env: cleanEnv() });
+    const unbound = runHook('seed-a.json', hook);
+    assert.equal(unbound.status, 3); assert.doesNotMatch(unbound.stdout, /returned/);
+    assert.deepEqual(JSON.parse(readFileSync(hook.requestFile, 'utf8')), { childPid: 7001, effects, sentinel: 'SENTINEL-7001' });
+    writeFileSync(hook.boundFile, '{}');
+    assert.equal(runHook('seed-b.json', { ...hook, requestFile: join(dir, 'request-b.json') }, { ...seed, childPid: undefined }).status, 3);
+    const bound = runHook('seed-c.json', { ...hook, requestFile: join(dir, 'request-c.json') });
+    assert.equal(bound.status, 0); assert.match(bound.stdout, /returned/);
+    assert.equal(runHook('seed-d.json', null).stdout.trim(), 'returned');
+    for (const name of ['seed-a.json', 'seed-c.json', 'seed-d.json']) assert.equal(JSON.parse(readFileSync(join(dir, name), 'utf8')).childPid, 7001);
     writeFileSync(effects, 'C2-START 7002\n');
-    assert.throws(() => orphanCleanup(crashed), /does not name this in-flight command/);
+    assert.throws(() => orphanCleanup(crashed(null)), /does not name this in-flight command/);
     assert.deepEqual(signalled, [], 'cleanup must never call process.kill');
   } finally { process.kill = realKill; rmSync(dir, { recursive: true, force: true }); }
 });
@@ -445,19 +581,20 @@ test('driver descendant cleanup source invariants (held handle before identity; 
   assert.ok(PS1.includes('Stop-IdentifiedProcess $d.identity $d.process'));
 });
 const MODEL_FUNCTIONS = ['Get-RowIdentity', 'Open-BoundDescendant', 'Get-VerifiedDescendants', 'Stop-IdentifiedProcess', 'Register-OrphanCommand', 'Stop-OrphanCommand'];
-const processModelScript = () => `${MODEL_FUNCTIONS.map(psFunction).join('')}
+const processModelScript = () => `${MODEL_FUNCTIONS.map(psFunction).join('')}${SUPERVISOR_PS}
 $s = $env:LUHENG_PS_SCENARIO | ConvertFrom-Json
 $base = [DateTime]::new(2026, 10, 3, 0, 0, 0, [DateTimeKind]::Utc)
 function At([int]$Seconds) { return $base.AddSeconds($Seconds) }
 function Find($Map, [int]$Id) { $e = $Map.PSObject.Properties[[string]$Id]; if ($e) { return $e.Value }; return $null }
 $appExe = 'C:\\fake\\Luheng Office Agent.exe'; $node = 'C:\\fake\\node.exe'
-$kills = [Collections.Generic.List[int]]::new(); $identities = $s.identities; $found = @()
+$kills = [Collections.Generic.List[int]]::new(); $identities = $s.identities; $found = @(); $opened = [Collections.Generic.List[object]]::new()
 $owned = @($s.owned | ForEach-Object { [pscustomobject]@{ Id = [int]$_.pid; StartTimeUtc = (At $_.start) } })
 function Get-ProcessSnapshot { return @($s.snapshot | ForEach-Object { [pscustomobject]@{ ProcessId = [int]$_.pid; ParentProcessId = [int]$_.parent; CreationDate = (At $_.created).ToLocalTime(); ExecutablePath = [string]$_.exe } }) }
 function Open-ProcessHandle([int]$ProcessId) {
   $h = Find $s.handles $ProcessId
   if (-not $h) { throw [ArgumentException]::new("Process with an Id of $ProcessId is not running.") }
-  $fake = [pscustomobject]@{ Id = $ProcessId; Handle = [IntPtr]::new(1); HasExited = [bool]$h.exited; StartTime = (At $h.start).ToLocalTime() }
+  $fake = [pscustomobject]@{ Id = $ProcessId; Handle = [IntPtr]::new(1); HasExited = [bool]$h.exited; ExitAfterBind = [bool]$h.exitAfterBind; StartTime = (At $h.start).ToLocalTime() }
+  $script:opened.Add($fake)
   $fake | Add-Member -MemberType ScriptMethod -Name Kill -Value { $script:kills.Add($this.Id); $this.HasExited = $true }
   $fake | Add-Member -MemberType ScriptMethod -Name WaitForExit -Value { param($ms) return $true }
   $fake | Add-Member -MemberType ScriptMethod -Name Dispose -Value { }
@@ -468,8 +605,23 @@ function Get-ProcessIdentity([int]$ProcessId) {
   if (-not $i) { return $null }
   return [pscustomobject]@{ pid = $ProcessId; parentProcessId = [int]$i.parent; creationDateUtc = (At $i.created).ToString('o'); executablePath = [string]$i.exe; commandLineSha256 = [string]$i.cmd; commandLine = [string]$i.cmd }
 }
+function Wait-File([string]$Path, [int]$Seconds, [string]$Abort = '') {
+  if ($Path -like '*consume') {   # time passes: the seed crashes; a job-bound command ends with it
+    foreach ($h in $script:opened) { if ($h.ExitAfterBind) { $h.HasExited = $true } }
+    if ($s.PSObject.Properties['identitiesAtStop']) { $script:identities = $s.identitiesAtStop }
+    return $true
+  }
+  return [IO.File]::Exists($Path)
+}
 $out = [Collections.Generic.List[string]]::new()
-if ($s.mode -eq 'orphan') {
+if ($s.mode -eq 'supervisor') {
+  $orphans = [Collections.Generic.List[object]]::new()
+  $dir = Join-Path ([IO.Path]::GetTempPath()) ('luheng-supervisor-model-' + [guid]::NewGuid()); [void](New-Item -ItemType Directory -Path $dir)
+  $T = [pscustomobject]@{ seedPid = 900; notBeforeMs = ((At 10) - [DateTime]::UnixEpoch).TotalMilliseconds; requestFile = (Join-Path $dir 'request.json'); boundFile = (Join-Path $dir 'bound.json'); consumeFile = (Join-Path $dir 'consume') }
+  if (-not $s.PSObject.Properties['noRequest']) { [IO.File]::WriteAllText($T.requestFile, (ConvertTo-Json -Compress -InputObject ([ordered]@{ childPid = 1001; effects = 'C:\\fake\\files\\effects.log'; sentinel = 'SENTINEL-1001' }))) }
+  $out.Add([string](Invoke-SupervisedCommand $T)); $out.Add('bound=' + [IO.File]::Exists($T.boundFile))
+  Remove-Item -LiteralPath $dir -Recurse -Force
+} elseif ($s.mode -eq 'orphan') {
   $orphans = [Collections.Generic.List[object]]::new(); $record = $null
   $seed = [pscustomobject]@{ childPid = 1001; effects = 'C:\\fake\\files\\effects.log'; sentinels = [pscustomobject]@{ command = 'SENTINEL-1001' } }
   try { $record = Register-OrphanCommand ([pscustomobject]@{ Id = 900; StartTimeUtc = (At 10) }) $seed } catch { $out.Add('refused: ' + $_.Exception.Message) }
@@ -486,7 +638,7 @@ if ($s.mode -eq 'orphan') {
 `;
 const NODE_FAKE = 'C:\\fake\\node.exe', C2_LINE = 'node.exe -e C2 C:\\fake\\files\\effects.log SENTINEL-1001';
 const row = (pid, parent, created, exe = NODE_FAKE) => ({ pid, parent, created, exe });
-const live = (start, exited = false) => ({ start, exited });
+const live = (start, exited = false, exitAfterBind = false) => ({ start, exited, exitAfterBind });
 const ident = (parent, created, exe = NODE_FAKE, cmd = `cmd-${parent}-${created}`) => ({ parent, created, exe, cmd });
 const KILLED = 'killed-after-identity-recheck';
 const PROCESS_MODEL = {
@@ -507,6 +659,26 @@ const PROCESS_MODEL = {
     { found: [], outcomes: [KILLED, KILLED], kills: [1001] }],
   'orphan command: PID reused before kill is refused and never retried': [{ mode: 'orphan', handles: { 1001: live(50) }, identities: { 1001: ident(900, 20, NODE_FAKE, C2_LINE) }, identitiesAtStop: { 1001: ident(8001, 50, NODE_FAKE, C2_LINE) } },
     { found: [], outcomes: ['refused: PID 1001 no longer matches its recorded parentProcessId; refusing to kill it.', 'kill-attempted'], kills: [] }],
+  'supervisor: bound before the crash, command ends with the seed (trusted held-handle exit)': [{ mode: 'supervisor', handles: { 1001: live(20, false, true) }, identities: { 1001: ident(900, 20, NODE_FAKE, C2_LINE) } },
+    { found: [], outcomes: ['exited-after-bind', 'bound=True'], kills: [] }],
+  'supervisor: bound and still alive, killed once through the held handle after recheck': [{ mode: 'supervisor', handles: { 1001: live(20) }, identities: { 1001: ident(900, 20, NODE_FAKE, C2_LINE) } },
+    { found: [], outcomes: [KILLED, 'bound=True'], kills: [1001] }],
+  'supervisor: PID already gone before the bind': [{ mode: 'supervisor', handles: {}, identities: {} },
+    { found: [], outcomes: ['refused: in-flight command PID 1001 was not running before the bind', 'bound=False'], kills: [] }],
+  'supervisor: stale/reused PID (held handle newer than the CIM row)': [{ mode: 'supervisor', handles: { 1001: live(50) }, identities: { 1001: ident(900, 20, NODE_FAKE, C2_LINE) } },
+    { found: [], outcomes: ['refused: the held handle is not the registered in-flight command', 'bound=False'], kills: [] }],
+  'supervisor: foreign parent': [{ mode: 'supervisor', handles: { 1001: live(20) }, identities: { 1001: ident(8001, 20, NODE_FAKE, C2_LINE) } },
+    { found: [], outcomes: ['refused: In-flight command was not started by the crashed seed process.', 'bound=False'], kills: [] }],
+  'supervisor: different command line': [{ mode: 'supervisor', handles: { 1001: live(20) }, identities: { 1001: ident(900, 20, NODE_FAKE, 'node.exe -e other') } },
+    { found: [], outcomes: ["refused: In-flight command line lacks this seed's unique marker or effects path.", 'bound=False'], kills: [] }],
+  'supervisor: different executable': [{ mode: 'supervisor', handles: { 1001: live(20) }, identities: { 1001: ident(900, 20, 'C:\\other\\node.exe', C2_LINE) } },
+    { found: [], outcomes: ['refused: In-flight command is not the pinned node.exe.', 'bound=False'], kills: [] }],
+  'supervisor: created before the seed': [{ mode: 'supervisor', handles: { 1001: live(5) }, identities: { 1001: ident(900, 5, NODE_FAKE, C2_LINE) } },
+    { found: [], outcomes: ['refused: In-flight command predates the seed process.', 'bound=False'], kills: [] }],
+  'supervisor: identity changes after the bind while alive': [{ mode: 'supervisor', handles: { 1001: live(20) }, identities: { 1001: ident(900, 20, NODE_FAKE, C2_LINE) }, identitiesAtStop: { 1001: ident(8001, 50, NODE_FAKE, C2_LINE) } },
+    { found: [], outcomes: ['refused: PID 1001 no longer matches its recorded parentProcessId; refusing to kill it.', 'bound=True'], kills: [] }],
+  'supervisor: the seed never asks for a bind': [{ mode: 'supervisor', noRequest: true, handles: {}, identities: {} },
+    { found: [], outcomes: ['refused: the seed never asked for a bind', 'bound=False'], kills: [] }],
   'orphan command: foreign parent is never registered': [{ mode: 'orphan', handles: { 1001: live(20) }, identities: { 1001: ident(8001, 20, NODE_FAKE, C2_LINE) } },
     { found: [], outcomes: ['refused: In-flight command was not started by the crashed seed process.'], kills: [] }],
 };
@@ -519,21 +691,31 @@ test('driver process cleanup, exact PS functions over a fake process layer (no r
   });
 for (const variant of ['pending', 'full']) {
   test(`interrupted ${variant} 0.5 profile: hard kill, then two restarts without replay (repository backend ${REPO_VERSION})`, async t => {
-    const dir = temp(`recovery-${variant}`); let orphan;
+    const dir = temp(`recovery-${variant}`); let crashed, orphan;
     try {
-      const crashed = crashSeed(dir, variant), { seed } = crashed;
+      crashed = await crashSeed(dir, variant); const { seed } = crashed;
       orphan = orphanCleanup(crashed);
       assert.equal(seed.status, 'seeded-before-kill');
       if (variant === 'pending') assert.deepEqual(seed.atCrash.drafts, { mailSent: ['sent', 1], mailSending: ['sending', 1] });
       assert.equal(orphan.state, variant === 'full' ? 'pending' : 'none', 'only the full variant leaves an in-flight command');
-      if (orphan.state === 'pending') t.diagnostic(`in-flight command cleanup: ${orphan.consume()}`);
+      const effectsAtCrash = existsSync(seed.effects) ? readFileSync(seed.effects, 'utf8') : null;
+      if (variant === 'full') {
+        assert.ok(seed.operations.inFlightCommand, 'full seed must record the operation that was executing at the crash');
+        assert.equal((effectsAtCrash.match(/^C2-START \d+$/gm) || []).length, 1);
+        t.diagnostic(`in-flight command cleanup: ${await orphan.consume()}`);
+      }
       for (const run of [1, 2]) {
         const report = await up.verifyRecovery({ backendDir: repo, dataDir: join(dir, `recovery-${variant}`, 'data'), seed, run, expectVersion: REPO_VERSION, quietMs: 300 });
         assert.equal(report.status, 'recovery-verified'); assert.deepEqual(report.counters, up.createEffectCounters());
         if (variant === 'pending') assert.deepEqual(report.mailFacts, clone(up.V05_PENDING_AFTER_RECOVERY));
+        else assert.deepEqual(report.operations, { inFlightCommand: 'invalidated' });
         assert.equal(up.jsonHits(report, up.seedNeedles(seed)), 0, 'report must not carry private markers');
       }
-    } finally { if (orphan?.state === 'pending') orphan.consume(); rmSync(dir, { recursive: true, force: true }); }
+      assert.equal(existsSync(seed.effects) ? readFileSync(seed.effects, 'utf8') : null, effectsAtCrash, 'command effects were appended after the crash');
+    } finally {
+      if (orphan) { if (orphan.state === 'pending') await orphan.consume(); } else if (crashed?.supervisor) await crashed.supervisor.finish();
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 }
 
