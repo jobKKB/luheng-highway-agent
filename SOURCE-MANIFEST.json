@@ -4,9 +4,29 @@
   "type": "source-only-not-installer",
   "files": [
     {
+      "path": ".github/release/publish_verified_beta1.py",
+      "bytes": 31530,
+      "sha256": "3e94575eeff13d863d558f62a432d0a5522409d70141b3c2af00d98f9d3c82e5"
+    },
+    {
+      "path": ".github/release/publish_verified_beta2.py",
+      "bytes": 31530,
+      "sha256": "5845769878db58ce5d7b7c45007ab060fd39f1c8ddda6d331ba2b8370574b2df"
+    },
+    {
       "path": ".github/release/publish_verified_release.py",
       "bytes": 21653,
       "sha256": "af4f55f0ac7556e4bb20eab67b0cd6ed91a8a2d56c72e84c35d45cb4e588733b"
+    },
+    {
+      "path": ".github/release/release-lock-beta1.json",
+      "bytes": 58324,
+      "sha256": "d4f59a84435baae66e49ab8f00e28c5101e4f2d1a27ad5ad4bfcb39949508f5d"
+    },
+    {
+      "path": ".github/release/release-lock-beta2.json",
+      "bytes": 58324,
+      "sha256": "238104d305babc5248ef35ae564f106bf2b047a08e61882c3a8a1e42095b5245"
     },
     {
       "path": ".github/release/release-lock.json",
@@ -14,14 +34,39 @@
       "sha256": "7e6e6f80691bbf9e8fa6ac7df3c429a2227c3d766640735107ded8d34a0e2ad7"
     },
     {
+      "path": ".github/release/test_publish_verified_beta1.py",
+      "bytes": 10962,
+      "sha256": "b3474f3ce40df76d501ebd3032aef92ac63d6c7a37840d0f2705fca2091f04c7"
+    },
+    {
+      "path": ".github/release/test_publish_verified_beta2.py",
+      "bytes": 10962,
+      "sha256": "1bd6ab6f038041fe089a540814ad974825805f4f815c2f16ba72c72b5703acad"
+    },
+    {
       "path": ".github/release/test_publish_verified_release.py",
       "bytes": 10854,
       "sha256": "dbb698673f4b16d79d3d7c54aa39f90779e92759a8836a5e08e77bf14e7cc0bb"
     },
     {
+      "path": ".github/workflows/beta-online-update-acceptance.yml",
+      "bytes": 3812,
+      "sha256": "8c091d5074d57e5d7d1fe41651a23a73ef8c8d7e33dee8c1b263782b16542aa5"
+    },
+    {
       "path": ".github/workflows/generic-workspace-acceptance.yml",
       "bytes": 3836,
       "sha256": "dd398ab701791f227afbea60e974adbc53c7c04eec864a69011d6947a5c0cc96"
+    },
+    {
+      "path": ".github/workflows/verified-beta1-release.yml",
+      "bytes": 2867,
+      "sha256": "58acccd5de6776059d5e2337ba589752270641385d4d0ebc79588821789417c2"
+    },
+    {
+      "path": ".github/workflows/verified-beta2-release.yml",
+      "bytes": 2867,
+      "sha256": "42007e0eccd91c98f77c9f07cbdb34259e2af9e6be25e310de5520677eec98e7"
     },
     {
       "path": ".github/workflows/verified-release.yml",
@@ -549,6 +594,11 @@
       "sha256": "389a5fd3beefce962c5c39e7dfdf3e2d899dec273262a51b6b8cbf473e6b2a19"
     },
     {
+      "path": "scripts/prepare-native-beta-pair.py",
+      "bytes": 8246,
+      "sha256": "e14aad5d1e84a273f910fedaed0591d5efc4abc852861fadf6d35dcf748b26d0"
+    },
+    {
       "path": "scripts/run-desktop.sh",
       "bytes": 504,
       "sha256": "ca5673a069ff57661ef0909325944a228b123bf0f24e64983d064c42b09b74f3"
@@ -657,6 +707,16 @@
       "path": "tests/fixtures/controlled-sites.mjs",
       "bytes": 4748,
       "sha256": "0492876a4a34b4ca1dd37427cf78867257c61c98b7860f427dee080aae88cf38"
+    },
+    {
+      "path": "tests/fixtures/online-update-beta1-lock.json",
+      "bytes": 57422,
+      "sha256": "72dcddf536c2e6ba78f63f499a1cca75d16e13229ea352dfc832052a58080a8f"
+    },
+    {
+      "path": "tests/fixtures/online-update-beta2-lock.json",
+      "bytes": 57422,
+      "sha256": "4933c7b9dbb1e84c276da5543d521d226510d6b108d69d7d0fbfd36569f89ec1"
     },
     {
       "path": "tests/fixtures/windows-acl.mjs",

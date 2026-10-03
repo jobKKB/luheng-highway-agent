@@ -1,0 +1,81 @@
+name: Real Windows beta1 to beta2 online updater acceptance
+on:
+  push:
+    branches: ['candidate/beta-online-update-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: real-beta-online-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  native-online-update:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.21.0'
+          cache: npm
+      - run: npm ci
+      - name: Download exact reviewed Beta1 original installer artifact
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: '11282777455'
+          merge-multiple: true
+          run-id: '37146796284'
+          repository: jobKKB/luheng-highway-agent
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/luheng-beta-pair-downloads/beta1/installer
+      - name: Download exact reviewed Beta1 native evidence
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: '11282363114'
+          merge-multiple: true
+          run-id: '37146796284'
+          repository: jobKKB/luheng-highway-agent
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/luheng-beta-pair-downloads/beta1/native
+      - name: Download exact reviewed Beta2 original installer artifact
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: '11282904363'
+          merge-multiple: true
+          run-id: '37148168416'
+          repository: jobKKB/luheng-highway-agent
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/luheng-beta-pair-downloads/beta2/installer
+      - name: Download exact reviewed Beta2 native evidence
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: '11283308298'
+          merge-multiple: true
+          run-id: '37148168416'
+          repository: jobKKB/luheng-highway-agent
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/luheng-beta-pair-downloads/beta2/native
+      - name: Verify exact artifact members and live fixed preview Releases
+        shell: pwsh
+        run: |
+          $downloads = Join-Path $env:RUNNER_TEMP 'luheng-beta-pair-downloads'
+          $pair = Join-Path $env:RUNNER_TEMP 'luheng-beta-pair.json'
+          python -I scripts/prepare-native-beta-pair.py --beta1-lock tests/fixtures/online-update-beta1-lock.json --beta2-lock tests/fixtures/online-update-beta2-lock.json --downloads $downloads --output $pair
+          if ($LASTEXITCODE -ne 0) { throw 'Exact beta pair preflight failed.' }
+      - name: Exercise actual preview UI, Release download, MOTW, native cancel and confirmation, visible NSIS and recovered Beta2
+        shell: pwsh
+        timeout-minutes: 25
+        run: |
+          $downloads = Join-Path $env:RUNNER_TEMP 'luheng-beta-pair-downloads'
+          ./scripts/verify-native-beta-update.ps1 -SourceRoot $env:GITHUB_WORKSPACE -PairLock (Join-Path $env:RUNNER_TEMP 'luheng-beta-pair.json') -BaselineInstaller (Join-Path $downloads 'beta1/installer/Luheng-Office-Agent-0.6.0-beta.1-windows-x64.exe') -TargetInstaller (Join-Path $downloads 'beta2/installer/Luheng-Office-Agent-0.6.0-beta.2-windows-x64.exe') -EvidenceDirectory (Join-Path $env:RUNNER_TEMP 'luheng-real-beta-online-proof')
+      - name: Preserve actual upgrade outcome and native visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: luheng-real-beta-online-upgrade-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/luheng-real-beta-online-proof/
+            ${{ runner.temp }}/luheng-beta-pair.json
+          if-no-files-found: warn
+          retention-days: 14

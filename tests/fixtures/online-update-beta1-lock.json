@@ -1,0 +1,1400 @@
+{
+  "schema": 1,
+  "repository": "jobKKB/luheng-highway-agent",
+  "repository_id": 1400818714,
+  "version": "0.6.0-beta.1",
+  "tag": "v0.6.0-beta.1",
+  "build_commit": "ade9ef552c10b9d05bc014631ecd960c678dd10d",
+  "build_branch": "candidate/beta-source-0.6.0-beta.1",
+  "build_run_id": 37146796284,
+  "build_run_attempt": 1,
+  "build_workflow_id": 372680023,
+  "build_workflow_path": ".github/workflows/windows-build.yml",
+  "source_binding": {
+    "commit": "ade9ef552c10b9d05bc014631ecd960c678dd10d",
+    "tree": "b367f0480eae9ab194e588f60dc62faa31f83d06",
+    "all_remote_git_blobs_matched": true,
+    "files": [
+      {
+        "path": ".github/release/publish_verified_release.py",
+        "bytes": 21653,
+        "sha256": "af4f55f0ac7556e4bb20eab67b0cd6ed91a8a2d56c72e84c35d45cb4e588733b",
+        "git_blob": "5f587d86f464bf18e7c3e374019dd6f4ec0c5a08"
+      },
+      {
+        "path": ".github/release/release-lock.json",
+        "bytes": 15768,
+        "sha256": "7e6e6f80691bbf9e8fa6ac7df3c429a2227c3d766640735107ded8d34a0e2ad7",
+        "git_blob": "3c250dc02cd137a974e46fb7a340383c4e98f613"
+      },
+      {
+        "path": ".github/release/test_publish_verified_release.py",
+        "bytes": 10854,
+        "sha256": "dbb698673f4b16d79d3d7c54aa39f90779e92759a8836a5e08e77bf14e7cc0bb",
+        "git_blob": "641422b435fcf75ab047065459be7ecb6df68e81"
+      },
+      {
+        "path": ".github/workflows/generic-workspace-acceptance.yml",
+        "bytes": 3836,
+        "sha256": "dd398ab701791f227afbea60e974adbc53c7c04eec864a69011d6947a5c0cc96",
+        "git_blob": "78d49580f8e5c8d8b8ff843bdae70c04ed215bab"
+      },
+      {
+        "path": ".github/workflows/verified-release.yml",
+        "bytes": 2822,
+        "sha256": "8734fe0b1658c198dcf8bd863cae1876418e148a0c05fe52fff57d800be07796",
+        "git_blob": "4295cf3d69ce146db3961dc304d4a31f8834a7e6"
+      },
+      {
+        "path": ".github/workflows/windows-build.yml",
+        "bytes": 6724,
+        "sha256": "2ea9c1846213063a304c3d25c697c44489eba0a0bad48894c76d651eaed3107c",
+        "git_blob": "9d76680e804638dfdc8f758ca9c4297a0ec75e18"
+      },
+      {
+        "path": ".github/workflows/windows-upgrade-acceptance.yml",
+        "bytes": 2481,
+        "sha256": "12960ad83ffde78a68f86e69932de758d64a59ea23132127927fce97a7a03868",
+        "git_blob": "fbeb2bb4486c2db39a4795bdda70d51a5d604dcf"
+      },
+      {
+        "path": ".gitignore",
+        "bytes": 99,
+        "sha256": "3e004ddc4e33e791a32538d5d30630dfb0755829718db22077346e6f4ca6ad22",
+        "git_blob": "7beed1faea65b22aa1dc2addadb5b853bc731d8a"
+      },
+      {
+        "path": "LICENSE",
+        "bytes": 828,
+        "sha256": "d8ea31f237a163906b5bf405df0c6757992566db4ced3310df23d34ea38fa5a2",
+        "git_blob": "d381298ee14fdb97c55d0218920a9dc3f1d2454d"
+      },
+      {
+        "path": "README.md",
+        "bytes": 3919,
+        "sha256": "1683245a9b026992c24e569301135d75f0e778a30cdb35f41b9e70875d04419b",
+        "git_blob": "4c7b3805a3fb903aaaa5e278a4d5c8a0b036307c"
+      },
+      {
+        "path": "SOURCE-MANIFEST.json",
+        "bytes": 29812,
+        "sha256": "80fa77269106355fcade982f2b722c032b7fca04ab3da3e93543aaf6f7de2748",
+        "git_blob": "fa683cbc21e98a5dc9e17fa2172b3c91c75061f8"
+      },
+      {
+        "path": "THIRD_PARTY_NOTICES.md",
+        "bytes": 2412,
+        "sha256": "c9cce07c3d5be947e25c18bcc22a2873e59f50f04f89cd507ad5a7190dccfb62",
+        "git_blob": "5309f3e9590c986c1f0028aaf185e79db39bfa46"
+      },
+      {
+        "path": "desktop/.gitignore",
+        "bytes": 44,
+        "sha256": "6341eecb07d80099d8e4858c4cebf0671c46903a745df3866ce99d887fafb14f",
+        "git_blob": "8f3d025bf46d376f03adec8a96f65835c8511dfc"
+      },
+      {
+        "path": "desktop/assets/tray.png",
+        "bytes": 148,
+        "sha256": "2c599c72f9988b7bebbc23e5103665d02cd19c784fa6807a60f787d43d2c16bb",
+        "git_blob": "25bb05bd72f9fb878815c408d686efaa4f56be2c"
+      },
+      {
+        "path": "desktop/backend-process.mjs",
+        "bytes": 4243,
+        "sha256": "a32e95cf4e621c81ea56dde98f3900829659b105bf21e1d43de219c8ed07eeda",
+        "git_blob": "e5bb9b9e1d34db8465662693e2a6e1fafb261910"
+      },
+      {
+        "path": "desktop/bridge.cjs",
+        "bytes": 8460,
+        "sha256": "1572f54f345b7b78c248bfb012f348ca1d4c90ec8da505bbac18adc723cd0e9d",
+        "git_blob": "a2a71e18754e8a5288e8481fdf9536edc36b840f"
+      },
+      {
+        "path": "desktop/current-user-install.nsh",
+        "bytes": 631,
+        "sha256": "1b7ffd4b7d26d62af84dd60a2d9fa8ea99cd9dc4d305e2fde79cb46d698b9edc",
+        "git_blob": "a026c4b238aa76a244c8bc4d714b388e185845a8"
+      },
+      {
+        "path": "desktop/electron-builder.cjs",
+        "bytes": 2180,
+        "sha256": "08c075a9eed03d8be4a21b7f398ce462269090a511888fc019f22971606b4fd5",
+        "git_blob": "a1c4c971f03f779d6c97eb1cd10bb2af7333b4bf"
+      },
+      {
+        "path": "desktop/launch.cmd",
+        "bytes": 370,
+        "sha256": "9d641dd020681abad2e4feef16e145d5059a2e746875e9ace2a1d114e3c0dab4",
+        "git_blob": "bed0cbb3f54d94252ed98a064a987cb8ef555c8c"
+      },
+      {
+        "path": "desktop/lifecycle.cjs",
+        "bytes": 3119,
+        "sha256": "129bfdbc34b77073254092f6885dab808d4657ac490149183eca3bb121ea634b",
+        "git_blob": "e231e965d104d5a18d84e6ebe5875f8520952956"
+      },
+      {
+        "path": "desktop/main.cjs",
+        "bytes": 16567,
+        "sha256": "14be04e5d7b17d9d710d374efed3a90280f44a5f67a726a52f97bff8e745c751",
+        "git_blob": "13861078badcac96e4a6642f2ff334dbcb8833bb"
+      },
+      {
+        "path": "desktop/package-lock.json",
+        "bytes": 127662,
+        "sha256": "c1989fe0e330f2ebe45b8bbe7b792056b1edf04673d4e6e674ac2932b4900759",
+        "git_blob": "daed8ed2779f46fde9a70a8650011b0fb33351f4"
+      },
+      {
+        "path": "desktop/package-windows.cjs",
+        "bytes": 754,
+        "sha256": "1d48c11a6680f125c026a0e8ae5c1ead3565f268e6eaa004f97dcc6d066bd358",
+        "git_blob": "970e73462513fe817aa39ac51646d4176ba33a8a"
+      },
+      {
+        "path": "desktop/package.json",
+        "bytes": 868,
+        "sha256": "2410eddc084c389f8a2e5f5ac65089f639afdf616aadf6803c5b1ad38fc68754",
+        "git_blob": "c82466837f43a345cc55203983ef9718bebb3375"
+      },
+      {
+        "path": "desktop/security.cjs",
+        "bytes": 3537,
+        "sha256": "947e4a954f7bd999a65c9a08db560b14b3fd3824cc2ef2a179daab55650e0156",
+        "git_blob": "c113f7f7ad03139cd8cd48a4c082b4057c36d7da"
+      },
+      {
+        "path": "desktop/stage-bundle.cjs",
+        "bytes": 6921,
+        "sha256": "24b73c4892fa77f58f705557d490d39e018a8355c2caa70216f05f3a97db9424",
+        "git_blob": "08b8ce8e7c8cca7f7023af78dea5190c65b5a596"
+      },
+      {
+        "path": "desktop/stage-utils.cjs",
+        "bytes": 2039,
+        "sha256": "8e0023cccbf894b06546d4155313753b9f1ed08de332f0c1eafde6935ff2e940",
+        "git_blob": "6c46552f3f833f77ce3618e5a3e1f7eed59e944b"
+      },
+      {
+        "path": "desktop/test/backend-process.test.cjs",
+        "bytes": 3474,
+        "sha256": "32536e89fbe76ccb791c67b5417a9fe0ee368ee0a5479bb255548be7f749a9bf",
+        "git_blob": "25ae08564b6a0abeaebd3189e504e36ed381d935"
+      },
+      {
+        "path": "desktop/test/bridge.test.cjs",
+        "bytes": 5567,
+        "sha256": "c62f7664557da928bafa6e072f83f1b5fcc99e77d1829c29e059301692a5cc26",
+        "git_blob": "a9e1ad30640e5d327af748854d72c578ebb8082a"
+      },
+      {
+        "path": "desktop/test/fixtures/release052-public-snapshot.json",
+        "bytes": 7231,
+        "sha256": "b4ef44de0d9e7cb1af5232b5b5c8aba4ac118206a53df10e75d1455fd6f84bd5",
+        "git_blob": "9d307db5ca904c923175997d0ff5c2d3ac071ee8"
+      },
+      {
+        "path": "desktop/test/launch-cmd.test.cjs",
+        "bytes": 1294,
+        "sha256": "0553c62525c3771dd2cf6ef5969b2869c3f5301f72085703735f88ea041898eb",
+        "git_blob": "7f4230c2713bdda863a7126a8ff0d6d335d9012f"
+      },
+      {
+        "path": "desktop/test/lifecycle.test.cjs",
+        "bytes": 5549,
+        "sha256": "65d152f507f8035184ef9a8b944aa40762d12389ed54df507feb321ae9f1ff60",
+        "git_blob": "3d2a11465a2f1be5051cd655404cea8f3a56e811"
+      },
+      {
+        "path": "desktop/test/local-folder-picker.test.cjs",
+        "bytes": 1559,
+        "sha256": "bc7fcf722f0d04fb89ff755cce108624a6d40a01d70d6c95bca0e06ce71e43c8",
+        "git_blob": "a2e8e11288d38a4474f8a87e89d877e1e0e7fcd5"
+      },
+      {
+        "path": "desktop/test/model-environment.test.cjs",
+        "bytes": 1249,
+        "sha256": "1a6b88d8416a925db78b84535a1bc1e2c4dcb75e7c7be638dda7f1ed8d372cc7",
+        "git_blob": "c81ef3829a62fab1f097826502afeeb78552d085"
+      },
+      {
+        "path": "desktop/test/packaging.test.cjs",
+        "bytes": 1914,
+        "sha256": "6767551002bb7d768993a9d19bcfaccbf65662d42f5cac25807886c77a8ec9ca",
+        "git_blob": "59afe32b89665573eab002ab6a5c9aa05168e5e6"
+      },
+      {
+        "path": "desktop/test/real-backend.test.cjs",
+        "bytes": 8678,
+        "sha256": "757c12a7dc7efabab82726ca8f3250fd7346e2065cb3ed913b6ee63d4ef090bf",
+        "git_blob": "9cd7bbe20a7671e362a9dbfc2e1f33a10a0ddcac"
+      },
+      {
+        "path": "desktop/test/run-native-checks.sh",
+        "bytes": 1144,
+        "sha256": "1304b212485898663c14a272d8a495431cb3539d83636deaa1f44f1224d53da3",
+        "git_blob": "3ff7b497e838f5c9428d37e8c7b8e2387f814e42"
+      },
+      {
+        "path": "desktop/test/security.test.cjs",
+        "bytes": 3008,
+        "sha256": "9bc06d2ffe2ec0490ef111ff8ceba89f8d915ebeeba96a354abddd507990e62f",
+        "git_blob": "a7dec312d49b36fbf5636db5bb4d6150d3a72a09"
+      },
+      {
+        "path": "desktop/test/stage-utils.test.cjs",
+        "bytes": 3190,
+        "sha256": "9cfab1b461aef8902bc6e8ccf1e3fff27d494cbc3cf637a462e36971f6f04c6b",
+        "git_blob": "f599d408706c34cf5edcaf4f63af8a3fe74717da"
+      },
+      {
+        "path": "desktop/test/staging-preflight.test.cjs",
+        "bytes": 2551,
+        "sha256": "d63a07f24d09f584dd07b762414108cd9931fee0b2f530a8f29cd2b88ac1c81e",
+        "git_blob": "813a288d3e9baf40c9f7ac35c49e0b6af4498b3f"
+      },
+      {
+        "path": "desktop/test/start-review-server.mjs",
+        "bytes": 1267,
+        "sha256": "3f9c380c8e355de8ebe3e0e0f381cdfa7319ca8fa0ae811fff9ea3e5ad596992",
+        "git_blob": "da332d81100a4021cf6d16f26c984d51b03abef8"
+      },
+      {
+        "path": "desktop/test/update-channel-policy-snapshot.test.cjs",
+        "bytes": 1233,
+        "sha256": "61d0a35d2ca5153007d9b28e6c6faa63f6931a182a82bc348da38b50e4b2d8d5",
+        "git_blob": "f2f4e5ac77311d2db9e8636b59db75dca5436715"
+      },
+      {
+        "path": "desktop/test/update-manager.test.cjs",
+        "bytes": 20974,
+        "sha256": "7a77b659b2d81fa54f0d30c6e7c0092177747d4a139e3495f86d9bbd73f01efe",
+        "git_blob": "fefad900c2cce97e885ae79ac2d798bfb91886b2"
+      },
+      {
+        "path": "desktop/test/update-policy.test.cjs",
+        "bytes": 36478,
+        "sha256": "64f36e7557a2cc35b4422384d358d5c4eeb362ff330d4fb9d93551741bc2e2ae",
+        "git_blob": "515e62ec3c54010f525da222767b119f39235eff"
+      },
+      {
+        "path": "desktop/test/update-sidecar.test.cjs",
+        "bytes": 4407,
+        "sha256": "9c09290d61d99041f520d8d20a477a307b997121502d25dfbc37ef9bfc6d87dc",
+        "git_blob": "f0509c47d629a84e9c6c8c2f2161ca6a2302c73a"
+      },
+      {
+        "path": "desktop/test/vault.test.cjs",
+        "bytes": 14547,
+        "sha256": "5a7228694df0c23ee3aa72c359f6ef304504a0297f66033ae009de0fbd55f588",
+        "git_blob": "7abe8d68f05eed7d8d6a1bb27da7ee15fc1d250d"
+      },
+      {
+        "path": "desktop/test/window-state.test.cjs",
+        "bytes": 10898,
+        "sha256": "f90c39fa20e699b91ad41c23c649ec715ada72397855c5184a5c0eac665c6f62",
+        "git_blob": "eca4903c475245cee0b4f79474b44f90bcb7b45a"
+      },
+      {
+        "path": "desktop/test/windows-release.test.cjs",
+        "bytes": 9783,
+        "sha256": "e9b7a33825822c476ca69d1d4d9dade00956f3966bc9917d41527f72e8e3bebc",
+        "git_blob": "8af55feb0c887ea9b6e28da49d046b9b4eb5725a"
+      },
+      {
+        "path": "desktop/update-files.cjs",
+        "bytes": 12604,
+        "sha256": "3c2e7e220e931e7b5f23ac01373f867ab2c17faa9100179e2337f200298c05f1",
+        "git_blob": "e500aae0542d20326959f305b14469a94bfc8cbb"
+      },
+      {
+        "path": "desktop/update-manager.cjs",
+        "bytes": 17075,
+        "sha256": "6967984e9eb6a844be86f6d10ceea8255bb33f85501feac411794f137341dcd9",
+        "git_blob": "16e32a3379d0c38ca75f8811c07d6befb6a66293"
+      },
+      {
+        "path": "desktop/update-policy.cjs",
+        "bytes": 12965,
+        "sha256": "fae26d3cf64da33dc8b1dbd9a865f3a81ae053983302c51be473e644215ccb4e",
+        "git_blob": "76d05ced48292d20fbf1e439727ed122b870434b"
+      },
+      {
+        "path": "desktop/update-transport.cjs",
+        "bytes": 16188,
+        "sha256": "a27987f69ee68992dd13526845fde436082257f6d3360d32941baf2477a6145b",
+        "git_blob": "d2cd60cb6a25d5a873ab56cf9f9534941d80b02a"
+      },
+      {
+        "path": "desktop/vault.cjs",
+        "bytes": 5771,
+        "sha256": "0a9765cf6b18c545817ee7671b047986255671a7714a433248d49d8014ffc93f",
+        "git_blob": "d786cbd45eb8f42a4aed55d9ea5faaedd8d1d822"
+      },
+      {
+        "path": "desktop/window-state.cjs",
+        "bytes": 5716,
+        "sha256": "1de30a2d34ac84ab8b4704743be9eef12ed018ffc67fd57fa0f2d4d2ebdd872b",
+        "git_blob": "18b8cd2a34453dd3a14edff3577c1e9cf9540462"
+      },
+      {
+        "path": "desktop/windows-build.workflow.yml",
+        "bytes": 6724,
+        "sha256": "2ea9c1846213063a304c3d25c697c44489eba0a0bad48894c76d651eaed3107c",
+        "git_blob": "9d76680e804638dfdc8f758ca9c4297a0ec75e18"
+      },
+      {
+        "path": "docs/CONTROLLED-BROWSER.md",
+        "bytes": 9358,
+        "sha256": "269b3bb4c872d02c9e95f82dd7b5b4c2585639fddd647f36bd3d276127f5b5e5",
+        "git_blob": "d50321d090b0ad55785ef5d82cec72968518f934"
+      },
+      {
+        "path": "docs/DESKTOP.md",
+        "bytes": 11436,
+        "sha256": "2a540f87caa16e0b26f9909ef9467e85d6b632ef4f7a2e1d14176f3521ca4434",
+        "git_blob": "c3773f631b8b382e7b44d7c92ab6edcc3e057141"
+      },
+      {
+        "path": "docs/GENERIC-WORKSPACE.md",
+        "bytes": 5780,
+        "sha256": "cbde72ca9496dfdba49d81dbf2f105236ecf6b64c02440d67b91c11f22e1722a",
+        "git_blob": "360b85280338ac8f30323f93a86f420bd550f3d0"
+      },
+      {
+        "path": "docs/IMPLEMENTATION-STATUS.md",
+        "bytes": 3909,
+        "sha256": "425a6da2a6882941286632ad886989ebf4da8eadae9fac0ccdf5cf9530856056",
+        "git_blob": "05f5b4152eda2aa02066fdd1d28935c843c85975"
+      },
+      {
+        "path": "docs/LOCAL-ACCESS-PERMISSIONS.zh-CN.md",
+        "bytes": 8554,
+        "sha256": "6e7524699f615c14533583e11f2ca924efc942c3c7d3b01e0d021b9802dad7ee",
+        "git_blob": "14cfe9a65e2f6311dab4292b23417d5a8707cf32"
+      },
+      {
+        "path": "docs/LOCAL-ACCESS-VALIDATION.zh-CN.md",
+        "bytes": 3920,
+        "sha256": "01cbc8fd5e89611e6d31ea59871438180d98471a6391f473e197274263fc2071",
+        "git_blob": "5a52733116e9d2dacc6e6da913cf6824d8e8eb2e"
+      },
+      {
+        "path": "docs/MAIL-ADAPTER.md",
+        "bytes": 10813,
+        "sha256": "2bee1301166e3912c4b76508fbebfc745bdb799cd45a2cef4282962d6cc2dcb4",
+        "git_blob": "733caee3b5d2be0d1e852409e24bb76c9de5d0fe"
+      },
+      {
+        "path": "docs/NATIVE-LINUX-v0.4-VALIDATION.zh-CN.md",
+        "bytes": 4504,
+        "sha256": "04e8c2e67f83a27f3e73197cd4fe7a3412e9cc91e205e865c149759a13570318",
+        "git_blob": "d4e440c021a0e9ade922b6a2a4385bcd46f0326f"
+      },
+      {
+        "path": "docs/QUICKSTART.zh-CN.md",
+        "bytes": 6307,
+        "sha256": "922b9248bd88bc93e12a854a2a6bb6edb7abd6c88c3cfa5aea383f855f2af9d9",
+        "git_blob": "1125cb5a7e93b4b771e2d9ce4032ce40dbdbd8fc"
+      },
+      {
+        "path": "docs/RELEASE-CHECKLIST.md",
+        "bytes": 3718,
+        "sha256": "297908dc96b193a664446ed38e41e6d6c9048de85cabba00e44ac303752b3519",
+        "git_blob": "7f39e95b878806a250042cf2330d74114a6704cf"
+      },
+      {
+        "path": "docs/RUNTIME-RELIABILITY.zh-CN.md",
+        "bytes": 3688,
+        "sha256": "ab953e223da316e11a2ad9176aaf5b232a55509ae5c0c0f0db4799ec10ddc1d2",
+        "git_blob": "80578769f59cc5bb6b8ee2a0899d21df4126c03e"
+      },
+      {
+        "path": "docs/TEST-REPORT.md",
+        "bytes": 7943,
+        "sha256": "63432f6498aaa6ccfe39e757f70ad9b3ebd1e58c8ece6399463f903e157f7626",
+        "git_blob": "471b134febf83b213e78f5327b22e0cba21a1232"
+      },
+      {
+        "path": "docs/UI-v0.4-CHANGELOG.zh-CN.md",
+        "bytes": 3499,
+        "sha256": "d3579607528963f7bd3751368e39534d879a16f5b0ff83453e357063eab9945c",
+        "git_blob": "f10689792fe1c451354e74a68d0e018f08908e4e"
+      },
+      {
+        "path": "docs/UI-v0.4-VALIDATION.zh-CN.md",
+        "bytes": 4861,
+        "sha256": "48f99c3af015881af488954a526295812043aa1c34d65869cd535439aa20a8c7",
+        "git_blob": "6fb81880623ed5d4bf2c4bb1e8ae6622bcabcca0"
+      },
+      {
+        "path": "docs/UPDATE-SECURITY.md",
+        "bytes": 9030,
+        "sha256": "cd15461bf52c62e318ccf2eb8b620e311e44d3c14d1b62b91d07f9f067b529c5",
+        "git_blob": "f8dea9cafd528235c1df4830801c01bb4e7f807d"
+      },
+      {
+        "path": "docs/WINDOWS-BUILD-ATTEMPT.md",
+        "bytes": 3371,
+        "sha256": "b9bf7104811e2ef714d8855d935068b52448c909d1e8208f52194126998cc236",
+        "git_blob": "de1846fe9aefe29cacb2df6a3fcdaf4dc3c17806"
+      },
+      {
+        "path": "docs/WINDOWS-PERMISSIONS.md",
+        "bytes": 4036,
+        "sha256": "8fad22209e7d68657d3b6f7c50c75db328115c1f03b1ece8f82ce13b1e0e0660",
+        "git_blob": "8136076ae2972ccffc9caf7971f43d72ed178819"
+      },
+      {
+        "path": "lib/agent-authority.mjs",
+        "bytes": 1592,
+        "sha256": "0932f64a2dc0f99b0f1d051def0b6d084730a2d2582136d77d54ae13648c2cf9",
+        "git_blob": "e192f31501e5d63f99a98213f0cdfc9e3bbe66ba"
+      },
+      {
+        "path": "lib/agent-registry.mjs",
+        "bytes": 5802,
+        "sha256": "ca69299150a3b4c62d833a3ff1276e7defd228e8943917d8ed525779bc0abb73",
+        "git_blob": "c5b6f8cf3960fd4161ad27c42eefe7e791bd5b10"
+      },
+      {
+        "path": "lib/agent-tools.mjs",
+        "bytes": 8301,
+        "sha256": "e1d4d33a64b04760350839d4de87cc0a23a42b157ff91b0044d82037513b3730",
+        "git_blob": "64a9735bbc58fbfd6b9bbb4af9e2633de68f52d5"
+      },
+      {
+        "path": "lib/browser.mjs",
+        "bytes": 800,
+        "sha256": "c40e83e9db9b9dea9b6060ef7bd61ae14a6f1697417b737a154bd6623a837b42",
+        "git_blob": "79877112d6b90976604ee09a57ac62c0cadc5586"
+      },
+      {
+        "path": "lib/controlled-browser.mjs",
+        "bytes": 44197,
+        "sha256": "7b388d770fed9f37e98a15fd4a21544da18087c558e0d2242318b378ffe6f4b0",
+        "git_blob": "3e44de2b88ada7a3e5368df48ccd54e320e64260"
+      },
+      {
+        "path": "lib/engine.mjs",
+        "bytes": 80304,
+        "sha256": "5c785233eacc3c4c70234e37c47150419056cc30b9e797ae8d3749349c78ef13",
+        "git_blob": "fc1e9464b48d9c8a5b04ccea3b79c1a945a074d1"
+      },
+      {
+        "path": "lib/knowledge-search.mjs",
+        "bytes": 1419,
+        "sha256": "dea8269a2e5b3ba9feed6ca61f30eb5915aeb89b0a61db0b25e5ab9614238aa3",
+        "git_blob": "fa13697229cdaa355eef17cb8ae30c0f875e9da5"
+      },
+      {
+        "path": "lib/local-access.mjs",
+        "bytes": 25943,
+        "sha256": "a33e6318bdeb58f0d15f2f554739e64bf0800e863af971024533d91df7389177",
+        "git_blob": "0bacda0c6dd205f759322ce345220e5fc68222ae"
+      },
+      {
+        "path": "lib/mail-adapter.mjs",
+        "bytes": 23970,
+        "sha256": "f067a7e3b6a41f5150a3a19a99faacc3f2c5671a8f79d0578fe20365ad7b4ef9",
+        "git_blob": "3cc125749f1bf784e43b33ac8077430c0984471d"
+      },
+      {
+        "path": "lib/model-transport.mjs",
+        "bytes": 6514,
+        "sha256": "a2a31ab50fda6bd3802795153a94d7f2126d9f403ce8866d1aecb88df1186f81",
+        "git_blob": "2ffc06e46e6815578dfdfc5fe7b4b0bf689e4814"
+      },
+      {
+        "path": "lib/model-usage.mjs",
+        "bytes": 1542,
+        "sha256": "2a28a09421f700437c54f0ddbbba7f8c5b1325f2be130001d5f52a8acbce6a78",
+        "git_blob": "65aa1d91efdfc5cf1907b90f79e4846c73e2301e"
+      },
+      {
+        "path": "lib/model.mjs",
+        "bytes": 12065,
+        "sha256": "5b99d5997e1012cb9371cec8e80c0fc8e2a25e9ddd728eb5502d6a612d1f00ee",
+        "git_blob": "eae52cdf6d555bbf3f477a7fc761e49a314bdf6a"
+      },
+      {
+        "path": "lib/office-artifacts.mjs",
+        "bytes": 27147,
+        "sha256": "6ff255f7e3d076bd13008d644ba28b9662533243dc02841b23f2100dd48664b8",
+        "git_blob": "c8ac8a6592656cef4e5d02475e305e7dd6c36692"
+      },
+      {
+        "path": "lib/paths.mjs",
+        "bytes": 451,
+        "sha256": "227911dd9447f1eb84d80c863e835d7c1b735e8021aad43fde76d4d128b53d77",
+        "git_blob": "f4134b1f2468c60770851e503bdfb3270d43c2cf"
+      },
+      {
+        "path": "lib/persisted-credentials.mjs",
+        "bytes": 4420,
+        "sha256": "92ad8b241ff105a10b74756d92148c7ad269d01269c64fbb9c49503decf0b2ee",
+        "git_blob": "20d3581816bb9198a244d9a4c4d77052d194c5e9"
+      },
+      {
+        "path": "lib/private-directory.mjs",
+        "bytes": 4224,
+        "sha256": "66322979447481443e666c9af7fdb40b3e9a4eb8d6118786234a56383296d4e2",
+        "git_blob": "02d8d1c6e8410156c8a64fcee2fea2702b52dda9"
+      },
+      {
+        "path": "lib/public-ip.mjs",
+        "bytes": 1329,
+        "sha256": "5883ee3c4c957466db659638833fd37730f991adbd9e9c71f8df558dbcfc43bc",
+        "git_blob": "93441a18464b0372f1918d22da1f919da2e588a5"
+      },
+      {
+        "path": "lib/public-web-transport.mjs",
+        "bytes": 7859,
+        "sha256": "3587386ead3060fdfebd526f02bb0821ebf3d2d8b259d44c7ac341c081330b72",
+        "git_blob": "ccdf86773e3ee3f25538f88e92ae135c69683bc2"
+      },
+      {
+        "path": "lib/public-web.mjs",
+        "bytes": 22518,
+        "sha256": "ddf56a575be0a7c1a8859f6c14574c3261bf40a39c31501f13ccf28de6a347ea",
+        "git_blob": "a5b59309580b94c06e1199e836df07b8b49079e7"
+      },
+      {
+        "path": "lib/redact.mjs",
+        "bytes": 1337,
+        "sha256": "75c11ad658981c615c6f56903373d1e4399b403eb6ff9d71d73dba1124db3647",
+        "git_blob": "14bead02ed8f8310856253bcd32315d0aa76cc85"
+      },
+      {
+        "path": "lib/runtime-errors.mjs",
+        "bytes": 495,
+        "sha256": "a7c2a95d14e8f05f5a8d88e8380fefd2952fff8a30aefcde1e7295e24bea9718",
+        "git_blob": "552834e2503c361dbf28ff31cc99226d2f906368"
+      },
+      {
+        "path": "lib/schedules.mjs",
+        "bytes": 19427,
+        "sha256": "ac93694562a65dbb12e43e4ef4e444e88ec1f4eb0948f3d1a97aaa8adbc533cd",
+        "git_blob": "c17bcbc24dc2cee810b2837f0eca149d66a2dc5e"
+      },
+      {
+        "path": "lib/skills.mjs",
+        "bytes": 6081,
+        "sha256": "648bfa00f4cc77290be55de72839cc65cb6ba62cd914b74e1b5d0ea6041682de",
+        "git_blob": "cbfab5fc611baf6b4a6f23e0f0cc33fc283aeb08"
+      },
+      {
+        "path": "lib/store.mjs",
+        "bytes": 8225,
+        "sha256": "5a8f863490581d974af68dd8103d6e3104ffdb8d4c10f52b4b798302dd4647db",
+        "git_blob": "e19212d5abc3f77a62ba7bd9b9089d1f061bc18a"
+      },
+      {
+        "path": "lib/task-outcome.mjs",
+        "bytes": 12502,
+        "sha256": "9fbd56512ec51a50cb2b77111bb6d9a4573242dfbc25c2c37580a29130a62c07",
+        "git_blob": "84bef2a9345d1c6fbecf415919fc858e43675127"
+      },
+      {
+        "path": "lib/tool-registry.mjs",
+        "bytes": 5385,
+        "sha256": "01f31d55c3f2e280b8e0bcc4dc046b402b828676ebf7f62c9b91d649ca93e48e",
+        "git_blob": "536f779667bf855a328da482cb939a24fc62b8d7"
+      },
+      {
+        "path": "package-lock.json",
+        "bytes": 21680,
+        "sha256": "162a81b911eb56bcbc4ad383cf66dc6c6c0d4fa94b1dc99f41028e6de172a16c",
+        "git_blob": "afd5731c2c20b31e7be77328cb9654eabf200a69"
+      },
+      {
+        "path": "package.json",
+        "bytes": 611,
+        "sha256": "ab6b10dcfc9f472ee111df638739b8a082e4a38b00f310bedf220d7db98c0e2b",
+        "git_blob": "2639dbabcb6b0ba86803a818b7df470b4dbeaae1"
+      },
+      {
+        "path": "public/agent-mark.svg",
+        "bytes": 855,
+        "sha256": "58d97ad8497eca0fdf5688a7147cb602b157dbdb378ba929296d42196a958715",
+        "git_blob": "6008d5e31996b5723028f748fce14ac6e37f15bd"
+      },
+      {
+        "path": "public/app.js",
+        "bytes": 187380,
+        "sha256": "45bffc2dcb841f803de4dc38c85713d60e57abceb7e49ff54ad51b2ae3821ab6",
+        "git_blob": "6361afaf3826f8aef41ac2869b0f53d743fde1d4"
+      },
+      {
+        "path": "public/chat.css",
+        "bytes": 14751,
+        "sha256": "2bf582e491eca20f48cb2b931385d81d394d2ee2829e6916a16e27011b3120e7",
+        "git_blob": "16f8bd87d47ed776fa9e722bc47ffd2882cced1f"
+      },
+      {
+        "path": "public/favicon.svg",
+        "bytes": 855,
+        "sha256": "58d97ad8497eca0fdf5688a7147cb602b157dbdb378ba929296d42196a958715",
+        "git_blob": "6008d5e31996b5723028f748fce14ac6e37f15bd"
+      },
+      {
+        "path": "public/index.html",
+        "bytes": 2315,
+        "sha256": "aaea29ca3b758944982bdd8658986e76017f99d533d89dabf08fdf9cc8a3fb95",
+        "git_blob": "1dfc1873795a0aa33e02a4b59bb070aaf4e7bb78"
+      },
+      {
+        "path": "public/ocean.css",
+        "bytes": 50627,
+        "sha256": "1fed0bf405b56a93726a44f6504e3b2c381b4fa958eb1775b53e73ba5d38196c",
+        "git_blob": "711522d716f5009053f2e05aa863d3b9e1bc6a1e"
+      },
+      {
+        "path": "public/styles.css",
+        "bytes": 48864,
+        "sha256": "5564e3e53ae93c2e767ef8723ad00a9686aae5d69a84410b1a6045cf3c9e5e30",
+        "git_blob": "7597324e67b83f24d561e4eff7763aaa3408420d"
+      },
+      {
+        "path": "scripts/native-update-consent.ps1",
+        "bytes": 2484,
+        "sha256": "f91d3887673d934403eb81d50f88060c4be6a0ce4d362366fa6ef34436bb85e3",
+        "git_blob": "f504e61b67c7c5ff976413542bd63ff8bc2ca1c8"
+      },
+      {
+        "path": "scripts/owned-installer-wizard.ps1",
+        "bytes": 47236,
+        "sha256": "736f1ded8f0994b7050d62b31a7e03c8a5ae79fdbf299810702cddc61b94ef8c",
+        "git_blob": "e032d7af61beff8a7206405f06b6cf6a15617743"
+      },
+      {
+        "path": "scripts/package-source.py",
+        "bytes": 2330,
+        "sha256": "389a5fd3beefce962c5c39e7dfdf3e2d899dec273262a51b6b8cbf473e6b2a19",
+        "git_blob": "22a699d4947607399e40ae4d52a2c7238ff0ce5f"
+      },
+      {
+        "path": "scripts/run-desktop.sh",
+        "bytes": 504,
+        "sha256": "ca5673a069ff57661ef0909325944a228b123bf0f24e64983d064c42b09b74f3",
+        "git_blob": "67c956236ab870d2dba01b981645e7e5866f0ed2"
+      },
+      {
+        "path": "scripts/run-ui-recovery.sh",
+        "bytes": 139,
+        "sha256": "04c7e08191d3a10645f44ed888717477f79073706d330a79afe58ceb262dd135",
+        "git_blob": "9a4657b316dcca2b7a3ce576aef87f8c8f8fe5c3"
+      },
+      {
+        "path": "scripts/verify-linux-release.mjs",
+        "bytes": 3084,
+        "sha256": "91791078c40ddde97d873ec1b471132bb6067616eda6c99dd194809c1babe2f5",
+        "git_blob": "0dcf82aaba277ef82a570ee5e1b3fce43adaf43f"
+      },
+      {
+        "path": "scripts/verify-native-beta-update.ps1",
+        "bytes": 10196,
+        "sha256": "d6c322345a13b7f2f12bea0d4f96baab7c8066c3953d3e552170bf1dd7cf43ca",
+        "git_blob": "d3ae0c246d212816e69fdaffbb03c5d8843be453"
+      },
+      {
+        "path": "scripts/verify-native-beta-updater.mjs",
+        "bytes": 19916,
+        "sha256": "98629557f6d1fe14489930dc811714ab8301772eb0f3d4ceefb95ea38cba14f8",
+        "git_blob": "5544461a0cf5753bc45044deb3164a80b9ab4dee"
+      },
+      {
+        "path": "scripts/verify-windows-native.mjs",
+        "bytes": 16580,
+        "sha256": "a59691b87f6227a5b0ea137b9fdcb0b306e0c9d6a9ee7bf06bdafc3bd7676b01",
+        "git_blob": "2d249db67fd5dff8ebf96831fe0dc645eaa94af1"
+      },
+      {
+        "path": "scripts/verify-windows-native.ps1",
+        "bytes": 11553,
+        "sha256": "2125087ba312b410e6c1c79b7582a6c0bf2e84de393c5eb49788617016d7a7e3",
+        "git_blob": "731ccd923a0e09bf733ea3e91e27835d823043c4"
+      },
+      {
+        "path": "scripts/verify-windows-online-update.mjs",
+        "bytes": 2399,
+        "sha256": "3f0f9d2329af2dd138884005900fe522c1ee8e5e8c63a882da77cf947b06eba8",
+        "git_blob": "3787d382afc7152237bba69f67379053a279dd79"
+      },
+      {
+        "path": "scripts/verify-windows-release.mjs",
+        "bytes": 11490,
+        "sha256": "43e624cb612096de89dd9287705b617b79183e5efcd95e59e2dd17d8c4b94f23",
+        "git_blob": "808cf45643fb6e045bbc7facf4ada7489590b2bd"
+      },
+      {
+        "path": "scripts/verify-windows-upgrade.mjs",
+        "bytes": 90013,
+        "sha256": "e846452e4146102d7e76f5d6184b7507101e46e972e2a8be20ac1f1b7540ebba",
+        "git_blob": "c5030138631e901e4cbe55276a4c7cfc1a2729a1"
+      },
+      {
+        "path": "scripts/verify-windows-upgrade.ps1",
+        "bytes": 45559,
+        "sha256": "34738b36f4882622c67ad26917c69afca24a94c0cd206028af2a4e766d80de7c",
+        "git_blob": "6eb5e54d40367ff0b6705893b068a0eb18def9bd"
+      },
+      {
+        "path": "scripts/windows-upgrade-lock.json",
+        "bytes": 1289,
+        "sha256": "ff79b3a52a5f9171c217a60d291c2fa78111af1e9881ab3c609b6f8224082c81",
+        "git_blob": "a54e78742746e02386bc879b5e435e289d681979"
+      },
+      {
+        "path": "server.mjs",
+        "bytes": 47350,
+        "sha256": "5ad478548af82d1a1a2eabcfdf12f823d01c074b7e2239a3cf98b79a7bf976bf",
+        "git_blob": "dcdd572da8ddb230c49370f9edb157ebbb768857"
+      },
+      {
+        "path": "tests/agent-authority.test.mjs",
+        "bytes": 11206,
+        "sha256": "52ebac946b5b35d117dcfd1feba679ed83fc7022ac7b27c93d82a808ee46de5b",
+        "git_blob": "510dd0dd9250dbc031cacb9be3954e8b9606c591"
+      },
+      {
+        "path": "tests/agent-loop.test.mjs",
+        "bytes": 11640,
+        "sha256": "8f30d66489b6231bd25f9c9cc88832e8210ef848582aee656a16830d0d117ccc",
+        "git_blob": "d5860e9c7fa531ed2e8bd6858ac590547410147f"
+      },
+      {
+        "path": "tests/backend-update.test.mjs",
+        "bytes": 12645,
+        "sha256": "eb9bed659e915185b252f993f8b762f397bd1b90ba5517ab75b5bedf6c5a0135",
+        "git_blob": "891f18e2e1c8b6d7b914c06f0838707c75ec5324"
+      },
+      {
+        "path": "tests/completion-integrity.test.mjs",
+        "bytes": 11841,
+        "sha256": "8c8335d5c0b409ff39c3c1c9c7e2af07bce54a294ce43802b8c2db234192231d",
+        "git_blob": "aac617bdc969180436b5bc4f9a16c2fde547374a"
+      },
+      {
+        "path": "tests/controlled-browser.test.mjs",
+        "bytes": 14536,
+        "sha256": "3dd189246d0530aa30ba5a773f8bf7bb89b67f2012de8f6a62caa2857d46ac2f",
+        "git_blob": "f3173ea795cc0bfb9ff4f74324258a56ac5c8872"
+      },
+      {
+        "path": "tests/controlled-engine.test.mjs",
+        "bytes": 7873,
+        "sha256": "b0e4874027c3a38119df3a21141ffc9d007d656f5562f1babce3c4832d077f1f",
+        "git_blob": "3366865d751d6c0be03d109ab0a72012a2bdae7b"
+      },
+      {
+        "path": "tests/core.test.mjs",
+        "bytes": 33178,
+        "sha256": "bc386019d8f72767b1ab76be3d1ff7e5c72a053098dd21386a42a3d6c9e629cb",
+        "git_blob": "cd9d04bcac71720954e923facd960f2cdb80b22a"
+      },
+      {
+        "path": "tests/existing-integrations-ui.mjs",
+        "bytes": 46548,
+        "sha256": "cfbcf38708b750cb437ec4c5d870435de912c35a7e9ecb8d10c0bae6c942a6b9",
+        "git_blob": "1912c62b1ee1dd241e613153a02d9c4811bfdac8"
+      },
+      {
+        "path": "tests/fixtures/controlled-sites.mjs",
+        "bytes": 4748,
+        "sha256": "0492876a4a34b4ca1dd37427cf78867257c61c98b7860f427dee080aae88cf38",
+        "git_blob": "01b41d2ebd9a52148e0082cf49e85a0c61dfcaa3"
+      },
+      {
+        "path": "tests/fixtures/windows-acl.mjs",
+        "bytes": 5152,
+        "sha256": "417369c0a682b86a10aeb72ed546df9201ecd2d65aade678268550c0afec622a",
+        "git_blob": "73ba3bf40148de063371ad255703f10ed1a50912"
+      },
+      {
+        "path": "tests/generic-chat-ui.mjs",
+        "bytes": 15304,
+        "sha256": "4d5cde839b4f0b930ecb57faf9de33ea3ffb0cc55611adc0ec9f0713ecec9f50",
+        "git_blob": "3004d2b3742502e09ba69808873a9ae9d88209c5"
+      },
+      {
+        "path": "tests/generic-local-controls.test.mjs",
+        "bytes": 2126,
+        "sha256": "6c8483e9ba5369c1e4905e0ec31763e077746c44834993950bd1ac38bd5935b6",
+        "git_blob": "4bd5343281095ed9a5923ec1c923a8c955e97cc3"
+      },
+      {
+        "path": "tests/generic-markdown.test.mjs",
+        "bytes": 2087,
+        "sha256": "df844e6074735c914828d7cd06b1737ee5e75b6f51d1cbcc82bcc778caece6b5",
+        "git_blob": "61a967805b171be99ef049253bfc9500ac3a410f"
+      },
+      {
+        "path": "tests/generic-skills.test.mjs",
+        "bytes": 9285,
+        "sha256": "64b4b721386dc58f09d2171cdb31cfa22bd7ab7eb24b503f2c76bb15f1265668",
+        "git_blob": "87cfc5473f9642ecebbabf35556e6a3c7d004d73"
+      },
+      {
+        "path": "tests/hardening.test.mjs",
+        "bytes": 7529,
+        "sha256": "33a237f2f37826331c1e5575d50af1467dcf5fd72bd251670ee7b84924429d04",
+        "git_blob": "365b19389720afde0e9446e432e5ad3a26e2b3f0"
+      },
+      {
+        "path": "tests/local-access-integration.test.mjs",
+        "bytes": 34089,
+        "sha256": "f9dff547d5510e2a58c046173e9713c9a1b9ee74ebb7ddabcb434329dc7b7468",
+        "git_blob": "892e2e3e975aeb9b4cee1dd353e4614e999c5f78"
+      },
+      {
+        "path": "tests/local-access-security-review.test.mjs",
+        "bytes": 35014,
+        "sha256": "84b068436ff79a890819a69f922795f1bd5dd7e9600cfd982b0f4ae5e21fbdf2",
+        "git_blob": "4892117fff754bedbe579a22cf445ac9c2ba46b9"
+      },
+      {
+        "path": "tests/local-access-ui.test.mjs",
+        "bytes": 12610,
+        "sha256": "e9063144ddb083fca8d58d8dadf795c1f2a19f164f37ffe897a0501f694354e9",
+        "git_blob": "5332779dafd74e6d177e7c1dbad8d65843d0c5a3"
+      },
+      {
+        "path": "tests/local-access.test.mjs",
+        "bytes": 7447,
+        "sha256": "7f172601f8ede6636181484fa36787ef6d8334b4ec099e3af33027176fbd79d6",
+        "git_blob": "37140329eadc76aab776d399e7af7fe89626aefd"
+      },
+      {
+        "path": "tests/local-recovery-privacy.test.mjs",
+        "bytes": 9288,
+        "sha256": "d79b89131e2a09734c7b13783faa44c2be59d32d706c4cb85ff9a449b71b4766",
+        "git_blob": "4896bfeb0714c1c6d00b4342a9d083253a095be5"
+      },
+      {
+        "path": "tests/local-runtime-ui.test.mjs",
+        "bytes": 2490,
+        "sha256": "ee53f3061f4b0e363f5e925e16e5be8e70c0d188bc222d40f80c1bc39e01ad89",
+        "git_blob": "d62540e6497d7a3caa05efff4e843fbb6b448382"
+      },
+      {
+        "path": "tests/mail-adapter.test.mjs",
+        "bytes": 17323,
+        "sha256": "edc23029ee274472c59f36fd6ae681437597bf7eb06f9920bb7881e81c493c36",
+        "git_blob": "d3b0f2aabc85ace141fdce22cb30836df913965b"
+      },
+      {
+        "path": "tests/mail-busy-controls.test.mjs",
+        "bytes": 1265,
+        "sha256": "059879afa4567839ae356d365cb61ab0b4934c6a9087c9356a7098084233e68c",
+        "git_blob": "f15fbd08aa9fe36db8af3bbf76424a4c4d49448a"
+      },
+      {
+        "path": "tests/mail-engine.test.mjs",
+        "bytes": 8583,
+        "sha256": "2cbe5609d6e5be4e9f011f1663e0d8abaf9b126c2520df41004ba54439c12180",
+        "git_blob": "2f17ec30006d5883574f9cbef8f3f8c0fb0a8581"
+      },
+      {
+        "path": "tests/mail-fixtures.mjs",
+        "bytes": 9023,
+        "sha256": "253e4499155844d4ef8df8283dcfd9508b1cb2fafe935518ea20474720750c4b",
+        "git_blob": "b279923ee789d0668cf850c7ac23e45819802a7c"
+      },
+      {
+        "path": "tests/model-diagnostics.test.mjs",
+        "bytes": 8789,
+        "sha256": "620a5b821a6d0a8e1e329116c56fd3618976acc602e0f6fffd94aa63682fe053",
+        "git_blob": "49001302fa45d44db63fd4960a1161a8a74cec1f"
+      },
+      {
+        "path": "tests/model-transport.test.mjs",
+        "bytes": 9371,
+        "sha256": "60407f400a1356b9ca64fa39d814b24d1d62ace76ee50341ff948368e22cc2d0",
+        "git_blob": "3bb8ecd58e34544a74845d5a9d36e000a7230d07"
+      },
+      {
+        "path": "tests/network-ip-policy.test.mjs",
+        "bytes": 14365,
+        "sha256": "11f555e83ecf05f7c6c4a2fc31c29abcaa6a829caf3a900bee33a3b3899be1ca",
+        "git_blob": "d3bdc719ce4ccbb35175c437875f048576dc17fc"
+      },
+      {
+        "path": "tests/new-task-focus-independent.test.mjs",
+        "bytes": 15548,
+        "sha256": "48309fa1566ac81e08eb61fa5c313e97d63937f94cf33f72999f35ae878c797d",
+        "git_blob": "9aacfe71a9b233a1c667e61ee76be1268137edd1"
+      },
+      {
+        "path": "tests/new-task-focus.test.mjs",
+        "bytes": 8198,
+        "sha256": "e49a79b6099f4d04e9b0a12a98f682d1f89053025750d036a40a0a47cd7c658a",
+        "git_blob": "aaa56c4bd8cc6aad3d7ba9d982c095418fdc916f"
+      },
+      {
+        "path": "tests/office-artifacts.test.mjs",
+        "bytes": 10859,
+        "sha256": "90960c6c3d7b44724b95dbc59fa249bdb1d4834ccabaf7962e1f7c0a84da61d3",
+        "git_blob": "4a86f62609a35f071f027892265e74e8185d2a53"
+      },
+      {
+        "path": "tests/paths.test.mjs",
+        "bytes": 1203,
+        "sha256": "63d8d4e995b3e3c3d882b7a5563d2d30b436625491b7832a19c675bc246d74eb",
+        "git_blob": "62ce7c06fe72a020217cd757e4e166b90a73d535"
+      },
+      {
+        "path": "tests/private-directory.test.mjs",
+        "bytes": 4734,
+        "sha256": "ecc8981d504a000f3241664b84c7b8e57a92c9f4b9944e3381821a6363aea72d",
+        "git_blob": "d6df29b3d8bfeb1309155b09d7cf641d507fbebd"
+      },
+      {
+        "path": "tests/public-web-engine.test.mjs",
+        "bytes": 13708,
+        "sha256": "ec8fb47d78531f3269450a5634c4b7b1410af759b0af4b27ccf04103d9606f7a",
+        "git_blob": "8a04c3333e5e4b7a2c8ce3f6c396f890646c2f74"
+      },
+      {
+        "path": "tests/public-web-live-smoke.mjs",
+        "bytes": 21373,
+        "sha256": "42e700dce893c9cee034a64398dd14923e5cfc5834bbd8ca47dc4e4940aef422",
+        "git_blob": "1a0e1a43ede6ea1aee73cee901f73bd06c39d691"
+      },
+      {
+        "path": "tests/public-web-revocation.test.mjs",
+        "bytes": 24760,
+        "sha256": "f3b384401888a56473b02992c355909f9a7e950066d0b4d3e16c192790c03214",
+        "git_blob": "11a309ed363f7847ab7d2e2123a35046369df8f0"
+      },
+      {
+        "path": "tests/public-web.test.mjs",
+        "bytes": 32489,
+        "sha256": "07f92b4ff15f22f00057612e0110f3768da0c4941d7734d5723a84c5d330b13c",
+        "git_blob": "ce840e88f9dd7aef93c904c0590f0fae54a589ea"
+      },
+      {
+        "path": "tests/real-idle-duration.mjs",
+        "bytes": 1063,
+        "sha256": "bef2fee11f81a128921f30cb0c08ee39c0e5b358ec594855456c446e188ddcbc",
+        "git_blob": "de11c09580991134054a90fe0e6cf65a8837d4c4"
+      },
+      {
+        "path": "tests/render-view-idempotency.test.mjs",
+        "bytes": 1308,
+        "sha256": "ae0532511222dd86054077fca81032b8d3028e9aafcf42862703bff8bdacf802",
+        "git_blob": "e40725b196d5776e2ebc25c80ea727111d521684"
+      },
+      {
+        "path": "tests/retained-chat-settings-ui.mjs",
+        "bytes": 53042,
+        "sha256": "87d6a56184e16107be55daf94f474003846440b5c5ad86b18b60074e199a03b3",
+        "git_blob": "42a323b187b6c2cf0fd4775d59bffbae314e497e"
+      },
+      {
+        "path": "tests/runtime-reliability.test.mjs",
+        "bytes": 27388,
+        "sha256": "0145dc429d6d57cd4767211cb921e90dccb9ba2ff19cb0921d7b73495c9e2ec1",
+        "git_blob": "d04d8539f63f2eab9d21ffd5a970ed397f56594e"
+      },
+      {
+        "path": "tests/schedules.test.mjs",
+        "bytes": 18423,
+        "sha256": "13d6ebd688b3fc92806317ce452c822f9554d27216228dbbe9b60fd807919dd2",
+        "git_blob": "f15e7550a465b34f699638b70341baa9470fe92f"
+      },
+      {
+        "path": "tests/settings-flash-v051.test.mjs",
+        "bytes": 31386,
+        "sha256": "bd19eedfd01ab438243f2fa640b657534d51cf287523144c1342c05d0d696927",
+        "git_blob": "7b730466236d50c8143cd6662a7bbf2c5722b2d2"
+      },
+      {
+        "path": "tests/stability-http-contract.test.mjs",
+        "bytes": 4031,
+        "sha256": "249d091a4205c018a565542c0e0b15b2ec4e456a77cee54561ccd7f06f5f1794",
+        "git_blob": "380b0c5d2f618c13435c159bb21c95223b831790"
+      },
+      {
+        "path": "tests/stable-dom-flicker.test.mjs",
+        "bytes": 38291,
+        "sha256": "a3aedd9e76a6dafe4bde515943b3f6eb5c1a2a4b67320ad5126065e5e2013dcd",
+        "git_blob": "5969171e0531f80afc94034f40f2c582a4facbbd"
+      },
+      {
+        "path": "tests/stable-dom-selection.test.mjs",
+        "bytes": 50459,
+        "sha256": "0743a87ec6e233d9de90979f324e5c7d7d4c2082636c9956e8ede41d062150ef",
+        "git_blob": "8f0c18fa894c69d2c9b8bafc44864b15646bcbaa"
+      },
+      {
+        "path": "tests/task-idempotency.test.mjs",
+        "bytes": 3474,
+        "sha256": "e692038828dec8f8e04de17e4b5a5d879b9604c04547dda48338e7d2a4bf1627",
+        "git_blob": "dbc5d0962cd160224aea526ab5919525c9d3811f"
+      },
+      {
+        "path": "tests/ui-idle-duration.test.mjs",
+        "bytes": 2152,
+        "sha256": "560e53857a85cff30a5d162891e8d3a62ed732a30d90c1929cd182a3d6d46215",
+        "git_blob": "ec92467ef1f265deadf29817e8b3767229d7dd71"
+      },
+      {
+        "path": "tests/ui-local-access.mjs",
+        "bytes": 11576,
+        "sha256": "4321a9c677ebd39848c7cbd1c62b662e73621fab56a0995f95fd00c96f3ebb6f",
+        "git_blob": "c48bed8f685efd2cccc98a1cfd80dca34a487d1f"
+      },
+      {
+        "path": "tests/ui-recovery.mjs",
+        "bytes": 15929,
+        "sha256": "f538a7c3f09b792a3ec4e65472960d77abae26802bbbf2f477cf083ab5318b79",
+        "git_blob": "4344acfd8dcdda870c8d7c607e31e4aafc9de368"
+      },
+      {
+        "path": "tests/ui-recovery.test.mjs",
+        "bytes": 4889,
+        "sha256": "2d3087e97e84414f0e795a0abb1c853b6e08c4b7f647ac4d01ca49a0cda78263",
+        "git_blob": "6acb910c740a5a727823fd6419d21e91d9f4f6ab"
+      },
+      {
+        "path": "tests/ui-smoke.mjs",
+        "bytes": 29358,
+        "sha256": "98d4f1b2fb205fc628a921139d7784da4b049cdd7c2efa16c52a29958b69c16f",
+        "git_blob": "74c131762775de10b23d9c555fb87566d7f7f2ba"
+      },
+      {
+        "path": "tests/ui-stability-60s.mjs",
+        "bytes": 15181,
+        "sha256": "657d7f6b91175416e37ff542b4180ca11da8e057b18a463fd14b9ca67bf0ed73",
+        "git_blob": "e20dc8e6b42ed71a37ff1adab62342da91c94355"
+      },
+      {
+        "path": "tests/ui-submitted-task-wait.test.mjs",
+        "bytes": 1170,
+        "sha256": "5ddf5deb07c3e2222c776e7c120fe0f5c0dddda2cf34599b61fb40b1a347d281",
+        "git_blob": "f2f94c2fd1fa73243501df723a18e7498c5be14a"
+      },
+      {
+        "path": "tests/ui-v03.mjs",
+        "bytes": 14963,
+        "sha256": "3a5aaf8047b3286abaf337d6c160e51dd53d0a17370935fa037a49f660128886",
+        "git_blob": "553dc56c5c8729085ff6b74f7ad2256f2d22c1f6"
+      },
+      {
+        "path": "tests/ui-v04.mjs",
+        "bytes": 9291,
+        "sha256": "5449d4386f43e1c134f9e014a0efb7104f509c492c7153254e8b55e3b5378d69",
+        "git_blob": "7515ecd3d1bb2b16b1cfcc7d42ebfd05e98a15c8"
+      },
+      {
+        "path": "tests/update-ui-source.test.mjs",
+        "bytes": 14589,
+        "sha256": "14f25b8c1383d6a422ceda25ec91d819727a5a1fb834f9d8a9f70c999a995817",
+        "git_blob": "038b5acb141f014656ad1a47f94433b7f8465aad"
+      },
+      {
+        "path": "tests/v03-integration.test.mjs",
+        "bytes": 7528,
+        "sha256": "6a395703850cd8076099dfe9552c0feef358398acfc163f0f81955d4c90654b4",
+        "git_blob": "81f79f9e43a12512723c985f3be48f25b9c3465c"
+      },
+      {
+        "path": "tests/windows-native-smoke.test.mjs",
+        "bytes": 7423,
+        "sha256": "73e98e91d94c1c2b48d0d5a857811e8376702c11a737f85c1cb08fa3296dec6e",
+        "git_blob": "c5b854d817480a75ed17e16d35b871247ae47ca2"
+      },
+      {
+        "path": "tests/windows-upgrade-acceptance.test.mjs",
+        "bytes": 69684,
+        "sha256": "6c65f659dda622cbdc1b7a0736c7c6a5689d26280454ff3e7ab70f12654ac34f",
+        "git_blob": "5b947d9abb7ebe3c87ba9c29de8e8413535bb1c2"
+      }
+    ]
+  },
+  "artifacts": {
+    "installer": {
+      "id": 11282777455,
+      "name": "luheng-windows-unsigned-prototype",
+      "zip_bytes": 243789182,
+      "zip_sha256": "bbc22213aa33109de48b995055cedfcb4d876f31e46732ce5aedebdda98127cd",
+      "members": {
+        "Luheng-Office-Agent-0.6.0-beta.1-windows-x64.exe": {
+          "bytes": 244071812,
+          "sha256": "ecf8efcb34449474976bc8dbd56553f695d08c42c33e3f0008b724f90f645cd0"
+        }
+      }
+    },
+    "native": {
+      "id": 11282363114,
+      "name": "luheng-windows-verification-ade9ef552c10b9d05bc014631ecd960c678dd10d",
+      "zip_bytes": 107787,
+      "zip_sha256": "3109f989d814da36fd26a6fb93e9c0a21c84c920d871a3fc20ce190976344ee9",
+      "members": {
+        "installed-payload.json": {
+          "bytes": 449629,
+          "sha256": "0ff80f3d1186da35cffb3121865daa385c1bed8ed11416fe958300e521379d6b"
+        },
+        "native-smoke.json": {
+          "bytes": 1687,
+          "sha256": "08ae45fcadcc05b230e6b5be93c74be6c9f9c24f0563fb099274f0bb54353170"
+        },
+        "runtime.json": {
+          "bytes": 2574,
+          "sha256": "fb6a9040e601fd4efb0012e0bd08c79a6af15009499743a8b9b9a0ea7763cfc7"
+        },
+        "static-preflight.json": {
+          "bytes": 1333,
+          "sha256": "32b8ecd7293c5f95ddb8a4336447e836986f4b41882b55d93a28d10bf37418ce"
+        }
+      }
+    },
+    "ui": {
+      "id": 11282421706,
+      "name": "luheng-ui-verification-ade9ef552c10b9d05bc014631ecd960c678dd10d",
+      "zip_bytes": 6936459,
+      "zip_sha256": "b250399a22eab27a5771f31bbae89bc324c9ce2d319e891d4fc168252989b54a",
+      "members": {
+        "luheng-highway-agent/luheng-highway-agent/artifacts/screenshots/generic-chat/desktop-conversation.png": {
+          "bytes": 71758,
+          "sha256": "71ebcf672a9f4fdfdb3975d805618d7e5bca7b171975c3bb7f392a82e7ac2fd8"
+        },
+        "luheng-highway-agent/luheng-highway-agent/artifacts/screenshots/generic-chat/desktop-empty.png": {
+          "bytes": 52053,
+          "sha256": "566a5bdb0fd72b42e2a1cd4c4abba621a010253c11e72de7a808e3809bbf50cb"
+        },
+        "luheng-highway-agent/luheng-highway-agent/artifacts/screenshots/generic-chat/desktop-skills.png": {
+          "bytes": 98640,
+          "sha256": "bce225b81d45704eedb50329d7ac53b175ac1932220199161aac279057a97e17"
+        },
+        "luheng-highway-agent/luheng-highway-agent/artifacts/screenshots/generic-chat/desktop-tools.png": {
+          "bytes": 104042,
+          "sha256": "6a97b0717c2c2a6d18efc326c3cc876a67fcbcb40bb7c9787a3930eb704e2593"
+        },
+        "luheng-highway-agent/luheng-highway-agent/artifacts/screenshots/generic-chat/idle-observation.json": {
+          "bytes": 223,
+          "sha256": "7d2020b9438d285885483ceccf85623640edd6366a2ded5ce5befdf420db01a1"
+        },
+        "luheng-highway-agent/luheng-highway-agent/artifacts/screenshots/generic-chat/mobile-conversation.png": {
+          "bytes": 28131,
+          "sha256": "2bc96f23c428b7adda817c02ecba51b757adf6665f2340ec0f06af2e1ac313fd"
+        },
+        "luheng-highway-agent/luheng-highway-agent/artifacts/screenshots/generic-chat/mobile-empty.png": {
+          "bytes": 25101,
+          "sha256": "794ab03b6f3ec86ba3662c624577a3a006ff21373391c3936e0f99b871e0042b"
+        },
+        "luheng-highway-agent/luheng-highway-agent/artifacts/screenshots/generic-chat/ui-report.json": {
+          "bytes": 1106,
+          "sha256": "b6c1b5324e10add28f67c22f73284214ca414f3cbb2a7b4bcb7ffc55cfee6618"
+        },
+        "_temp/luheng-ui-local-proof/command-approval.png": {
+          "bytes": 118257,
+          "sha256": "0c5c28236543680602a2d6cd4e196034969dec889ad3171f791214754cbafac8"
+        },
+        "_temp/luheng-ui-local-proof/full-confirmation.png": {
+          "bytes": 151797,
+          "sha256": "3885ac26e238ecc2a4ad84b971e226a7ec62ad318ac9501cfa0f22bac868fbfd"
+        },
+        "_temp/luheng-ui-local-proof/mobile-permission-popover.png": {
+          "bytes": 59753,
+          "sha256": "32f606122ff7fc14e3c67272464695af1390d2fe3d9070eebb03e05e9eaa802c"
+        },
+        "_temp/luheng-ui-local-proof/onboarding.png": {
+          "bytes": 111832,
+          "sha256": "5923bcddcec728ddb11d13a01175322eae77efb25bcde2d63af679365ea55a7f"
+        },
+        "_temp/luheng-ui-local-proof/permission-popover.png": {
+          "bytes": 91603,
+          "sha256": "fb044e1a76aaf7a0899af950270314e27dc7b991388fe1a68055ea6af900be56"
+        },
+        "_temp/luheng-ui-local-proof/qa-result.json": {
+          "bytes": 161,
+          "sha256": "0d78e8968d75e6edf14cb0f4c189a24522ad4f2d89e58efa901458feb2c16640"
+        },
+        "_temp/luheng-ui-local-proof/settings-local-access.png": {
+          "bytes": 110950,
+          "sha256": "d25b0e7dc5b2bf1342d09ef2b78dea557c44952ea1092ec95e58d9ce344096e4"
+        },
+        "_temp/luheng-ui-local-proof/write-approval.png": {
+          "bytes": 114092,
+          "sha256": "3d70e88b0e895234e146836e0e58c58fc3f48e1cb29fda75d81e3470216d2637"
+        },
+        "_temp/luheng-ui-stability-proof/idle-00.png": {
+          "bytes": 61762,
+          "sha256": "ad35b8530e3a7898f17c7bae81452f8fac1f294a7c76b7002deed64dde7f62a7"
+        },
+        "_temp/luheng-ui-stability-proof/idle-10.png": {
+          "bytes": 61797,
+          "sha256": "30acac533fce158fe3e1e5f19b964fa719ae1d2cb486e6302f84e4fdb8f93058"
+        },
+        "_temp/luheng-ui-stability-proof/idle-20.png": {
+          "bytes": 61797,
+          "sha256": "30acac533fce158fe3e1e5f19b964fa719ae1d2cb486e6302f84e4fdb8f93058"
+        },
+        "_temp/luheng-ui-stability-proof/idle-30.png": {
+          "bytes": 61797,
+          "sha256": "30acac533fce158fe3e1e5f19b964fa719ae1d2cb486e6302f84e4fdb8f93058"
+        },
+        "_temp/luheng-ui-stability-proof/idle-40.png": {
+          "bytes": 61797,
+          "sha256": "30acac533fce158fe3e1e5f19b964fa719ae1d2cb486e6302f84e4fdb8f93058"
+        },
+        "_temp/luheng-ui-stability-proof/idle-50.png": {
+          "bytes": 61797,
+          "sha256": "30acac533fce158fe3e1e5f19b964fa719ae1d2cb486e6302f84e4fdb8f93058"
+        },
+        "_temp/luheng-ui-stability-proof/idle-60.png": {
+          "bytes": 61797,
+          "sha256": "30acac533fce158fe3e1e5f19b964fa719ae1d2cb486e6302f84e4fdb8f93058"
+        },
+        "_temp/luheng-ui-stability-proof/output-selected.png": {
+          "bytes": 79350,
+          "sha256": "b8e1c757088c900379dcb77dc05963e18adc8f08ec1a14e4fa69f2ca3a692bdb"
+        },
+        "_temp/luheng-ui-stability-proof/permission-confirm.png": {
+          "bytes": 81099,
+          "sha256": "ee4440b75fae1883f8ff7de39f70fa8d427e4f6dfba3a550af895807825192ba"
+        },
+        "_temp/luheng-ui-stability-proof/permission-disabled.png": {
+          "bytes": 81162,
+          "sha256": "7e37389494eec4c6aad636386214b25914a9ef99fad7b44959035c50e8d5b86b"
+        },
+        "_temp/luheng-ui-stability-proof/task-completed.png": {
+          "bytes": 65659,
+          "sha256": "7ba1810ce0582d055056e43b3fc39a7432f214a7e3904a05167319b3e04848d9"
+        },
+        "_temp/luheng-ui-stability-proof/task-running.png": {
+          "bytes": 65826,
+          "sha256": "2e5bc543e8cdb49ce6567e04c1b201d2c17c542eaba91bd03e9ef0a01f184166"
+        },
+        "_temp/luheng-ui-stability-proof/ui-stability-results.json": {
+          "bytes": 8637,
+          "sha256": "b7f599f41f535e7bb6a780dbe07db5d8207c748d683a2716c22feb318b256127"
+        },
+        "_temp/luheng-ui-stability-proof/video/acedc6afd95df0ea18877209e144624a.webm": {
+          "bytes": 2400782,
+          "sha256": "30056ba8aaaaf712d2da7de9bd591d4ff91d5ffa1787c4ca47ef82cc443f2925"
+        },
+        "_temp/luheng-existing-integrations-proof/controlled-full-approval.png": {
+          "bytes": 134537,
+          "sha256": "cfdb9b702e5b83d72ae9e098a7f212238e1c2727bee6d6a45a06e8025b413860"
+        },
+        "_temp/luheng-existing-integrations-proof/controlled-manual.png": {
+          "bytes": 186954,
+          "sha256": "20f9d6e23e15228c62c40db2d970d2c045fbbe927dfcc57e96aac14e0afbe26e"
+        },
+        "_temp/luheng-existing-integrations-proof/existing-integrations-report.json": {
+          "bytes": 38849,
+          "sha256": "6613a09a815d540c4d9ceb3bfd3ef359269b96e588f74630bd85dd2dceeeb326"
+        },
+        "_temp/luheng-existing-integrations-proof/mail-full-approval.png": {
+          "bytes": 194263,
+          "sha256": "25c4d3b16619819489cb46d84d8462b0ce93fcd1471a20be049147cbc1798f81"
+        },
+        "_temp/luheng-existing-integrations-proof/mail-unknown.png": {
+          "bytes": 169217,
+          "sha256": "6ba39246894ec8a926dc2af909f2f11048b882d24b2975ac8774653890d73d52"
+        },
+        "_temp/luheng-existing-integrations-proof/mobile-controlled-approval.png": {
+          "bytes": 48616,
+          "sha256": "f849b2c03a50726bd92e34b1df0fc6119dfc062e1a8a0a84d5632c9f0ef68643"
+        },
+        "_temp/luheng-existing-integrations-proof/mobile-controlled.png": {
+          "bytes": 95596,
+          "sha256": "4784a54bc90ab4237d586bdf3816ec3bbcc333bc806596df8379eb88ba6c1566"
+        },
+        "_temp/luheng-existing-integrations-proof/mobile-mail-approval.png": {
+          "bytes": 51192,
+          "sha256": "3836e9d9a597e57c8f0231f31f4918dbddf2b00876ed9372e259147eca33ff35"
+        },
+        "_temp/luheng-existing-integrations-proof/mobile-mail.png": {
+          "bytes": 88128,
+          "sha256": "8b3c1368400de8a221d7eed62a4a953e3f8beae42e8e4adf365e33865cd89b58"
+        },
+        "_temp/luheng-retained-ui-proof/retained-chat-1180x812-1x.png": {
+          "bytes": 47467,
+          "sha256": "b7866354e498b1933eb5f601d043a8a32d10b098cbe9677c8b6f58857ddf7c57"
+        },
+        "_temp/luheng-retained-ui-proof/retained-chat-1280x720-1x.png": {
+          "bytes": 47148,
+          "sha256": "cb52c82a917ad2fa3d52f0dbe699467df012207e3e4b8c85641336d52f817870"
+        },
+        "_temp/luheng-retained-ui-proof/retained-chat-1440x1000-1x.png": {
+          "bytes": 50868,
+          "sha256": "122228fdd0e41b87caae0fd4fe1222e5c14ae8a76832490de4aa6b794a5c3b39"
+        },
+        "_temp/luheng-retained-ui-proof/retained-chat-1920x1080-2x.png": {
+          "bytes": 152946,
+          "sha256": "0b3f74b60a3f1c1641f02026dd4e48ed02ed61a1e9cffd6638767a751cd52188"
+        },
+        "_temp/luheng-retained-ui-proof/retained-chat-settings-results.json": {
+          "bytes": 7871,
+          "sha256": "10b2c61a041d20b0083a9bd90e975ff2e30caabdab8026139174eb7bdf0501dc"
+        },
+        "_temp/luheng-retained-ui-proof/retained-fake-desktop-settings.png": {
+          "bytes": 88117,
+          "sha256": "d9b131392473cdfe4e7b782bf3afab1362ae161fa7d43803a14c45914f8a0d81"
+        },
+        "_temp/luheng-retained-ui-proof/retained-fake-vault-unavailable.png": {
+          "bytes": 107464,
+          "sha256": "7207ef05d9881071ae777ecab1d96b1cc1f67ece5c6560e842ba3e56d701680c"
+        },
+        "_temp/luheng-retained-ui-proof/retained-office-after-reload.png": {
+          "bytes": 75518,
+          "sha256": "4fa7169a1ff843a95de9d85c64aec4358eeda9cb09f4161d551e3cf4cb57bf59"
+        },
+        "_temp/luheng-retained-ui-proof/retained-schedule-weekly.png": {
+          "bytes": 156337,
+          "sha256": "60d1ab7b04f5460010709eaf5254d63301f0f50ea6c4cc35d290a2662de80cf4"
+        },
+        "_temp/luheng-retained-ui-proof/retained-schedules.png": {
+          "bytes": 96963,
+          "sha256": "fecca0db945076522a4a32983a2115a5398e7c2f76d27d4086d8c528050bbfbe"
+        },
+        "_temp/luheng-retained-ui-proof/retained-settings-1180-1x.png": {
+          "bytes": 94017,
+          "sha256": "b29a26e3d46741a8f5a4509917d5fd3a12779adfcc732ad268ba1be1995915e9"
+        },
+        "_temp/luheng-retained-ui-proof/retained-settings-1280-1x.png": {
+          "bytes": 88113,
+          "sha256": "1cce5bdd326b5d4d95e889a0005f1d0ada5d372b4a0b3c91789cb51f6b8a5ea5"
+        },
+        "_temp/luheng-retained-ui-proof/retained-settings-1440-1x.png": {
+          "bytes": 107462,
+          "sha256": "2e493b8c02608a8769e9027cbfb06cf2ec998f45499248886ba7c405c3491fd2"
+        },
+        "_temp/luheng-retained-ui-proof/retained-settings-1920-2x.png": {
+          "bytes": 369683,
+          "sha256": "25e79a501703e9308e4615efe5200ea0c3eb8a1af9a3e124a50219bdc0f1aabd"
+        },
+        "_temp/luheng-retained-ui-proof/retained-tools-1180-1x.png": {
+          "bytes": 95235,
+          "sha256": "09c8808f283c865d3de956de206cb9288f71fe86e1e2e7934370024f1199b89d"
+        },
+        "_temp/luheng-retained-ui-proof/retained-tools-1280-1x.png": {
+          "bytes": 92551,
+          "sha256": "3c51ee3028b214f2e03f46dfd513b902a716c26e73d80d43f22f1f05b4027696"
+        },
+        "_temp/luheng-retained-ui-proof/retained-tools-1440-1x.png": {
+          "bytes": 110878,
+          "sha256": "2f592fdecf04b42023c52bc5500aa8e26b2574e4d561ecc8b6adeda431fa9a22"
+        },
+        "_temp/luheng-retained-ui-proof/retained-tools-1920-2x.png": {
+          "bytes": 336819,
+          "sha256": "7fa47e5be78f70bc3706bf56aeb80d2bca17b8448059d758e6ed69f81bc797c0"
+        },
+        "_temp/luheng-retained-ui-proof/standalone-settings-unavailable.png": {
+          "bytes": 112511,
+          "sha256": "633cb4fb0cbe341dd9b53006a25a4735287db0673e3d0401ce0f8e0e5e0df133"
+        },
+        "_temp/luheng-public-web-live-proof/public-web-live-smoke.json": {
+          "bytes": 11699,
+          "sha256": "3e9b0ccbaa4096cea36438af262c05f5681cb9620a589b6add0cf9b88905355b"
+        }
+      }
+    }
+  }
+}
