@@ -53,6 +53,13 @@ jobs:
       - run: npm --prefix desktop run install:runtime
       - run: npx playwright install chromium
         id: ui_dependencies
+      - name: Parse exact native beta acceptance scripts with Windows PowerShell
+        shell: pwsh
+        run: |
+          $env:LUHENG_NATIVE_SCRIPT_ROOT = Join-Path $env:GITHUB_WORKSPACE 'scripts'
+          $parser = Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/powershell.exe'
+          & $parser -NoLogo -NoProfile -NonInteractive -Command '$ErrorActionPreference="Stop"; foreach($name in @("native-update-consent.ps1","owned-installer-wizard.ps1","verify-native-beta-update.ps1")) { $path=Join-Path $env:LUHENG_NATIVE_SCRIPT_ROOT $name; if(-not(Test-Path -LiteralPath $path)){throw "Native acceptance source missing"}; $errors=$null; $tokens=$null; [void][System.Management.Automation.Language.Parser]::ParseFile($path,[ref]$tokens,[ref]$errors); if($errors.Count){$errors | Format-List; exit 1} }; Write-Output "NATIVE_BETA_POWERSHELL_PARSE_PASSED: execution still pending"'
+          if ($LASTEXITCODE -ne 0) { throw 'Windows PowerShell rejected native acceptance source.' }
       - name: Test real 60-second idle and live DOM stability
         if: ${{ !cancelled() && steps.ui_dependencies.outcome == 'success' }}
         shell: pwsh

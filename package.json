@@ -1,6 +1,6 @@
 {
   "name": "luheng-office-agent",
-  "version": "0.6.0-candidate.2",
+  "version": "0.6.0-beta.1",
   "private": true,
   "type": "module",
   "description": "路衡通用办公智能体 · 开发候选",

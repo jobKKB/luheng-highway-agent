@@ -71,7 +71,7 @@ async function probe(installed, workDir, out) {
   assert.ok(!within(installed, out) && !within(installed, workDir), 'Probe output and state must be outside the installation');
   const backend = join(installed, 'resources', 'backend');
   const expected = JSON.parse(readFileSync(join(backend, 'package.json'), 'utf8'));
-  assert.equal(expected.version, '0.6.0-candidate.2', 'This gate is pinned to the exact generic workspace candidate');
+  assert.equal(expected.version, '0.6.0-beta.1', 'This gate is pinned to the exact generic workspace candidate');
   const manifest = JSON.parse(readFileSync(join(installed, 'resources', 'bundle-manifest.json'), 'utf8'));
   const executable = resolve(installed, 'resources', 'browser-runtime', manifest.browserExecutable);
   assert.ok(within(join(installed, 'resources', 'browser-runtime'), executable));

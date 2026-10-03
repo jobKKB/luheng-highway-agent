@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, Menu, Tray, nativeImage, safeStorage, dialog, session, utilityProcess, screen } = require('electron');
+const { app, BrowserWindow, Menu, Tray, nativeImage, safeStorage, dialog, session, utilityProcess, screen, net, shell } = require('electron');
 const { randomBytes } = require('node:crypto');
 const { mkdirSync } = require('node:fs');
 const path = require('node:path');
@@ -8,6 +8,9 @@ const { SecretVault } = require('./vault.cjs');
 const { DesktopPreferences, TrayLifecycle } = require('./lifecycle.cjs');
 const { WindowStateStore, manageWindowState } = require('./window-state.cjs');
 const { createDesktopHandler } = require('./bridge.cjs');
+const { UpdateManager } = require('./update-manager.cjs');
+const { createUpdateFiles } = require('./update-files.cjs');
+const { createUpdateTransport, createUpdateSession } = require('./update-transport.cjs');
 const {
   CONTENT_SECURITY_POLICY, isApplicationURL, isAllowedResource,
   authenticatedHeaders, backendEnvironment, isArtifactDownload, resolveBundledBrowser,
@@ -37,8 +40,12 @@ let windowStateController;
 let vault;
 let desktopHandler;
 let restoreError = false;
+let updater;
+let updateShutdown = false;
+let nextBackendRequest = 0;
 
 function startBackend(persistedCredentials) {
+  stopped = false;
   return new Promise((resolve, reject) => {
     const desktopToken = randomBytes(32).toString('hex');
     const childEnvironment = backendEnvironment(process.env);
@@ -81,7 +88,7 @@ function startBackend(persistedCredentials) {
         });
       } else if (message?.type === 'ready') {
         clearTimeout(timer);
-        resolve({ origin: `http://127.0.0.1:${message.port}`, desktopToken });
+        resolve({ origin: `http://127.0.0.1:${message.port}`, desktopToken, version: message.version });
       } else if (message?.type === 'error') {
         clearTimeout(timer);
         reject(new Error(message.message));
@@ -91,11 +98,87 @@ function startBackend(persistedCredentials) {
       clearTimeout(timer);
       stopped = true;
       if (!origin) reject(new Error(`The local backend exited before startup (code ${code}).`));
-      else if (!exiting) {
+      else if (!exiting && !updateShutdown) {
         dialog.showErrorBox('本地服务已停止', '路衡的本地服务意外停止。请重新打开应用；已保存的本地数据会保留。');
         app.quit();
       }
     });
+  });
+}
+
+
+// Fixed main-to-sidecar control messages; no renderer IPC, path, URL or command.
+function updateBackendRequest(type, responseType) {
+  return new Promise((resolve, reject) => {
+    if (!backend || stopped) return reject(Object.assign(new Error('SHUTDOWN'), { code: 'SHUTDOWN' }));
+    const child = backend, id = ++nextBackendRequest;
+    const timer = setTimeout(() => { cleanup(); reject(Object.assign(new Error('SHUTDOWN'), { code: 'SHUTDOWN' })); }, 20000);
+    function cleanup() { clearTimeout(timer); child.off('message', message); child.off('exit', exit); }
+    function message(value) { if (value?.type === responseType && value.id === id) { cleanup(); resolve(value); } }
+    function exit() { cleanup(); reject(Object.assign(new Error('SHUTDOWN'), { code: 'SHUTDOWN' })); }
+    child.on('message', message); child.once('exit', exit);
+    try { child.postMessage({ type, id }); } catch { exit(); }
+  });
+}
+function shutdownForUpdate() {
+  return new Promise((resolve, reject) => {
+    if (!backend || stopped) return reject(Object.assign(new Error('SHUTDOWN'), { code: 'SHUTDOWN' }));
+    updateShutdown = true;
+    windowStateController?.flush();
+    const child = backend, id = ++nextBackendRequest;
+    let flushed = false;
+    const timer = setTimeout(() => { cleanup(); reject(Object.assign(new Error('SHUTDOWN'), { code: 'SHUTDOWN' })); }, 20000);
+    function cleanup() { clearTimeout(timer); child.off('message', message); child.off('exit', exit); }
+    function message(value) { if (value?.type === 'update:closed' && value.id === id) flushed = value.ok === true; }
+    function exit(code) { cleanup(); if (flushed && code === 0) resolve(true); else reject(Object.assign(new Error('SHUTDOWN'), { code: 'SHUTDOWN' })); }
+    child.on('message', message); child.once('exit', exit);
+    try { child.postMessage({ type: 'update:shutdown', id }); } catch { exit(1); }
+  });
+}
+async function recoverCurrentVersion() {
+  if (!stopped) {
+    dialog.showErrorBox('更新未启动', '本地服务仍在关闭或未确认完整关闭；没有打开安装器。请关闭并重新打开当前版本。仅内存中的密钥及未保存输入需重新填写。');
+    return;
+  }
+  dialog.showErrorBox('安装未确认完成', 'Windows 未接受安装器打开请求，或本地服务没有完整关闭。正在重新打开当前版本；仅内存中的密钥需重新输入，未保存输入可能丢失。请勿重复确认系统安装窗口。');
+  updateShutdown = false;
+  let saved = null;
+  try { saved = vault.load(); } catch { restoreError = true; }
+  const info = await startBackend(saved); saved = null;
+  origin = info.origin;
+  configureSession(session.fromPartition('luheng-desktop-session'), origin, info.desktopToken);
+  if (window && !window.isDestroyed()) await window.loadURL(origin); else await openWindow();
+}
+function initializeUpdater() {
+  const supported = process.platform === 'win32' && process.arch === 'x64' && app.isPackaged;
+  const updateSession = createUpdateSession(session); // Separate, memory-only; not the authenticated UI session.
+  updateSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
+  updateSession.setPermissionCheckHandler(() => false);
+  let ownedFiles;
+  const filesReady = () => ownedFiles ||= createUpdateFiles({ stateRoot, privateDirectoryModule: app.isPackaged
+    ? path.join(process.resourcesPath, 'backend', 'lib', 'private-directory.mjs')
+    : path.resolve(__dirname, '..', 'lib', 'private-directory.mjs') });
+  const files = Object.fromEntries(['create', 'finish', 'verify', 'discard', 'installSpace'].map(method => [method, async (...args) => (await filesReady())[method](...args)]));
+  const journal = supported ? Object.fromEntries(['read', 'write', 'clear'].map(method => [method, async (...args) => (await filesReady()).journal[method](...args)])) : undefined;
+  const transport = createUpdateTransport();
+  return new UpdateManager({ currentVersion: app.getVersion(), supported, files,
+    transport: { fetchReleases: args => transport.fetchReleases({ ...args, net, session: updateSession }), openAssetStream: args => transport.openAssetStream({ ...args, net, session: updateSession }) }, journal,
+    lifecycle: {
+      executable: process.execPath,
+      confirm: async candidate => {
+        const options = { type: 'warning', title: '安装路衡测试版更新', buttons: ['取消', '退出并打开安装向导'], defaultId: 0, cancelId: 0, noLink: true,
+          message: `安装路衡 ${candidate.version}（${(candidate.sizeBytes / 1024 ** 2).toFixed(1)} MiB）？`,
+          detail: `来源：固定 GitHub 仓库 jobKKB/luheng-highway-agent，${candidate.channel === 'preview' ? '你明确选择的测试版渠道' : '正式版渠道'}。\n此安装包未签名。大小与 SHA-256 校验仅验证下载完整性，不能独立认证发布者。Windows 安全提示由你决定，应用不会绕过提示或请求自动提权。\n仅支持当前用户安装。本地服务将先完整关闭，再通过 Windows 正常方式打开可见安装向导；这不表示安装成功。\n待审批和排队记录保留，但请先完成或停止运行中的任务，并关闭受控浏览器会话。仅内存中的密钥及未保存输入将在退出时丢失，已选择保存的系统加密快照保持原处。\n安装器失败或断电没有自动回滚保证，可从官方发布页重新安装修复。` };
+        const result = window && !window.isDestroyed() ? await dialog.showMessageBox(window, options) : await dialog.showMessageBox(options);
+        return result.response === 1;
+      },
+      prepare: () => updateBackendRequest('update:prepare', 'update:prepared'),
+      release: () => updateBackendRequest('update:release', 'update:released'),
+      shutdown: shutdownForUpdate,
+      launch: file => shell.openPath(file),
+      exit: () => { exiting = true; tray?.destroy(); app.quit(); },
+      recover: recoverCurrentVersion,
+    },
   });
 }
 
@@ -185,7 +268,7 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    if (origin) openWindow().catch(() => app.quit());
+    if (origin && !updateShutdown) openWindow().catch(() => app.quit());
   });
   app.whenReady().then(async () => {
     Menu.setApplicationMenu(null);
@@ -198,8 +281,9 @@ if (!app.requestSingleInstanceLock()) {
     });
     tray.create();
     vault = new SecretVault({ safeStorage, stateRoot });
+    updater = initializeUpdater();
     desktopHandler = createDesktopHandler({
-      vault, preferences, tray,
+      vault, preferences, tray, updater,
       selectFolders: async () => {
         const options = { title: '选择允许路衡访问的本机文件夹', properties: ['openDirectory', 'multiSelections', 'dontAddToRecent'] };
         const result = window && !window.isDestroyed() ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
@@ -214,6 +298,7 @@ if (!app.requestSingleInstanceLock()) {
     persistedCredentials = null;
     const info = await startingBackend;
     origin = info.origin;
+    await updater.verifyStartup(info.version).catch(error => updater.fail(error));
     configureSession(session.fromPartition('luheng-desktop-session'), origin, info.desktopToken);
     await openWindow();
   }).catch(error => {
@@ -226,6 +311,7 @@ if (!app.requestSingleInstanceLock()) {
   process.on('SIGINT', () => app.quit());
   app.on('before-quit', event => {
     windowStateController?.flush();
+    updater?.close();
     tray?.destroy();
     if (!backend || stopped || exiting) return;
     event.preventDefault();

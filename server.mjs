@@ -91,6 +91,8 @@ export async function startServer({
     broker,
     baseUrl,
     closed = false,
+    updateGate = false,
+    inflightMutations = 0,
     schedules;
   const mail = new MailService(store, {
     ...mailOptions,
@@ -157,6 +159,7 @@ export async function startServer({
       req.headers.origin !== baseUrl
     )
       return error(res, "修改操作必须来自本机客户端同源页面", 403);
+    let mutationClaimed = false;
     try {
       if (path === "/health")
         return json(res, {
@@ -169,6 +172,49 @@ export async function startServer({
       if (path.startsWith("/api/")) {
         if (!apiAuthenticated(req))
           return error(res, "本地会话已失效，请刷新客户端", 401);
+        // The renderer can only address the main-owned updater through these
+        // fixed RPC methods. No paths, URLs, flags or claimed approvals cross it.
+        const updateRoute = path.match(/^\/api\/desktop\/update(?:\/(check|download|cancel|install))?$/);
+        if (updateRoute) {
+          if (url.search) throw new Error("更新接口不接受查询参数");
+          const command = updateRoute[1];
+          if (!command && req.method === "GET") {
+            if (typeof desktopBridge?.updateStatus !== "function") return json(res, {
+              supported: false, currentVersion: applicationVersion, channel: "stable", phase: "unsupported",
+              reason: "客户端内更新仅支持已打包的 Windows x64 当前用户安装；Mac 与网页模式暂不支持。",
+            });
+            try { return json(res, await desktopBridge.updateStatus()); }
+            catch { return error(res, "更新状态暂不可用，请稍后重试", 503); }
+          }
+          if (!command || req.method !== "POST") return error(res, "更新接口不存在", 404);
+          const candidateCommand = ["download", "install"].includes(command);
+          const input = await objectBody(req, candidateCommand ? ["candidateId"] : command === "check" ? ["channel"] : [], 256);
+          if (command === "check" && Object.hasOwn(input, "channel") &&
+              !["stable", "preview"].includes(input.channel))
+            throw new Error("更新渠道无效，只可选择正式版或测试版");
+          if (candidateCommand && (Object.keys(input).length !== 1 ||
+              typeof input.candidateId !== "string" || !/^[a-f0-9]{32}$/.test(input.candidateId)))
+            throw new Error("更新候选标识无效，请重新检查更新");
+          const method = { check: "checkUpdate", download: "downloadUpdate", cancel: "cancelUpdate", install: "installUpdate" }[command];
+          if (typeof desktopBridge?.[method] !== "function" || typeof desktopBridge?.updateStatus !== "function")
+            return error(res, "此更新功能仅在受支持的 Windows 桌面客户端可用", 409);
+          try {
+            if ((await desktopBridge.updateStatus()).supported !== true)
+              return error(res, "当前安装不支持客户端内更新；请使用官方安装包手动更新", 409);
+            // Install is only a request: main still requires native confirmation
+            // and obtains this backend's atomic readiness gate itself.
+            return json(res, await (candidateCommand || command === "check" ? desktopBridge[method](input) : desktopBridge[method]()));
+          } catch { return error(res, "更新操作暂不可用，请检查状态后重试", 503); }
+        }
+        // Claim synchronously, before parsing a body or awaiting anything. A
+        // partially received mutation is busy too and cannot race installation.
+        // These GETs reconcile/expire state or perform browser observation writes.
+        const mutatesBackend = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method) ||
+          req.method === "GET" && (["/api/state", "/api/local-access/state", "/api/tools/capabilities"].includes(path) ||
+            /^\/api\/controlled-browser\/[^/]+\/read$/.test(path));
+        if (closed || updateGate && mutatesBackend)
+          return error(res, "正在准备安装更新，请等待或取消更新后再操作", 409);
+        if (mutatesBackend) { inflightMutations++; mutationClaimed = true; }
         if (req.method === "GET" && path === "/api/tools/capabilities") return json(res, engine.capabilities(new URL(req.url, "http://127.0.0.1").searchParams.get("agentId") || "coordinator"));
         if (path.startsWith("/api/browser/")) return error(res, "旧版模拟浏览器已移除，请配置真实网页目标", 410);
         if (req.method === "GET" && path === "/api/state") {
@@ -845,6 +891,8 @@ export async function startServer({
     } catch (e) {
       if (!res.headersSent) error(res, e.message || "处理请求失败");
       else res.end();
+    } finally {
+      if (mutationClaimed) inflightMutations--;
     }
   });
   await new Promise((ok, fail) => {
@@ -885,6 +933,35 @@ export async function startServer({
     localAccess,
     schedules,
     url: baseUrl,
+    version: applicationVersion,
+    prepareForUpdate() {
+      if (closed) return { ready: false };
+      // No await is allowed between closing dispatch and checking activity.
+      updateGate = true;
+      engine.setUpdateGate(true);
+      schedules.setUpdateGate(true);
+      // Even an idle live page can initiate a background network request after
+      // this check. Require it closed rather than race its next request or abort
+      // an in-progress external action during update shutdown.
+      const browserBusy = controlledBrowser.inflight.size > 0 || controlledBrowser.live.size > 0;
+      const busy = inflightMutations > 0 || engine.running.size > 0 ||
+        localAccess.running.size > 0 || localAccess.inflight.size > 0 || browserBusy ||
+        mail.active.size > 0 || mail.inboxLocks.size > 0 || mail.readControllers.size > 0;
+      if (busy) {
+        // A refused installation must not strand tasks or settings behind a gate.
+        updateGate = false;
+        engine.setUpdateGate(false);
+        schedules.setUpdateGate(false);
+        return { ready: false };
+      }
+      return { ready: true };
+    },
+    releaseUpdateGate() {
+      if (closed || !updateGate) return;
+      updateGate = false;
+      engine.setUpdateGate(false);
+      schedules.setUpdateGate(false);
+    },
     async close() {
       if (closed) return;
       closed = true;

@@ -11,9 +11,14 @@ test('Windows packaging configuration satisfies electron-builder schema', async 
   await validateConfiguration({ ...config, win: { ...config.win, signExecutable: false }, toolsets: { wine: '1.0.1', nsis: '1.2.1' } }, { isEnabled: false, add() {} });
   assert.equal(config.publish, null);
   assert.equal(config.nsis.perMachine, false);
+  assert.equal(config.nsis.allowElevation, false);
+  assert.equal(config.nsis.packElevateHelper, false);
+  assert.ok(existsSync(config.nsis.include));
+  assert.match(readFileSync(config.nsis.include, 'utf8'), /customInstallMode/);
+  assert.match(readFileSync(config.nsis.include, 'utf8'), /\$isForceCurrentInstall "1"/);
   assert.equal(config.nsis.deleteAppDataOnUninstall, false);
   assert.ok(config.extraResources.some(entry => entry.to === 'browser-runtime'));
-  for (const file of ['bridge.cjs', 'vault.cjs', 'lifecycle.cjs', 'window-state.cjs']) {
+  for (const file of ['bridge.cjs', 'vault.cjs', 'lifecycle.cjs', 'window-state.cjs', 'update-policy.cjs', 'update-transport.cjs', 'update-files.cjs', 'update-manager.cjs']) {
     assert.ok(config.files.includes(file)); assert.ok(existsSync(join(__dirname, '..', file)));
   }
   assert.ok(config.files.includes('assets/**'));
