@@ -560,8 +560,8 @@
     },
     {
       "path": "tests/generic-chat-ui.mjs",
-      "bytes": 14492,
-      "sha256": "bbeca5806d167d1aab51ca5cd60d8c464270e7178411fdd54a5c3e4b59c78f19"
+      "bytes": 15107,
+      "sha256": "54b6d8cf1c3d874c7e3944c5f99c9879d25e6e1e69fb205a43b7942fa76c4e16"
     },
     {
       "path": "tests/generic-local-controls.test.mjs",
@@ -757,6 +757,11 @@
       "path": "tests/ui-stability-60s.mjs",
       "bytes": 15181,
       "sha256": "657d7f6b91175416e37ff542b4180ca11da8e057b18a463fd14b9ca67bf0ed73"
+    },
+    {
+      "path": "tests/ui-submitted-task-wait.test.mjs",
+      "bytes": 1170,
+      "sha256": "5ddf5deb07c3e2222c776e7c120fe0f5c0dddda2cf34599b61fb40b1a347d281"
     },
     {
       "path": "tests/ui-v03.mjs",
