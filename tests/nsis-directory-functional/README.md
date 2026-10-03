@@ -161,3 +161,5 @@ an actual helper execution. No makensis is installed here. NSIS compilation,
 PowerShell preflight, the actual Windows probe, native status/ACL readback, and
 cleanup behavior are **unrun and unverified on Windows** until the publisher's
 actual probe supplies evidence.
+
+This diagnostic revision additionally compares original and corrected initialized-pointer output forms using one actual read-only TokenUser call. The included product helper remains byte-exact original fcfaf…; 15 source contracts pass. Windows execution remains pending.

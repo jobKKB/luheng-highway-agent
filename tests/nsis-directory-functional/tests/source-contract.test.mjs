@@ -166,3 +166,17 @@ test('failure trace remains a failure and does not manufacture later stages', ()
   assert.equal(validateTrace(data, owned).helperFlowSucceeded, false);
   assert.equal(Object.hasOwn(data, 'create_exit'), false);
 });
+
+test('TokenUser probe compares ignored original output against initialized correct destination', () => {
+  const token = /Function FixtureProbeTokenUserSizing([\s\S]*?)FunctionEnd/.exec(fixture)[1];
+  assert.match(token, /OpenProcessToken\(p r0, i 0x8, \*p 0 r1\)/);
+  assert.match(token, /GetTokenInformation\(p r1, i 1, p 0, i 0, \*i 0 \.r3\) i \.r2 \?e/);
+  assert.match(token, /GetTokenInformation\(p r1, i 1, p 0, i 0, \*i 0 r3\) i \.r2 \?e/);
+  assert.match(token, /Pop \$fixtureOriginalSizingError/);
+  assert.match(token, /Pop \$fixtureTokenSizingError/);
+  assert.match(token, /GetTokenInformation\(p r1, i 1, p r4, i r3, \*i 0 r5\)/);
+  assert.match(token, /System::Free \$4/);
+  assert.match(token, /CloseHandle\(p r1\)/);
+  const outsideProbe = fixture.replace(/Function FixtureProbeTokenUserSizing[\s\S]*?FunctionEnd/, '');
+  assert.doesNotMatch(outsideProbe, /\*(?:p|i) 0 \.r\d+/);
+});

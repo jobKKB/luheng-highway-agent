@@ -53,6 +53,19 @@ Var fixtureOutcome
 Var fixtureCleanup
 Var fixtureCleanupError
 Var fixtureExit
+Var fixtureCurrentProcess
+Var fixtureTokenOpenResult
+Var fixtureTokenOpenHandle
+Var fixtureTokenOpenError
+Var fixtureOriginalSizingResult
+Var fixtureOriginalSizingLength
+Var fixtureOriginalSizingError
+Var fixtureTokenSizingResult
+Var fixtureTokenSizingLength
+Var fixtureTokenSizingError
+Var fixtureTokenReadResult
+Var fixtureTokenReadLength
+Var fixtureTokenReadError
 
 ; The unreachable old-registration helper branch must still compile. This
 ; function is copied from electron-builder 26.15.3 include/installUtil.nsh.
@@ -93,7 +106,7 @@ Function FixtureParseArguments
   StrCpy $fixtureNonce ""
   StrCpy $4 0
   System::Call 'kernel32::GetCommandLineW() p .r0'
-  System::Call 'shell32::CommandLineToArgvW(p r0, *i 0 .r2) p .r1'
+  System::Call 'shell32::CommandLineToArgvW(p r0, *i 0 r2) p .r1'
   ${If} $1 == 0
   ${OrIf} $2 != 4
     StrCpy $fixtureGateError "Expected exactly /S /ROOT=... /NONCE=..."
@@ -158,7 +171,7 @@ Function FixtureParseArguments
 FunctionEnd
 
 !macro FixtureRejectExistingKey HIVE KEY VIEW
-  System::Call 'advapi32::RegOpenKeyExW(p ${HIVE}, w "${KEY}", i 0, i ${VIEW}, *p 0 .r0) i .r1'
+  System::Call 'advapi32::RegOpenKeyExW(p ${HIVE}, w "${KEY}", i 0, i ${VIEW}, *p 0 r0) i .r1'
   ${If} $1 == 0
     System::Call 'advapi32::RegCloseKey(p r0)'
     StrCpy $fixtureGateError "Product registry key exists: ${HIVE}/${VIEW}/${KEY}"
@@ -313,22 +326,78 @@ Function FixtureReadTokenStatus
   UserInfo::GetAccountType
   Pop $fixtureAccountType
   System::Call 'kernel32::GetCurrentProcess() p .r0'
-  System::Call 'advapi32::OpenProcessToken(p r0, i 8, *p 0 .r1) i .r2'
+  System::Call 'advapi32::OpenProcessToken(p r0, i 8, *p 0 r1) i .r2'
   ${If} $2 != 0
     System::Call '*(i 0) p .r3'
     ${If} $3 != 0
-      System::Call 'advapi32::GetTokenInformation(p r1, i 20, p r3, i 4, *i 0 .r4) i .r2'
+      System::Call 'advapi32::GetTokenInformation(p r1, i 20, p r3, i 4, *i 0 r4) i .r2'
       ${If} $2 != 0
         System::Call '*$3(i .r4)'
         StrCpy $fixtureTokenElevated $4
       ${EndIf}
-      System::Call 'advapi32::GetTokenInformation(p r1, i 18, p r3, i 4, *i 0 .r4) i .r2'
+      System::Call 'advapi32::GetTokenInformation(p r1, i 18, p r3, i 4, *i 0 r4) i .r2'
       ${If} $2 != 0
         System::Call '*$3(i .r4)'
         StrCpy $fixtureTokenElevationType $4
       ${EndIf}
       System::Free $3
     ${EndIf}
+    System::Call 'kernel32::CloseHandle(p r1)'
+  ${EndIf}
+  System::Store "L"
+FunctionEnd
+
+; Read-only reproduction of the exact helper TokenUser sizing call. Capture
+; the raw System result and Win32 error immediately; never change the token.
+Function FixtureProbeTokenUserSizing
+  System::Store "S"
+  StrCpy $fixtureTokenReadResult "not-attempted"
+  StrCpy $fixtureTokenReadLength "not-attempted"
+  StrCpy $fixtureTokenReadError "not-attempted"
+  StrCpy $fixtureTokenSizingResult "not-attempted"
+  StrCpy $fixtureTokenSizingLength "not-attempted"
+  StrCpy $fixtureTokenSizingError "not-attempted"
+  StrCpy $1 0
+  StrCpy $3 0
+  StrCpy $4 0
+  System::Call 'kernel32::GetCurrentProcess() p .r0'
+  StrCpy $fixtureCurrentProcess $0
+  System::Call 'advapi32::OpenProcessToken(p r0, i 0x8, *p 0 r1) i .r2 ?e'
+  Pop $fixtureTokenOpenError
+  StrCpy $fixtureTokenOpenResult $2
+  StrCpy $fixtureTokenOpenHandle $1
+  ${If} $2 == 0
+  ${OrIf} $1 == 0
+    Goto fixture_token_probe_done
+  ${EndIf}
+  ; Original destination syntax on this known valid handle: output ignored.
+  System::Call 'advapi32::GetTokenInformation(p r1, i 1, p 0, i 0, *i 0 .r3) i .r2 ?e'
+  Pop $fixtureOriginalSizingError
+  StrCpy $fixtureOriginalSizingResult $2
+  StrCpy $fixtureOriginalSizingLength $3
+  System::Call 'advapi32::GetTokenInformation(p r1, i 1, p 0, i 0, *i 0 r3) i .r2 ?e'
+  Pop $fixtureTokenSizingError
+  StrCpy $fixtureTokenSizingResult $2
+  StrCpy $fixtureTokenSizingLength $3
+  ${If} $3 < 8
+  ${OrIf} $3 > 65536
+    Goto fixture_token_probe_done
+  ${EndIf}
+  System::Alloc $3
+  Pop $4
+  ${If} $4 == 0
+    StrCpy $fixtureTokenReadResult "allocation-failed"
+    Goto fixture_token_probe_done
+  ${EndIf}
+  System::Call 'advapi32::GetTokenInformation(p r1, i 1, p r4, i r3, *i 0 r5) i .r2 ?e'
+  Pop $fixtureTokenReadError
+  StrCpy $fixtureTokenReadResult $2
+  StrCpy $fixtureTokenReadLength $5
+  fixture_token_probe_done:
+  ${If} $4 != 0
+    System::Free $4
+  ${EndIf}
+  ${If} $1 != 0
     System::Call 'kernel32::CloseHandle(p r1)'
   ${EndIf}
   System::Store "L"
@@ -341,7 +410,7 @@ Function FixtureReadSecurity
   StrCpy $6 0
   StrCpy $7 0
   StrCpy $8 0
-  System::Call 'advapi32::GetSecurityInfo(p $luidOwnedHandle, i 1, i 5, *p 0 .r0, p 0, *p 0 .r1, p 0, *p 0 .r6) i .r2'
+  System::Call 'advapi32::GetSecurityInfo(p $luidOwnedHandle, i 1, i 5, *p 0 r0, p 0, *p 0 r1, p 0, *p 0 r6) i .r2'
   ${If} $2 != 0
   ${OrIf} $0 == 0
   ${OrIf} $1 == 0
@@ -349,14 +418,14 @@ Function FixtureReadSecurity
     StrCpy $fixtureSecurityError "GetSecurityInfo failed"
     Goto fixture_security_done
   ${EndIf}
-  System::Call 'advapi32::ConvertSidToStringSidW(p r0, *p 0 .r7) i .r2'
+  System::Call 'advapi32::ConvertSidToStringSidW(p r0, *p 0 r7) i .r2'
   ${If} $2 != 0
     System::Call 'kernel32::lstrcpynW(w .r3, p r7, i ${NSIS_MAX_STRLEN})'
     StrCpy $fixtureOwnerSid $3
   ${Else}
     StrCpy $fixtureSecurityError "Owner SID conversion failed"
   ${EndIf}
-  System::Call 'advapi32::GetSecurityDescriptorControl(p r6, *i 0 .r3, *i 0 .r4) i .r2'
+  System::Call 'advapi32::GetSecurityDescriptorControl(p r6, *i 0 r3, *i 0 r4) i .r2'
   ${If} $2 != 0
     StrCpy $fixtureDaclControl $3
   ${Else}
@@ -364,7 +433,7 @@ Function FixtureReadSecurity
   ${EndIf}
   System::Call '*$1(&i1, &i1, &i2, &i2 .r3, &i2)'
   StrCpy $fixtureAceCount $3
-  System::Call 'advapi32::ConvertSecurityDescriptorToStringSecurityDescriptorW(p r6, i 1, i 5, *p 0 .r8, p 0) i .r2'
+  System::Call 'advapi32::ConvertSecurityDescriptorToStringSecurityDescriptorW(p r6, i 1, i 5, *p 0 r8, p 0) i .r2'
   ${If} $2 != 0
     System::Call 'kernel32::lstrcpynW(w .r3, p r8, i ${NSIS_MAX_STRLEN})'
     StrCpy $fixtureDaclSddl $3
@@ -525,9 +594,12 @@ Function .onInit
   FileWriteByte $fixtureTrace 255
   FileWriteByte $fixtureTrace 254
   Call FixtureReadTokenStatus
+  Call FixtureProbeTokenUserSizing
   FileWriteUTF16LE $fixtureTrace "[meta]$\r$\nschema=1$\r$\nnonce=$fixtureNonce$\r$\nhelperSHA256=${FIXTURE_HELPER_SHA256}$\r$\nappGUID=${APP_GUID}$\r$\nappLeaf=${APP_FILENAME}$\r$\n"
   FileWriteUTF16LE $fixtureTrace "root=$fixtureRoot$\r$\nparent=$fixtureParent$\r$\ntarget=$INSTDIR$\r$\nevidence=$fixtureEvidence$\r$\n"
   FileWriteUTF16LE $fixtureTrace "accountType=$fixtureAccountType$\r$\ntokenElevated=$fixtureTokenElevated$\r$\ntokenElevationType=$fixtureTokenElevationType$\r$\nregistryGate=all-product-keys-absent-in-both-views$\r$\nglobalSemantics=post-return-snapshot$\r$\n$\r$\n"
+  FileWriteUTF16LE $fixtureTrace "originalSizingResult=$fixtureOriginalSizingResult$\r$\noriginalSizingLength=$fixtureOriginalSizingLength$\r$\noriginalSizingError=$fixtureOriginalSizingError$\r$\n"
+  FileWriteUTF16LE $fixtureTrace "currentProcess=$fixtureCurrentProcess$\r$\ntokenOpenResult=$fixtureTokenOpenResult$\r$\ntokenOpenHandle=$fixtureTokenOpenHandle$\r$\ntokenOpenError=$fixtureTokenOpenError$\r$\ntokenSizingResult=$fixtureTokenSizingResult$\r$\ntokenSizingLength=$fixtureTokenSizingLength$\r$\ntokenSizingError=$fixtureTokenSizingError$\r$\ntokenReadResult=$fixtureTokenReadResult$\r$\ntokenReadLength=$fixtureTokenReadLength$\r$\ntokenReadError=$fixtureTokenReadError$\r$\n$\r$\n"
 FunctionEnd
 
 Section "Actual helper flow"
