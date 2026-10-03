@@ -193,7 +193,7 @@ function morphChildren(live,next){
 }
 function render(force=false){
  renderChrome();
- main.dataset.view=view;
+ if(main.dataset.view!==view)main.dataset.view=view;
  if(!loaded){if(!online){main.innerHTML=`<div class="error-page">${icon('link')}<h2>工作空间暂未连接</h2><p>请确认本地服务已启动。连接恢复后，任务与设置会自动重新加载。</p><button class="secondary-button" data-action="refresh">${icon('refresh')}重新连接</button></div>`;mainMount='';}return;}
  if(!force&&view==='settings'&&$('#settings-form'))return;
  const mount=view+':'+navigationVersion,stable=view==='chat'&&mainMount===mount;

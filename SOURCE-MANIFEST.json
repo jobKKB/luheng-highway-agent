@@ -430,8 +430,8 @@
     },
     {
       "path": "public/app.js",
-      "bytes": 176236,
-      "sha256": "f760aaa5b53198519c0494802ab8d20e1ef29ea9706ff770e9d7c199072a3087"
+      "bytes": 176264,
+      "sha256": "fa5caea83ba6b8eb5f5f0e8737a30231d3c432f66c4c2200b88f767aa2d2303a"
     },
     {
       "path": "public/chat.css",
@@ -560,8 +560,8 @@
     },
     {
       "path": "tests/generic-chat-ui.mjs",
-      "bytes": 13989,
-      "sha256": "68e8f6cd0d5e14c20ed045aa0196c7ade89e33ea493733f6c56476bd39b5e78c"
+      "bytes": 14492,
+      "sha256": "bbeca5806d167d1aab51ca5cd60d8c464270e7178411fdd54a5c3e4b59c78f19"
     },
     {
       "path": "tests/generic-local-controls.test.mjs",
@@ -687,6 +687,11 @@
       "path": "tests/public-web.test.mjs",
       "bytes": 32489,
       "sha256": "07f92b4ff15f22f00057612e0110f3768da0c4941d7734d5723a84c5d330b13c"
+    },
+    {
+      "path": "tests/render-view-idempotency.test.mjs",
+      "bytes": 1308,
+      "sha256": "ae0532511222dd86054077fca81032b8d3028e9aafcf42862703bff8bdacf802"
     },
     {
       "path": "tests/retained-chat-settings-ui.mjs",
