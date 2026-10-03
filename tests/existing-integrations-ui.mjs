@@ -200,16 +200,38 @@ async function runUi() {
       assert.equal(await box.locator('.output-block').innerText(), text);
       assert.equal(await page.locator('[data-action="mail-approve"]').isEnabled(), true);
     }
+    // Backend counters/status can precede settle/read/screenshot and the UI's
+    // forced refresh. Type only after the selected session's handler has ended
+    // and its rendered form is bound to the current observation.
+    async function settledControlled(sessionId = awaitId, { status, editable = false, hasLease = false } = {}) {
+      await page.waitForFunction(({ sessionId, status, editable, hasLease }) => {
+        const session = state.controlledSessions.find(item => item.id === sessionId);
+        const form = document.querySelector('#controlled-action-form');
+        return selectedControlledId === sessionId && session && (!status || session.status === status)
+          && !pollBusy && !controlledBusy.has('open') && !controlledBusy.has(sessionId) && !controlledBusy.has('cancel:' + sessionId)
+          && form?.dataset.id === sessionId && form.dataset.observationId === session.lastObservation?.observationId
+          && (!hasLease || controlledLeases.has(sessionId))
+          && (!editable || !document.querySelector('#cb-control').disabled && !form.querySelector('[type="submit"]').disabled);
+      }, { sessionId, status, editable, hasLease });
+    }
+    async function taskDetail(taskId) {
+      const response = await page.request.get(h.app.url + '/api/tasks/' + encodeURIComponent(taskId));
+      assert.equal(response.status(), 200); return response.json();
+    }
     async function stageFill(value) {
+      await settledControlled(awaitId, { editable: true });
       const current = (await state()).controlledSessions.find(item => item.id === awaitId);
       const control = current.lastObservation.controls.find(item => item.label === '巡查安排'); assert.ok(control);
       await page.locator('#cb-control').selectOption(control.controlId); await page.locator('#cb-action-type').selectOption('fill'); await page.locator('#cb-value').fill(value);
       await page.locator('#controlled-action-form [type="submit"]').click();
+      await settledControlled(awaitId, { status: current.status, editable: true, hasLease: current.status === 'manual' });
     }
     async function stageSave() {
+      await settledControlled(awaitId, { editable: true });
       const current = (await state()).controlledSessions.find(item => item.id === awaitId);
       await page.locator('#cb-control').selectOption(current.lastObservation.controls.find(item => item.label === '保存安排').controlId);
       await page.locator('#cb-action-type').selectOption('click'); await page.locator('#controlled-action-form [type="submit"]').click();
+      await settledControlled(awaitId, { status: current.status, editable: true, hasLease: current.status === 'manual' });
     }
     async function openControlled() {
       await page.locator('[data-action="cb-open"]').click();
@@ -219,6 +241,7 @@ async function runUi() {
         return selected?.status==='agent' && !controlledBusy.has('open') && form?.dataset.id===selected.id;
       });
       awaitId=await page.evaluate(()=>selectedControlledId);
+      await settledControlled(awaitId, { status: 'agent', editable: true });
     }
     async function newTask(prompt) {
       await page.locator('.new-task-button').click();
@@ -267,24 +290,46 @@ async function runUi() {
     await stageFill('已批准的合成网页内容'); await stageSave(); await page.locator('[data-action="cb-propose"]').click(); await page.locator('.controlled-exact-actions').waitFor();
     assert.equal(await page.locator('.controlled-exact-actions li').count(), 2); assert.equal(await page.locator('.controlled-exact-actions pre').innerText(), '已批准的合成网页内容'); assert.match(await page.locator('.controlled-exact-actions li').last().innerText(), /保存安排/); assert.equal(await page.locator('.mail-approval-snapshot dd').first().innerText(), h.sites.oa.origin + '/oa'); assert.equal(h.sites.stats.inputs, 0); assert.equal(h.sites.stats.saves, 0); await shot('controlled-full-approval');
     await page.keyboard.press('Escape'); await page.locator('[data-action="cb-review"]').click(); await page.locator('[data-action="cb-approve"]').click(); await page.locator('.modal').waitFor({ state: 'hidden' }); await until(() => h.sites.stats.saves === 1 && h.sites.stats.inputs === 1, 'only approved batch causes autosave/save');
-    await page.locator('[data-action="cb-read"]').click(); await until(async () => (await state()).controlledSessions.find(item => item.id === awaitId)?.lastObservation.text.includes('已保存 1：已批准的合成网页内容'), 'approved save observed');
+    await settledControlled(awaitId, { status: 'agent', editable: true });
+    const beforeApprovedRead = await page.evaluate(id => state.controlledSessions.find(item => item.id === id).lastObservation.observationId, awaitId);
+    await page.locator('[data-action="cb-read"]').click();
+    await page.waitForFunction(({ sessionId, previous }) => state.controlledSessions.find(item => item.id === sessionId)?.lastObservation?.observationId !== previous, { sessionId: awaitId, previous: beforeApprovedRead });
+    await settledControlled(awaitId, { status: 'agent', editable: true });
+    await until(async () => (await state()).controlledSessions.find(item => item.id === awaitId)?.lastObservation.text.includes('已保存 1：已批准的合成网页内容'), 'approved save observed');
     pass('ui', 'Owned target/open/read, clear/reject/stage/propose/review, exact approval and no preapproval autosave');
     await page.locator('[data-action="cb-takeover"]').click(); await page.getByText('此窗口持有人工独占控制权。下面的单个操作由你直接发起，不经智能体审批；敏感字段仍然禁用。', { exact: true }).waitFor();
     await stageFill('人工明确填写的合成内容'); await until(() => h.sites.stats.inputs === 2, 'manual lease fill'); assert.equal(await page.locator('[data-action="cb-propose"]').count(), 0); await stageSave(); await until(() => h.sites.stats.saves === 2, 'manual lease save'); await shot('controlled-manual');
-    await page.locator('[data-action="cb-resume"]').click(); await until(async () => (await state()).controlledSessions.find(item => item.id === awaitId)?.status === 'agent', 'resume lease'); assert.match((await state()).controlledSessions.find(item => item.id === awaitId).lastObservation.text, /已保存 2：人工明确填写的合成内容/);
-    await stageFill('关闭前未批准的内容'); await page.locator('[data-action="cb-propose"]').click(); await page.locator('.controlled-exact-actions').waitFor(); await page.keyboard.press('Escape'); await page.locator('[data-action="cb-cancel"]').click(); await until(async () => (await state()).controlledSessions.find(item => item.id === awaitId)?.status === 'cancelled', 'close session'); assert.equal(h.sites.stats.inputs, 2); assert.equal(h.sites.stats.saves, 2);
+    await page.locator('[data-action="cb-resume"]').click(); await until(async () => (await state()).controlledSessions.find(item => item.id === awaitId)?.status === 'agent', 'resume lease'); await settledControlled(awaitId, { status: 'agent', editable: true }); assert.match((await state()).controlledSessions.find(item => item.id === awaitId).lastObservation.text, /已保存 2：人工明确填写的合成内容/);
+    await stageFill('关闭前未批准的内容'); await page.locator('[data-action="cb-propose"]').click(); await page.locator('.controlled-exact-actions').waitFor(); await page.keyboard.press('Escape'); await page.locator('[data-action="cb-cancel"]').click(); await until(async () => (await state()).controlledSessions.find(item => item.id === awaitId)?.status === 'cancelled', 'close session'); await settledControlled(awaitId, { status: 'cancelled' }); assert.equal(h.sites.stats.inputs, 2); assert.equal(h.sites.stats.saves, 2);
     assert.equal(await page.locator('[data-action="cb-takeover"]').count(), 0); assert.equal(await page.locator('#controlled-action-form [type="submit"]').isDisabled(), true);
     pass('ui', 'Actual manual lease fill/save, resume/reobservation and close with pending batch cause no replay');
     // Reload discards the in-window lease; the server still owns the manual
     // session. UI must neither resume nor silently regain manual authorization.
-    await openControlled(); await page.locator('[data-action="cb-takeover"]').click(); await page.locator('[data-action="cb-resume"]').waitFor(); const reloadedLease = (await state()).controlledSessions.find(item => item.status === 'manual').id;
-    await page.reload(); await page.locator('.controlled-detail').waitFor(); await page.getByText('此窗口没有当前人工租约，可能已刷新页面或由其他窗口接管。不能操作或归还；可关闭此会话后重新建立。', { exact: true }).waitFor(); assert.equal(await page.locator('[data-action="cb-resume"]').isDisabled(), true); assert.equal(await page.locator('#controlled-action-form [type="submit"]').isDisabled(), true); assert.equal((await state()).controlledSessions.find(item => item.id === reloadedLease).status, 'manual'); await page.locator('[data-action="cb-cancel"]').click(); await until(async () => (await state()).controlledSessions.find(item => item.id === reloadedLease)?.status === 'cancelled', 'lease reload close');
+    await openControlled(); await page.locator('[data-action="cb-takeover"]').click(); await page.locator('[data-action="cb-resume"]').waitFor(); await settledControlled(awaitId, { status: 'manual', editable: true, hasLease: true }); const reloadedLease = awaitId;
+    await page.reload(); await page.locator('.controlled-detail').waitFor(); await page.getByText('此窗口没有当前人工租约，可能已刷新页面或由其他窗口接管。不能操作或归还；可关闭此会话后重新建立。', { exact: true }).waitFor(); assert.equal(await page.locator('[data-action="cb-resume"]').isDisabled(), true); assert.equal(await page.locator('#controlled-action-form [type="submit"]').isDisabled(), true); assert.equal((await state()).controlledSessions.find(item => item.id === reloadedLease).status, 'manual'); await page.locator('[data-action="cb-cancel"]').click(); await until(async () => (await state()).controlledSessions.find(item => item.id === reloadedLease)?.status === 'cancelled', 'lease reload close'); await settledControlled(reloadedLease, { status: 'cancelled' });
     pass('ui', 'Reload loses manual lease and disables manual/resume until explicit close');
     await nav('chat'); const mailTask = await newTask(taskMailPrompt); await page.locator('[data-action="open-mail-approval"]').waitFor(); assert.equal(h.mail.smtp.messages.length, 3); assert.equal(await page.locator('.chat-turn [data-action="approve"]').count(), 0); await page.locator('[data-action="open-mail-approval"]').click(); await snapshot('任务完整审批（合成）', approvedText, [recipients[0]]); await page.locator('[data-action="mail-approve"]').click(); await page.locator('.modal').waitFor({ state: 'hidden' }); await until(async () => (await state()).tasks.find(item => item.id === mailTask.id)?.status === 'completed', 'central mail task finishes'); assert.equal(h.mail.smtp.messages.length, 4);
-    await nav('chat'); const browserTask = await newTask(taskBrowserPrompt); await page.locator('[data-action="open-controlled-approval"]').waitFor(); assert.equal(h.sites.stats.inputs, 2); assert.equal(h.sites.stats.saves, 2); assert.equal(await page.locator('.chat-turn [data-action="approve"]').count(), 0); await page.locator('[data-action="open-controlled-approval"]').click(); await page.locator('.controlled-exact-actions').waitFor(); assert.equal(await page.locator('.controlled-exact-actions pre').innerText(), '任务已批准的合成网页内容'); await page.locator('[data-action="cb-approve"]').click(); await page.locator('.modal').waitFor({ state: 'hidden' }); await until(async () => (await state()).tasks.find(item => item.id === browserTask.id)?.status === 'completed', 'central controlled task finishes'); assert.equal(h.sites.stats.inputs, 3); assert.equal(h.sites.stats.saves, 3); await page.locator('[data-action="cb-cancel"]').click();
+    const mailDone = await taskDetail(mailTask.id);
+    assert.equal(mailDone.mailOutcome, 'sent');
+    assert.ok(mailDone.toolEvidence.some(item => item.callId === 'synthetic-mail-send' && item.success && item.actionKinds.includes('mail_send')));
+    const taskDraft = (await state()).mailOutbox.find(item => item.id === mailDone.mailDraftId);
+    assert.equal(taskDraft.status, 'sent'); assert.equal(taskDraft.attempts, 1);
+    const taskMime = await require('mailparser').simpleParser(h.mail.smtp.messages[3].raw);
+    assert.equal(taskMime.subject, taskDraft.subject); assert.equal(taskMime.text.trim(), approvedText); assert.equal(taskMime.messageId, taskDraft.messageId); assert.deepEqual(taskMime.to.value.map(item => item.address), [recipients[0]]);
+    await nav('chat'); const browserTask = await newTask(taskBrowserPrompt); await page.locator('[data-action="open-controlled-approval"]').waitFor(); assert.equal(h.sites.stats.inputs, 2); assert.equal(h.sites.stats.saves, 2); assert.equal(await page.locator('.chat-turn [data-action="approve"]').count(), 0); await page.locator('[data-action="open-controlled-approval"]').click(); await page.locator('.controlled-exact-actions').waitFor(); assert.equal(await page.locator('.controlled-exact-actions pre').innerText(), '任务已批准的合成网页内容'); await page.locator('[data-action="cb-approve"]').click(); await page.locator('.modal').waitFor({ state: 'hidden' }); await until(async () => (await state()).tasks.find(item => item.id === browserTask.id)?.status === 'completed', 'central controlled task finishes'); assert.equal(h.sites.stats.inputs, 3); assert.equal(h.sites.stats.saves, 3);
+    const browserDone = await taskDetail(browserTask.id);
+    assert.equal(browserDone.controlledOutcome, 'completed');
+    assert.ok(browserDone.toolEvidence.some(item => item.callId === 'synthetic-browser-write' && item.success && item.actionKinds.includes('browser_action')));
+    const browserReceipt = (await state()).browserApprovals.find(item => item.id === browserDone.controlledApprovalId);
+    assert.equal(browserReceipt.status, 'completed'); assert.equal(browserReceipt.inputStarted, true); assert.equal(browserReceipt.actionsCompleted, 2);
+    // Task-owned sessions are closed by decideControlled's finally block before
+    // the approval HTTP response returns. There is no active close button here.
+    awaitId = browserDone.controlledSessionId;
+    await settledControlled(awaitId, { status: 'cancelled' });
+    assert.equal(await page.locator('[data-action="cb-cancel"]').count(), 0);
     pass('ui', 'API-first conversation central mail/browser actions open full workspace approvals then resume from real receipts');
     // Layout assertions use the live CSS and native interaction paths at 360px.
-    await page.setViewportSize({ width: 360, height: 780 }); await nav('mail'); await page.locator('[data-mail-tab="outbox"]').click(); await page.locator('.mail-draft-detail').waitFor(); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); await shot('mobile-mail'); const mobileMail = await compose('移动端完整审批（合成）'); await page.locator('[data-action="mail-request-send"]').click(); await snapshot(mobileMail.subject, approvedText); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); await shot('mobile-mail-approval'); await page.locator('[data-action="mail-reject"]').click(); await page.locator('.modal').waitFor({ state: 'hidden' }); assert.equal(h.mail.smtp.messages.length, 4); await nav('browser'); await page.locator('.controlled-detail').waitFor(); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); await shot('mobile-controlled'); await openControlled(); awaitId = (await state()).controlledSessions.find(item => item.status === 'agent').id; await stageFill('移动端审批仅合成文本'); await page.locator('[data-action="cb-propose"]').click(); await page.locator('.controlled-exact-actions').waitFor(); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); await shot('mobile-controlled-approval'); await page.locator('[data-action="cb-reject"]').click(); await page.locator('.modal').waitFor({ state: 'hidden' }); await page.locator('[data-action="cb-cancel"]').click(); await until(async () => (await state()).controlledSessions.find(item => item.id === awaitId)?.status === 'cancelled', 'mobile close'); assert.equal(h.sites.stats.inputs, 3); assert.equal(h.sites.stats.saves, 3);
+    await page.setViewportSize({ width: 360, height: 780 }); await nav('mail'); await page.locator('[data-mail-tab="outbox"]').click(); await page.locator('.mail-draft-detail').waitFor(); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); await shot('mobile-mail'); const mobileMail = await compose('移动端完整审批（合成）'); await page.locator('[data-action="mail-request-send"]').click(); await snapshot(mobileMail.subject, approvedText); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); await shot('mobile-mail-approval'); await page.locator('[data-action="mail-reject"]').click(); await page.locator('.modal').waitFor({ state: 'hidden' }); assert.equal(h.mail.smtp.messages.length, 4); await nav('browser'); await page.locator('.controlled-detail').waitFor(); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); await shot('mobile-controlled'); await openControlled(); await stageFill('移动端审批仅合成文本'); await page.locator('[data-action="cb-propose"]').click(); await page.locator('.controlled-exact-actions').waitFor(); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); await shot('mobile-controlled-approval'); await page.locator('[data-action="cb-reject"]').click(); await page.locator('.modal').waitFor({ state: 'hidden' }); await settledControlled(awaitId, { status: 'agent', editable: true }); await page.locator('[data-action="cb-cancel"]').click(); await until(async () => (await state()).controlledSessions.find(item => item.id === awaitId)?.status === 'cancelled', 'mobile close'); await settledControlled(awaitId, { status: 'cancelled' }); assert.equal(h.sites.stats.inputs, 3); assert.equal(h.sites.stats.saves, 3);
     assert.equal(h.sites.stats.unauthorizedWrites, 0); assert.equal(h.sites.stats.deniedHTTP, 0); assert.equal(h.sites.stats.deniedWS, 0); assert.deepEqual(pageErrors, []); assert.ok(!JSON.stringify(await state()).includes(h.mail.config.smtp.password));
     pass('ui', '360px mail/browser real layout, no page errors or fixture side effects outside approvals/manual actions');
   } catch (error) { if (page) { try { await page.screenshot({ path: join(out, 'failure.png'), animations: 'disabled' }); screenshots.push('failure.png'); } catch {} } throw error; }
