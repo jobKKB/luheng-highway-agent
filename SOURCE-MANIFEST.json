@@ -390,8 +390,8 @@
     },
     {
       "path": "public/app.js",
-      "bytes": 158323,
-      "sha256": "203a2876c5059941a38b517e9aae654f61025fe9243e775f781d0c1c38fdfb4d"
+      "bytes": 158290,
+      "sha256": "dc036ddc485fe74d4b034698ecc27c91d4354ffaf960ea85943844f5da9d72b9"
     },
     {
       "path": "public/favicon.svg",
@@ -552,6 +552,16 @@
       "path": "tests/network-ip-policy.test.mjs",
       "bytes": 14365,
       "sha256": "11f555e83ecf05f7c6c4a2fc31c29abcaa6a829caf3a900bee33a3b3899be1ca"
+    },
+    {
+      "path": "tests/new-task-focus-independent.test.mjs",
+      "bytes": 14199,
+      "sha256": "a3c9776bbd3fd68849798d3fdf5a83e6023c28dc4324a1bba645e87a73ec74f6"
+    },
+    {
+      "path": "tests/new-task-focus.test.mjs",
+      "bytes": 8105,
+      "sha256": "bc25b1b1c56df9de44f2f748f23e541956b02c1184e810dd15d6a082b0d8ff96"
     },
     {
       "path": "tests/office-artifacts.test.mjs",
