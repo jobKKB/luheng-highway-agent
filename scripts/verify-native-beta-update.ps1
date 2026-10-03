@@ -7,7 +7,8 @@ param(
   [Parameter(Mandatory=$true)][string]$PairLock,
   [Parameter(Mandatory=$true)][string]$BaselineInstaller,
   [Parameter(Mandatory=$true)][string]$TargetInstaller,
-  [Parameter(Mandatory=$true)][string]$EvidenceDirectory
+  [Parameter(Mandatory=$true)][string]$EvidenceDirectory,
+  [switch]$ReadOnlyInstallProbe
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
@@ -95,6 +96,10 @@ try{
  if((Get-ItemProperty -LiteralPath $productKey).InstallLocation -ine $install){throw 'Actual HKCU install location mismatch'}
  if(Test-Path -LiteralPath $machineKey){throw 'Unexpected machine product installation'}
  $report.stages.baselineInstall='passed'
+ $installAcl=Get-Acl -LiteralPath $install
+ $identity=[System.Security.Principal.WindowsIdentity]::GetCurrent()
+ $report.stages.installationOwnerDiagnostic=@{readOnly=$true;path=$install;currentSid=$identity.User.Value;owner=$installAcl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value;protected=$installAcl.AreAccessRulesProtected;currentTokenIsAdministrator=([System.Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator);rules=@($installAcl.GetAccessRules($true,$true,[System.Security.Principal.SecurityIdentifier])|ForEach-Object{@{sid=$_.IdentityReference.Value;type=[string]$_.AccessControlType;rights=[string]$_.FileSystemRights;inherited=$_.IsInherited}})}
+ if($ReadOnlyInstallProbe){$report.status='read-only-install-owner-observed';throw 'Read-only owned installer directory probe completed; online upgrade was not executed'}
  $pair | Add-Member -NotePropertyName installedExecutable -NotePropertyValue $appExe -Force
  $pair | Add-Member -NotePropertyName stateRoot -NotePropertyValue $data -Force
  $pair | Add-Member -NotePropertyName runMarker -NotePropertyValue $marker -Force

@@ -50,8 +50,8 @@
     },
     {
       "path": ".github/workflows/beta-online-update-acceptance.yml",
-      "bytes": 3891,
-      "sha256": "07a08e0f2edbe1ef1d1c178564ee70eca34a5d8f04c02e373e20d3d360d39712"
+      "bytes": 3894,
+      "sha256": "48c9e9ae924d81118cea95fd19b09e48b3280e27449ccfdc6697784a48e48f9e"
     },
     {
       "path": ".github/workflows/generic-workspace-acceptance.yml",
@@ -615,8 +615,8 @@
     },
     {
       "path": "scripts/verify-native-beta-update.ps1",
-      "bytes": 12024,
-      "sha256": "7715c9ae800ced79f310d3728e39dc52005a51f652d90a32d05ace39e920ef83"
+      "bytes": 12978,
+      "sha256": "48f8981983fae3ff9f983b219da7acb7ab70c773fc192bb0e2bc5be81780157f"
     },
     {
       "path": "scripts/verify-native-beta-updater.mjs",
