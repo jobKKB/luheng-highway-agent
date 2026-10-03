@@ -48,7 +48,8 @@ jobs:
       - run: npm --prefix desktop ci
       - run: npm --prefix desktop run install:runtime
       - run: npx playwright install chromium
-      - run: npm test
+      - name: Test backend with serialized test files
+        run: node --test --test-concurrency=1 tests/*.test.mjs
       - run: npm --prefix desktop run check
       - name: Test existing browser UI flows
         run: node tests/ui-smoke.mjs

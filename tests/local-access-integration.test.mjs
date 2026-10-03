@@ -182,7 +182,7 @@ test("task-bound exact write is approved once, resumes the model and keeps paylo
     assert.equal(c.app.store.get("tasks", task.id).modelMessages.length, 0);
     assert.equal(c.app.store.get("approvals", central.id).status, "completed");
     const exported = await c.api(`/api/tasks/${task.id}/export`, { format: "docx" });
-    assert.equal(exported.status, 201);
+    assert.equal(exported.status, 201, JSON.stringify(exported.data));
     const document = await readFile(join(c.dataDir, "artifacts", exported.data.filename));
     assert.equal(zipPart(document, "word/document.xml").includes(marker), true, "explicit export uses the live result");
     assert.equal(sqlitePayloads(c).includes(marker), false, "export metadata does not repersist local output");
@@ -542,7 +542,7 @@ test("integrated: restart preserves existing Office export size and hash but can
     const task = (await c.api("/api/tasks", { prompt: "Make a synthetic result for explicit export" })).data;
     assert.equal((await settled(c, task.id)).status, "completed");
     const exported = await c.api(`/api/tasks/${task.id}/export`, { format: "docx" });
-    assert.equal(exported.status, 201); assert.ok(exported.data.size > 0);
+    assert.equal(exported.status, 201, JSON.stringify(exported.data)); assert.ok(exported.data.size > 0);
     assert.match(exported.data.sha256, /^[0-9a-f]{64}$/);
     assert.equal(c.app.store.get("tasks", task.id).exports[0].size, exported.data.size);
     await c.restart();

@@ -5,8 +5,8 @@
   "files": [
     {
       "path": ".github/workflows/windows-build.yml",
-      "bytes": 3949,
-      "sha256": "07b1b4c218e1da36160bc2cdc187986cda669f0e7d3928852610a2d5d80809e9"
+      "bytes": 4044,
+      "sha256": "4cdc3d699c6d949927cb4807d54b90b0c0a0bff1f1cf9acdf9182fc30919b4b7"
     },
     {
       "path": ".gitignore",
@@ -190,8 +190,8 @@
     },
     {
       "path": "desktop/windows-build.workflow.yml",
-      "bytes": 3949,
-      "sha256": "07b1b4c218e1da36160bc2cdc187986cda669f0e7d3928852610a2d5d80809e9"
+      "bytes": 4044,
+      "sha256": "4cdc3d699c6d949927cb4807d54b90b0c0a0bff1f1cf9acdf9182fc30919b4b7"
     },
     {
       "path": "docs/CONTROLLED-BROWSER.md",
@@ -495,8 +495,8 @@
     },
     {
       "path": "tests/local-access-integration.test.mjs",
-      "bytes": 33857,
-      "sha256": "49ec30839efd94fc6d68553233eb78a1a9b74939098b66a02e89186e68eff4ce"
+      "bytes": 33919,
+      "sha256": "b04598a30bf22aa9ba09f9afd292c121cfe6a0df4c8840c945206ec0bfd65830"
     },
     {
       "path": "tests/local-access-security-review.test.mjs",
