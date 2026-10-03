@@ -31,7 +31,7 @@ function harness({modalOpen=true}={}){
   document:doc,window:{scrollTo(){}},location:{hash:''},views:{chat:1,tasks:1,settings:1},main:{focus(){}},
   view:'chat',search:'',navigationVersion:0,activeTaskDetail:null,taskDetailRequest:0,modal:modalOpen?{kind:'reminder'}:null,modalReturnFocus:modalOpen?{node:h.notification}:null,
   localAccessChallenge:null,pendingSubmission:{id:'old'},chatTaskId:'old-chat',draft:DRAFT,pendingRender:false,
-  state:{settings:{},tasks:[],reminders:[]},pollBusy:false,refreshWaiters:[],online:true,loaded:true,localAccessAvailable:false,localAccessLastSignature:'[false,null]',lastSignature:'',selectedTaskId:null,notificationSeen:new Set(),
+  state:{settings:{},tasks:[],reminders:[]},pollBusy:false,refreshWaiters:[],settingsSaving:null,settingsEpoch:0,online:true,loaded:true,localAccessAvailable:false,localAccessLastSignature:'[false,null]',lastSignature:'',selectedTaskId:null,notificationSeen:new Set(),
   $:selector=>selector==='#prompt-input'?h.find('prompt-input'):selector==='#modal-root'?h.modalRoot:null,
   api:route=>{h.apis.push(route);const d=deferred();h.pending.push(d);return d.promise;},
   array:value=>Array.isArray(value)?value:[],syncLocalAccess:async()=>{},syncTaskDetail:async()=>{},selectActiveChat:id=>{context.chatTaskId=id;},

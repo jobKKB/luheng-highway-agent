@@ -954,7 +954,7 @@ if (
     port,
     dataDir: process.env.HIGHWAY_DATA_DIR || join(root, "data"),
   });
-  console.log(`路衡办公智能体 v0.4.0 已启动：${app.url} （仅本机）`);
+  console.log(`路衡办公智能体 v${applicationVersion} 已启动：${app.url} （仅本机）`);
   process.on("SIGINT", async () => {
     await app.close();
     process.exit(0);

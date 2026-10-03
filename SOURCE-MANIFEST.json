@@ -1,6 +1,6 @@
 {
   "name": "路衡办公智能体",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "type": "source-only-not-installer",
   "files": [
     {
@@ -20,8 +20,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 12918,
-      "sha256": "78e165be4c7c72f0e6089a111fd3b523251a1cc1cdab4723f036e7584d60687b"
+      "bytes": 13735,
+      "sha256": "ab78131fd2bbfe4ba57f12b27377a7f7218e7a721ffa225beb616fb6957ece0d"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -71,7 +71,7 @@
     {
       "path": "desktop/package-lock.json",
       "bytes": 127648,
-      "sha256": "c9ff2512b99fc3b3d94a0242f4f7e03bad1610ed2e92ebaac6ea07499fc632d1"
+      "sha256": "2562c35ea6ffb42c34e76a21bb3b2107ad6f5a55d0402fa69c27bf9058ce2dae"
     },
     {
       "path": "desktop/package-windows.cjs",
@@ -81,7 +81,7 @@
     {
       "path": "desktop/package.json",
       "bytes": 722,
-      "sha256": "e158c771d32b36094ebb3d034740a1011875d08a172e6d952681ab058149dca4"
+      "sha256": "ca2154c1d3e6a6a8bfc43219e081b8984fc27acf0fb80207f7928e512411ab17"
     },
     {
       "path": "desktop/security.cjs",
@@ -200,8 +200,8 @@
     },
     {
       "path": "docs/DESKTOP.md",
-      "bytes": 10340,
-      "sha256": "e6d8e9cfe96c3758c2660906087646a634ee3ba9e0b514813ef81aafe010103e"
+      "bytes": 10769,
+      "sha256": "22ecbcd6d5f99b5722fef6895e544e019b39fa954fdcfc97647f0c64200c1c2d"
     },
     {
       "path": "docs/IMPLEMENTATION-STATUS.md",
@@ -290,8 +290,8 @@
     },
     {
       "path": "lib/engine.mjs",
-      "bytes": 84005,
-      "sha256": "4ba2c942999f37ffd08defb124020c9cc5c323856be54d44ef5b45eed26a05e1"
+      "bytes": 84714,
+      "sha256": "0e55137b4d667f7ebde8ba4487831d4df36d4c550e1779fe7339e45345a13077"
     },
     {
       "path": "lib/fixture-client.js",
@@ -325,8 +325,8 @@
     },
     {
       "path": "lib/model.mjs",
-      "bytes": 11124,
-      "sha256": "2d04e98ca0a3d0d50c9e72c73d94e1250198b6934e732d4ea39fbe7eac962356"
+      "bytes": 12065,
+      "sha256": "5b99d5997e1012cb9371cec8e80c0fc8e2a25e9ddd728eb5502d6a612d1f00ee"
     },
     {
       "path": "lib/office-artifacts.mjs",
@@ -376,12 +376,12 @@
     {
       "path": "package-lock.json",
       "bytes": 21666,
-      "sha256": "e02aedff0d3d37587ec67968ce01e65553a9b779c2da46d3e47e770c6bc767a2"
+      "sha256": "019b9ca1c814dcb74aefee01404f32f9f001bde0075ca206b6430c02d3d1f966"
     },
     {
       "path": "package.json",
       "bytes": 543,
-      "sha256": "629968effced68cd912579c0c00243a110db00b4f2ed5c3a5e10b076f5ca848a"
+      "sha256": "a7a75dc881ae20c25fc351dc1ba36219d4b95fe3fd7298a1e30cb1c001a49b4e"
     },
     {
       "path": "public/agent-mark.svg",
@@ -390,8 +390,8 @@
     },
     {
       "path": "public/app.js",
-      "bytes": 158290,
-      "sha256": "dc036ddc485fe74d4b034698ecc27c91d4354ffaf960ea85943844f5da9d72b9"
+      "bytes": 163556,
+      "sha256": "a6a38a0d9144a00d96d51b3702788bbaf325604c97df798c4645246238f8a517"
     },
     {
       "path": "public/favicon.svg",
@@ -400,8 +400,8 @@
     },
     {
       "path": "public/index.html",
-      "bytes": 2260,
-      "sha256": "4a2c85b78f45f241012c2aceb3df3c6620d8f914c45e1da32e9f68762fed0c6e"
+      "bytes": 2275,
+      "sha256": "f38cc04ac4fc68ce9f566d86c88c24f72aad84b94d0fca86eba014313727322b"
     },
     {
       "path": "public/ocean.css",
@@ -436,12 +436,12 @@
     {
       "path": "scripts/verify-windows-native.mjs",
       "bytes": 15262,
-      "sha256": "119f8308d120139f5b76500f9ae1d921c10cbb67a6340ef33724fd7395ff3873"
+      "sha256": "812791838c82f5d9831ff4be0d812f6198fb5244c0eb257e705dcec26323837b"
     },
     {
       "path": "scripts/verify-windows-native.ps1",
-      "bytes": 11483,
-      "sha256": "bf69b979e68b313f49f8b845ef140007bfb763d4c410f08ce64819f782c34d2d"
+      "bytes": 11493,
+      "sha256": "43b8241b1fedb61b4503e093b25aa2733a3a2d236c65a3f38facef382a3cdaf2"
     },
     {
       "path": "scripts/verify-windows-release.mjs",
@@ -450,8 +450,8 @@
     },
     {
       "path": "server.mjs",
-      "bytes": 43143,
-      "sha256": "0c26e650979a457a75c3396957003b3d8b664c9960751c6f3cefacbb8aa46152"
+      "bytes": 43159,
+      "sha256": "4fd4d866432ea9253257e080f536f91f4530d94a4acf167f1bc9a0ba7d542d2a"
     },
     {
       "path": "tests/agent-authority.test.mjs",
@@ -560,8 +560,8 @@
     },
     {
       "path": "tests/new-task-focus.test.mjs",
-      "bytes": 8105,
-      "sha256": "bc25b1b1c56df9de44f2f748f23e541956b02c1184e810dd15d6a082b0d8ff96"
+      "bytes": 8141,
+      "sha256": "c2786e42a843adc7748af6377a03c94ee0367937bfd48ef3d92af495823b8613"
     },
     {
       "path": "tests/office-artifacts.test.mjs",
@@ -587,6 +587,11 @@
       "path": "tests/schedules.test.mjs",
       "bytes": 18423,
       "sha256": "13d6ebd688b3fc92806317ce452c822f9554d27216228dbbe9b60fd807919dd2"
+    },
+    {
+      "path": "tests/settings-flash-v051.test.mjs",
+      "bytes": 26045,
+      "sha256": "a9ed85c702846bb24a5adb5101baa3f0a81a7a5990fadfd0c9354e620120f808"
     },
     {
       "path": "tests/task-idempotency.test.mjs",

@@ -1,6 +1,10 @@
 # 路衡桌面客户端 0.4
 
-## 当前 v0.4 状态
+## 当前 v0.5.1 候选
+
+版本元数据与安装验收门槛已对齐 0.5.1。本轮只增加设置保存和模型协议兼容修复；本版本 Windows 构建及真实 thinking 调用尚未验收。已交付 v0.5 的原生 Windows 证据为 [CI #11 / d822591](https://github.com/jobKKB/luheng-highway-agent/actions/runs/37088470380)，包含全新安装与卸载，不包含覆盖升级。未签名预发布限制仍适用。
+
+## 历史 v0.4 状态
 
 - 源码版本为 0.4.0；新版聊天首页、原生可缩放窗口、几何持久化、会话刷新恢复与连接诊断已实现，变化见 `UI-v0.4-CHANGELOG.zh-CN.md`
 - v0.4 Linux x64 目录包已单独构建并验证健康接口版本、DOCX/XLSX 生成、包内 Chromium 虚构 OA 流程和独立原生窗口启动；发行产物单独存放，不包含在此源码仓库。范围与已知窗口恢复限制见 `NATIVE-LINUX-v0.4-VALIDATION.zh-CN.md`
