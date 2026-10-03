@@ -143,6 +143,11 @@ class PublisherTests(unittest.TestCase):
             self.assertFalse(p.anonymous_url_allowed(url))
         self.assertIsNone(p.NoRedirect().redirect_request(None, None, 302, "", {}, "https://evil.test"))
 
+    def test_artifact_download_uses_normal_api_media_type(self):
+        self.assertEqual(p.api_accept('/actions/artifacts/11276759238/zip', True), 'application/vnd.github+json')
+        self.assertEqual(p.api_accept('/releases/assets/123', True), 'application/octet-stream')
+        self.assertEqual(p.api_accept('/releases/assets/123', False), 'application/vnd.github+json')
+
     def valid_reports(self):
         native = {"native-smoke.json": {"status": "native-windows-smoke-passed", "commit": p.BUILD_SHA,
             "version": p.VERSION, "runnerOS": "Windows", "error": None, "cleanupError": None,

@@ -23,9 +23,9 @@ jobs:
       # Anonymous fetch from the exact trusted main event SHA; hardcoded digests.
       - name: Fetch reviewed publisher files from this trusted main commit
         env:
-          LOCK_SHA256: 02873134ab7d4d9505cf39d3afc1cd65dc0e861b7bcef6d0ba6de4be4e18a6ad
-          PUBLISHER_SHA256: 7447c57973487e30487b95ab05e6da436fd5efe225956d016dbf0b4e8e4686ba
-          TESTS_SHA256: ee8c26906a11b2453b77871e27b4831c7615d42650e1d872033815e4d3d1f4d1
+          LOCK_SHA256: 7e6e6f80691bbf9e8fa6ac7df3c429a2227c3d766640735107ded8d34a0e2ad7
+          PUBLISHER_SHA256: af4f55f0ac7556e4bb20eab67b0cd6ed91a8a2d56c72e84c35d45cb4e588733b
+          TESTS_SHA256: dbb698673f4b16d79d3d7c54aa39f90779e92759a8836a5e08e77bf14e7cc0bb
         run: |
           python3 -I - <<'PYCODE'
           import hashlib, os, pathlib, re, urllib.request

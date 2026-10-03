@@ -25,7 +25,7 @@ VERSION = "0.5.2"
 TAG = "v0.5.2"
 BUILD_SHA = "31faf64ab44c4830a4599c74945fdc44268a5eff"
 RUN_ID = 37132189651
-LOCK_SHA256 = "02873134ab7d4d9505cf39d3afc1cd65dc0e861b7bcef6d0ba6de4be4e18a6ad"
+LOCK_SHA256 = "7e6e6f80691bbf9e8fa6ac7df3c429a2227c3d766640735107ded8d34a0e2ad7"
 EXE_NAME = "Luheng-Office-Agent-0.5.2-windows-x64.exe"
 EXE_BYTES = 244046095
 EXE_SHA256 = "45510cbe8f3af129687d8ace267a5184ac64d4d273f63948996d1554a70acfe3"
@@ -155,6 +155,12 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+def api_accept(path, binary):
+    # Artifact ZIP endpoints redirect with GitHub's normal API media type.
+    # Only the Release asset endpoint negotiates octet-stream content.
+    return "application/octet-stream" if binary and path.startswith("/releases/assets/") else "application/vnd.github+json"
+
+
 def anonymous_url_allowed(url):
     u = urllib.parse.urlsplit(url)
     host = (u.hostname or "").lower()
@@ -175,7 +181,7 @@ class Client:
         require((path == "" or path.startswith("/")) and not path.startswith("//"), "Invalid API path")
         url = API + path
         headers = {"Authorization": "Bearer " + self.token, "User-Agent": UA,
-                   "Accept": "application/octet-stream" if binary else "application/vnd.github+json",
+                   "Accept": api_accept(path, binary),
                    "X-GitHub-Api-Version": "2022-11-28"}
         data = None if payload is None else json.dumps(payload).encode("utf-8")
         if data is not None:
@@ -194,7 +200,7 @@ class Client:
                 require(anonymous_url_allowed(location), "Unsafe storage redirect")
                 return location
             # Never log request headers, response bodies or signed redirect URLs.
-            raise RuntimeError("GitHub API " + method + " failed with HTTP " + str(e.code)) from None
+            raise RuntimeError("GitHub API " + method + " " + path.split("?")[0] + " failed with HTTP " + str(e.code)) from None
 
     def download(self, url, path, size, sha256):
         require(anonymous_url_allowed(url), "Unsafe anonymous download URL")

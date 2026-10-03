@@ -299,5 +299,6 @@
     }
   },
   "release_name": "路衡办公智能体 0.5.2 · Windows 止闪测试版",
-  "release_notes": "Windows x64 未签名预发布测试版。\n\n本次仅发布止闪修复：已在 Windows CI 使用真实时间完成 60.116 秒静置检查，持续 HTTP 轮询期间输入草稿、焦点、选区与滚动保持稳定，静置 DOM 修改和根节点移除均为 0；后台任务状态、输出追加与权限变化通过测试。另已验证 Windows 安装、安装包载荷绑定、内置运行时、桌面窗口启动与正常关闭、卸载及用户数据保留。\n\n测试范围：本地 demo 任务引擎与自有合成数据；不代表真实模型、邮件、OA 或生产业务集成验收。此版本不包含新的工具系统、Notion 风格聊天界面或自动更新功能。0.5.2 覆盖升级、签名和 SmartScreen 信誉、全用户安装、托盘及多显示器尚未验证。\n\n构建与验收：https://github.com/jobKKB/luheng-highway-agent/actions/runs/37132189651\n源码提交：31faf64ab44c4830a4599c74945fdc44268a5eff\n\n下载后请对照 SHA256SUMS 校验安装包。"
+  "release_notes": "Windows x64 未签名预发布测试版。\n\n本次仅发布止闪修复：已在 Windows CI 使用真实时间完成 60.116 秒静置检查，持续 HTTP 轮询期间输入草稿、焦点、选区与滚动保持稳定，静置 DOM 修改和根节点移除均为 0；后台任务状态、输出追加与权限变化通过测试。另已验证 Windows 安装、安装包载荷绑定、内置运行时、桌面窗口启动与正常关闭、卸载及用户数据保留。\n\n测试范围：本地 demo 任务引擎与自有合成数据；不代表真实模型、邮件、OA 或生产业务集成验收。此版本不包含新的工具系统、Notion 风格聊天界面或自动更新功能。0.5.2 覆盖升级、签名和 SmartScreen 信誉、全用户安装、托盘及多显示器尚未验证。\n\n构建与验收：https://github.com/jobKKB/luheng-highway-agent/actions/runs/37132189651\n源码提交：31faf64ab44c4830a4599c74945fdc44268a5eff\n\n下载后请对照 SHA256SUMS 校验安装包。",
+  "publisher_revision": 2
 }
