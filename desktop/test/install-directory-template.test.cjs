@@ -247,10 +247,29 @@ test('directory creation uses the actual TokenUser owner in a new-object securit
   const verify = nsisFunction(source, 'luhengVerifyDirectoryHandle');
   assertOrder(verify, ['kernel32::GetFileInformationByHandle(', 'StrCpy $luidCheckIdentity', 'advapi32::GetSecurityInfo(', 'advapi32::EqualSid(']);
   assert.match(verify, /EqualSid\(\$\{SYSTYPE_PTR\} r2, \$\{SYSTYPE_PTR\} \$luidUserSid\)/);
-  assert.match(verify, /\$luidVerifyAcl == 1[\s\S]*GetSecurityDescriptorControl[\s\S]*\$4 != 0x1004/);
+  assert.match(verify, /\$luidVerifyAcl == 1[\s\S]*GetSecurityDescriptorControl[\s\S]*\$4 <> 0x1004/);
   assert.match(verify, /\$4 != 3/);
-  assert.match(verify, /\$7 != 3[\s\S]*\$R0 != 0x1f01ff/);
+  assert.match(verify, /\$7 != 3[\s\S]*\$R0 <> 0x1f01ff/);
   assert.match(verify, /\$5 != 7/);
+});
+
+test('native decimal DWORD readback compares bit masks numerically in LogicLib', () => {
+  const verify = nsisFunction(helperSource(), 'luhengVerifyDirectoryHandle');
+  // LogicLib != is StrCmp; <> is IntCmp. IntOp and System return decimal
+  // register strings even when their equivalent source constants use hex.
+  for (const [register, expected, rejected] of [
+    ['$4', 0x1004, [0, 0x4, 0x1000]],
+    ['$R0', 0x1f01ff, [0, 0x120089, 0x1f01fe]],
+  ]) {
+    const escaped = register.replace('$', '\\$');
+    const condition = verify.match(new RegExp(escaped + ' (<>|!=) (0x[0-9a-f]+)', 'i'));
+    assert.ok(condition, register + ' must retain its exact mask comparison');
+    const compare = actual => condition[1] === '<>'
+      ? Number(actual) !== Number(condition[2]) : String(actual) !== condition[2];
+    assert.equal(Number(condition[2]), expected);
+    assert.equal(compare(String(expected)), false, 'Valid decimal native mask must pass');
+    for (const actual of rejected) assert.equal(compare(String(actual)), true, 'Invalid native mask must fail');
+  }
 });
 
 test('preflight scopes existing installs to app keys and reads them without ACL repair or privileges', () => {

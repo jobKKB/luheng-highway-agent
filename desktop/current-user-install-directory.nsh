@@ -408,7 +408,7 @@
       System::Call 'advapi32::GetSecurityDescriptorControl(${SYSTYPE_PTR} r9, *i 0 .r4, *i 0 .r5) i .r0'
       IntOp $4 $4 & 0x1004
       ${If} $0 == 0
-      ${OrIf} $4 != 0x1004
+      ${OrIf} $4 <> 0x1004
         StrCpy $luidError "新应用目录的 DACL 未受到保护。"
         Goto luid_verify_done
       ${EndIf}
@@ -429,7 +429,7 @@
         System::Call '*$6(&i1 .r0, &i1 .r7, &i2 .r8, i .R0)'
         ${If} $0 != 0
         ${OrIf} $7 != 3
-        ${OrIf} $R0 != 0x1f01ff
+        ${OrIf} $R0 <> 0x1f01ff
         ${OrIf} $8 < 16
           StrCpy $luidError "新应用目录的访问控制权限不符合要求。"
           Goto luid_verify_done

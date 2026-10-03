@@ -75,8 +75,8 @@
     },
     {
       "path": ".github/workflows/windows-build.yml",
-      "bytes": 6724,
-      "sha256": "2ea9c1846213063a304c3d25c697c44489eba0a0bad48894c76d651eaed3107c"
+      "bytes": 7054,
+      "sha256": "ff90ff7393664a5c53f655d9aededcf16cbd78ae76bd4c9703ae00066564c359"
     },
     {
       "path": ".github/workflows/windows-upgrade-acceptance.yml",
@@ -126,7 +126,7 @@
     {
       "path": "desktop/current-user-install-directory.nsh",
       "bytes": 31826,
-      "sha256": "d1b028e58e239b8befd9fc7cea1a510ecb83b68b3c17331c4c3de5ffe2d1fac8"
+      "sha256": "fcfaf03a4f140ced8839cee5f81c6639d52fb2cf0963c48720e5795dae9684c4"
     },
     {
       "path": "desktop/current-user-install.nsh",
@@ -210,8 +210,8 @@
     },
     {
       "path": "desktop/test/install-directory-template.test.cjs",
-      "bytes": 20034,
-      "sha256": "e599e5b914c5b82dbbaa77d10832853aa685892cafbaed5fa232a058d6ecfee4"
+      "bytes": 21108,
+      "sha256": "3ffd31f13bfd8607c06df04f5556c821052cf1177eb57c83d247e091f0944205"
     },
     {
       "path": "desktop/test/launch-cmd.test.cjs",
