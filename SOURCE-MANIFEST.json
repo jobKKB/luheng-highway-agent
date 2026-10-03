@@ -260,8 +260,8 @@
     },
     {
       "path": "desktop/test/update-created-file-owner.test.cjs",
-      "bytes": 17387,
-      "sha256": "d967d75ed9e8bb1bcd406864958d0839722bb5b0d99a694668f9526145c2885d"
+      "bytes": 18203,
+      "sha256": "9ca888e650650f6f84b1e5d4e8246f6c48a8e7323f9c56346d8816981c94fac3"
     },
     {
       "path": "desktop/test/update-manager.test.cjs",
@@ -295,8 +295,8 @@
     },
     {
       "path": "desktop/update-files.cjs",
-      "bytes": 18254,
-      "sha256": "24447f00ded8766e655f756ee6a569557bf973cdbedb50a410b53983bfe44be9"
+      "bytes": 18313,
+      "sha256": "dc94d94086398f92c7f61e0109c0c6b7e6545e21bf6f57c048407c72848a10f9"
     },
     {
       "path": "desktop/update-manager.cjs",

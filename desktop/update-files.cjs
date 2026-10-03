@@ -29,9 +29,10 @@ if ($mode -eq 'mark' -or $mode -eq 'verify-mark') {
  if ($item.PSIsContainer) { throw 'Not a file' }
  if ($mode -eq 'mark') {
   $source = [Environment]::GetEnvironmentVariable('LUHENG_UPDATE_SOURCE', 'Process')
-  [IO.File]::WriteAllText($target + ':Zone.Identifier', ([string]::Join([Environment]::NewLine, @('[ZoneTransfer]', 'ZoneId=3', "HostUrl=$source", ''))), [Text.Encoding]::ASCII)
+  $zoneText = [string]::Join([Environment]::NewLine, @('[ZoneTransfer]', 'ZoneId=3', "HostUrl=$source", ''))
+  Set-Content -LiteralPath $target -Stream Zone.Identifier -Encoding ASCII -Value $zoneText -NoNewline
  }
- $zone = [IO.File]::ReadAllText($target + ':Zone.Identifier')
+ $zone = Get-Content -LiteralPath $target -Stream Zone.Identifier -Raw -Encoding ASCII
  if ($zone -notmatch '(?m)^ZoneId=3\r?$') { throw 'Internet zone marker absent' }
 }
 Write-Output 'LUHENG_UPDATE_FILE_READY'

@@ -169,7 +169,7 @@ $rules = @($acl.GetAccessRules($true, $true, [System.Security.Principal.Security
   propagation = [int]$_.PropagationFlags
  }
 })
-$zone = if ($readZone -eq '1') { [IO.File]::ReadAllText($target + ':Zone.Identifier') } else { $null }
+$zone = if ($readZone -eq '1') { Get-Content -LiteralPath $target -Stream Zone.Identifier -Raw -Encoding ASCII } else { $null }
 [ordered]@{
  currentSid = $currentSid
  ownerSid = $acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value
@@ -178,6 +178,16 @@ $zone = if ($readZone -eq '1') { [IO.File]::ReadAllText($target + ':Zone.Identif
  zone = $zone
 } | ConvertTo-Json -Depth 5 -Compress
 `;
+
+test('Internet MOTW uses Windows PowerShell literal NTFS stream APIs', () => {
+  assert.match(WINDOWS_INSPECT_SCRIPT, /\$zoneText = \[string\]::Join\(\[Environment\]::NewLine, @\('\[ZoneTransfer\]', 'ZoneId=3', "HostUrl=\$source", ''\)\)/);
+  assert.match(WINDOWS_INSPECT_SCRIPT, /Set-Content -LiteralPath \$target -Stream Zone\.Identifier -Encoding ASCII -Value \$zoneText -NoNewline/);
+  for (const script of [WINDOWS_INSPECT_SCRIPT, WINDOWS_OWNER_SNAPSHOT_SCRIPT]) {
+    assert.match(script, /Get-Content -LiteralPath \$target -Stream Zone\.Identifier -Raw -Encoding ASCII/);
+    assert.doesNotMatch(script, /\[(?:System\.)?IO\.File\]::(?:ReadAllText|WriteAllText)|:Zone\.Identifier/);
+    assert.doesNotMatch(script, /Unblock-File/i);
+  }
+});
 
 function nativeSnapshot(file, readZone = false) {
   const systemRoot = process.env.SystemRoot || process.env.WINDIR;
@@ -269,7 +279,7 @@ test('native Windows partial becomes current-user owned and retains ACL, hash an
   assert.equal(final.size, bytes.length);
   assert.deepEqual(sortedRules(final), sortedRules(original.snapshot));
   assert.match(final.zone, /(?:^|\r?\n)ZoneId=3\r?(?:\n|$)/);
-  assert.ok(final.zone.includes('HostUrl=' + candidate.downloadUrl));
+  assert.equal(final.zone, ['[ZoneTransfer]', 'ZoneId=3', 'HostUrl=' + candidate.downloadUrl, ''].join('\r\n'));
   const content = await fsp.readFile(record.file);
   assert.deepEqual(content, bytes);
   assert.equal(createHash('sha256').update(content).digest('hex'), candidate.sha256);
