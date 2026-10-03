@@ -23,7 +23,7 @@ await mkdir(out, { recursive: true });
 const owned = await mkdtemp(join(tmpdir(), 'luheng-stability-'));
 const docs = join(owned, 'selected'); await mkdir(docs);
 const draftText = Array.from({ length: 65 }, (_, i) => `未发送草稿 ${i + 1}：真实浏览器、选区和滚动仅用合成资料`).join('\n');
-const report = { status: 'failed', platform: process.platform, commit: process.env.GITHUB_SHA || null, expectedVersion: JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version, sandbox: true, fakeClock: false, checks: [], frames: [], errors: [], scope: 'Owned temporary data; actual local demo engine and live HTTP polling; one synthetic output suffix fixture; no real provider or user data' };
+const report = { screenshotOptions: { animations: 'allow', caret: 'initial' }, status: 'failed', platform: process.platform, commit: process.env.GITHUB_SHA || null, expectedVersion: JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version, sandbox: true, fakeClock: false, checks: [], frames: [], errors: [], scope: 'Owned temporary data; actual local demo engine and live HTTP polling; one synthetic output suffix fixture; no real provider or user data' };
 let app, browser, context, page;
 const counters = { stateRequests: 0, taskPosts: 0, detailRequests: 0 }, heartbeatValues = new Set();
 const check = (name, value = true) => { assert.ok(value, name); report.checks.push(name); console.log('PASS ' + name); };
@@ -33,7 +33,7 @@ async function until(fn, name, ms = 30000) {
   throw new Error('Timed out: ' + name);
 }
 async function shot(name) {
-  const filename = name + '.png'; await page.screenshot({ path: join(out, filename), animations: 'disabled' });
+  const filename = name + '.png'; await page.screenshot({ path: join(out, filename), animations: 'allow', caret: 'initial' });
   report.frames.push(filename);
 }
 async function post(path, data) {
@@ -44,16 +44,17 @@ async function post(path, data) {
 async function anchor() {
   await page.evaluate(() => {
     const main = document.querySelector('#main'), prompt = document.querySelector('#prompt-input');
-    window.__stability = { main, prompt, form: document.querySelector('#task-form'), home: document.querySelector('.home-main'), thread: document.querySelector('.chat-thread'), roots: [...main.children], value: prompt.value, start: prompt.selectionStart, end: prompt.selectionEnd, scroll: prompt.scrollTop, mutations: 0, rootRemovals: 0, range: null };
-    window.__stability.observer = new MutationObserver(records => { const p = window.__stability; p.mutations += records.length; for (const r of records) if (r.target === p.main) p.rootRemovals += r.removedNodes.length; });
-    window.__stability.observer.observe(main, { subtree: true, childList: true, characterData: true, attributes: true });
+    window.__stability = { main, prompt, form: document.querySelector('#task-form'), home: document.querySelector('.home-main'), thread: document.querySelector('.chat-thread'), roots: [...main.children], value: prompt.value, start: prompt.selectionStart, end: prompt.selectionEnd, scroll: prompt.scrollTop, mutations: 0, rootRemovals: 0, mutationRecords: [], range: null };
+    window.__stability.observer = new MutationObserver(records => { const p = window.__stability; p.mutations += records.length; for (const r of records) { if (r.target === p.main) p.rootRemovals += r.removedNodes.length; if (p.mutationRecords.length < 30) p.mutationRecords.push({ type: r.type, target: r.target.id || r.target.getAttribute?.('data-key') || r.target.nodeName, attribute: r.attributeName, oldValue: r.oldValue, newValue: r.type === 'attributes' ? r.target.getAttribute(r.attributeName) : null }); } });
+    window.__stability.observer.observe(main, { subtree: true, childList: true, characterData: true, attributes: true, attributeOldValue: true });
   });
 }
 async function stable({ focus = true, range = false, idle = false } = {}) {
   const facts = await page.evaluate(({ focus, range }) => {
     const p = window.__stability, prompt = document.querySelector('#prompt-input'), sel = document.getSelection();
-    return { main: p.main === document.querySelector('#main'), form: p.form === document.querySelector('#task-form'), home: p.home === document.querySelector('.home-main'), prompt: p.prompt === prompt, roots: p.roots.length === p.main.children.length && p.roots.every((n, i) => n === p.main.children[i]), thread: !p.thread || p.thread === document.querySelector('.chat-thread'), value: prompt.value === p.value, selection: prompt.selectionStart === p.start && prompt.selectionEnd === p.end, scroll: Math.abs(prompt.scrollTop - p.scroll) <= 1, focus: !focus || document.activeElement === prompt, rootRemovals: p.rootRemovals, mutations: p.mutations, range: !range || !!sel.rangeCount && sel.toString() === p.range.text && sel.getRangeAt(0).startContainer === p.range.node && sel.getRangeAt(0).startOffset === p.range.start && sel.getRangeAt(0).endOffset === p.range.end };
+    return { main: p.main === document.querySelector('#main'), form: p.form === document.querySelector('#task-form'), home: p.home === document.querySelector('.home-main'), prompt: p.prompt === prompt, roots: p.roots.length === p.main.children.length && p.roots.every((n, i) => n === p.main.children[i]), thread: !p.thread || p.thread === document.querySelector('.chat-thread'), value: prompt.value === p.value, selection: prompt.selectionStart === p.start && prompt.selectionEnd === p.end, scroll: Math.abs(prompt.scrollTop - p.scroll) <= 1, focus: !focus || document.activeElement === prompt, rootRemovals: p.rootRemovals, mutations: p.mutations, mutationRecords: p.mutationRecords, range: !range || !!sel.rangeCount && sel.toString() === p.range.text && sel.getRangeAt(0).startContainer === p.range.node && sel.getRangeAt(0).startOffset === p.range.start && sel.getRangeAt(0).endOffset === p.range.end };
   }, { focus, range });
+  report.lastFacts = facts;
   for (const key of ['main', 'form', 'home', 'prompt', 'roots', 'thread', 'value', 'selection', 'scroll', 'focus', 'range']) assert.equal(facts[key], true, key + ' must survive background updates');
   assert.equal(facts.rootRemovals, 0, 'No main root replacement');
   if (idle) assert.equal(facts.mutations, 0, 'Idle heartbeat polls must write no main DOM');

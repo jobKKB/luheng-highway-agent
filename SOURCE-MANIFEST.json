@@ -6,7 +6,7 @@
     {
       "path": ".github/workflows/windows-build.yml",
       "bytes": 4344,
-      "sha256": "d4a58c5a7bfa4ee1b6f10c9c871e9e05b9fb15236e9bb35c993a48bcbd4a3821"
+      "sha256": "2622966cbe02d0352e64ce7ecb1d48d49c003b50b2d990a7fbda4e1e74a82b72"
     },
     {
       "path": ".github/workflows/windows-upgrade-acceptance.yml",
@@ -196,7 +196,7 @@
     {
       "path": "desktop/windows-build.workflow.yml",
       "bytes": 4344,
-      "sha256": "d4a58c5a7bfa4ee1b6f10c9c871e9e05b9fb15236e9bb35c993a48bcbd4a3821"
+      "sha256": "2622966cbe02d0352e64ce7ecb1d48d49c003b50b2d990a7fbda4e1e74a82b72"
     },
     {
       "path": "docs/CONTROLLED-BROWSER.md",
@@ -655,8 +655,8 @@
     },
     {
       "path": "tests/ui-stability-60s.mjs",
-      "bytes": 13005,
-      "sha256": "ad8794deff8fc879285c897b2e04bd4c33b94e0276c13d2a5531d356f866056e"
+      "bytes": 13487,
+      "sha256": "3a9566e9028b382ac5298c9479542d166b3342474bfa426b024ff61b25b63bfc"
     },
     {
       "path": "tests/ui-v03.mjs",
