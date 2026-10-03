@@ -511,6 +511,7 @@ try {
       assert.equal((await getState(page)).schedules.find(item => item.id === schedule.id).status, 'active');
       await card().locator('[data-action="cancel-schedule"]').click(); await page.locator('[data-action="schedule-cancel"]').click();
       await page.locator('.modal').waitFor({ state: 'hidden' }); assert.equal((await getState(page)).schedules.find(item => item.id === schedule.id).status, 'cancelled');
+      await page.waitForFunction(id => !document.querySelector('[data-schedule-id="' + id + '"] [data-action="edit-schedule"]'), schedule.id);
       assert.equal(await card().locator('[data-action="edit-schedule"]').count(), 0);
       await page.locator('[data-action="add-schedule"]').first().click(); await page.locator('#schedule-title').fill('合成每日计划');
       await page.locator('#schedule-prompt').fill('每日通用合成整理'); await page.locator('#schedule-timezone').fill('America/New_York'); await page.locator('#schedule-time').fill('13:45');

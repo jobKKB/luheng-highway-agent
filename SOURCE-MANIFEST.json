@@ -545,8 +545,8 @@
     },
     {
       "path": "tests/existing-integrations-ui.mjs",
-      "bytes": 41855,
-      "sha256": "94ec0c86635a0995a1aaa543e7baab1b27c96ae23eb9defd589e9a56c957a7b1"
+      "bytes": 41911,
+      "sha256": "f2d63ffc48b2e5884ce2621af114f308bcb5eddc67eff2c67d3a3f956099093c"
     },
     {
       "path": "tests/fixtures/controlled-sites.mjs",
@@ -700,8 +700,8 @@
     },
     {
       "path": "tests/retained-chat-settings-ui.mjs",
-      "bytes": 52904,
-      "sha256": "aee3856577d5d79618b3f4bd03fe7de64ada9e8c97f2ba26ac40a6ff29564e09"
+      "bytes": 53047,
+      "sha256": "337931c3779b172d5738e393881532699dce58d6351690c8735f5819155995ce"
     },
     {
       "path": "tests/runtime-reliability.test.mjs",
