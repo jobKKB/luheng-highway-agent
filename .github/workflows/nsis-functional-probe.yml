@@ -51,9 +51,18 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Real fixture preparation refused' }
           $prepared | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath prepared.json -Encoding utf8
           "NSIS_FIXTURE_ROOT=$($prepared.root)" >> $env:GITHUB_ENV
-          $fixtureArgs = @($prepared.argv)
-          & $prepared.executable @fixtureArgs
-          $fixtureExit=$LASTEXITCODE
+          $info=[Diagnostics.ProcessStartInfo]::new()
+          $info.FileName=$prepared.executable
+          $info.UseShellExecute=$false
+          foreach($argument in $prepared.argv){$info.ArgumentList.Add([string]$argument)}
+          $process=[Diagnostics.Process]::Start($info)
+          $held=$process.Handle
+          $completed=$process.WaitForExit(30000)
+          $actual=[ordered]@{pid=$process.Id;waitCompleted=$completed;actualWindows=$true;sourceCommit=$env:GITHUB_SHA;args=$prepared.argv}
+          if($completed){$fixtureExit=$process.ExitCode;$actual.exitCode=$fixtureExit}
+          $actual | ConvertTo-Json | Set-Content -LiteralPath runtime-execution.json -Encoding utf8
+          if(-not $completed){throw 'Actual owned fixture did not exit; no forced process termination'}
+          if(-not (Test-Path -LiteralPath (Join-Path $prepared.evidence 'trace.ini'))){throw "Actual fixture exited $fixtureExit before trace creation"}
           node scripts/fixture.mjs report --root $prepared.root --nonce $prepared.nonce --github-actions
           $reportExit=$LASTEXITCODE
           Copy-Item -LiteralPath $prepared.evidence -Destination actual-evidence -Recurse
@@ -68,6 +77,7 @@ jobs:
             tests/nsis-directory-functional/compile.json
             tests/nsis-directory-functional/prepared.json
             tests/nsis-directory-functional/temp-environment.json
+            tests/nsis-directory-functional/runtime-execution.json
             tests/nsis-directory-functional/actual-evidence/
           if-no-files-found: warn
           retention-days: 14
