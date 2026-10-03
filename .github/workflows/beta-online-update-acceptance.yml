@@ -58,6 +58,8 @@ jobs:
           path: ${{ runner.temp }}/luheng-beta-pair-downloads/beta2/native
       - name: Verify exact artifact members and live fixed preview Releases
         shell: pwsh
+        env:
+          LUHENG_BETA_METADATA_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $downloads = Join-Path $env:RUNNER_TEMP 'luheng-beta-pair-downloads'
           $pair = Join-Path $env:RUNNER_TEMP 'luheng-beta-pair.json'

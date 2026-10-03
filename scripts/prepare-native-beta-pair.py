@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import sys
 import urllib.request
+from datetime import datetime, timezone
 
 REPOSITORY = "jobKKB/luheng-highway-agent"
 REPOSITORY_ID = 1400818714
@@ -102,9 +103,15 @@ def verified_build(lock_path, directory, version):
 
 def public_api(path):
     url = "https://api.github.com/repos/" + REPOSITORY + path
-    request = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json",
-                                                  "User-Agent": "Luheng-owned-beta-pair-acceptance"})
-    with urllib.request.urlopen(request, timeout=30) as response:
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "Luheng-owned-beta-pair-acceptance"}
+    token = os.environ.get("LUHENG_BETA_METADATA_TOKEN")
+    require(bool(token), "Existing read-only CI metadata token required")
+    headers["Authorization"] = "Bearer " + token
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, hdrs, newurl):
+            return None
+    request = urllib.request.Request(url, headers=headers)
+    with urllib.request.build_opener(NoRedirect()).open(request, timeout=30) as response:
         require(response.status == 200 and response.url == url, "Unexpected GitHub API response")
         raw = response.read(2 * 1024 * 1024 + 1)
     require(len(raw) <= 2 * 1024 * 1024, "Oversized GitHub metadata")
@@ -131,6 +138,7 @@ def resolve_release(build):
             asset["browser_download_url"] == "https://github.com/" + REPOSITORY +
             "/releases/download/" + build["tag"] + "/" + build["assetName"], "Release asset/source mismatch")
     build.update(releaseId=release["id"], assetId=asset["id"])
+    return release
 
 
 def main():
@@ -151,10 +159,16 @@ def main():
             repo["owner"]["login"] == "jobKKB", "Wrong live repository identity")
     first, _ = verified_build(args.beta1_lock, Path(args.downloads) / "beta1", "0.6.0-beta.1")
     second, _ = verified_build(args.beta2_lock, Path(args.downloads) / "beta2", "0.6.0-beta.2")
-    resolve_release(first)
-    resolve_release(second)
+    first_release = resolve_release(first)
+    second_release = resolve_release(second)
     pair = {"schema": 1, "repository": {"id": REPOSITORY_ID, "fullName": REPOSITORY,
             "ownerId": OWNER_ID, "ownerLogin": "jobKKB"}, "from": first, "to": second}
+    pair["metadata"] = {"origin": "live-fixed-github-ci-preflight", "runId": os.environ["GITHUB_RUN_ID"],
+        "acceptanceCommit": os.environ["GITHUB_SHA"], "checkedAtUtc": datetime.now(timezone.utc).isoformat(),
+        "repository": {key: repo[key] for key in ["id", "full_name", "private", "url", "html_url", "owner"]},
+        "tagCommits": {first["tag"]: first["commit"], second["tag"]: second["commit"]},
+        "releases": [first_release, second_release],
+        "clientTokenless": True}
     output.write_text(json.dumps(pair, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"status": "exact-native-beta-pair-prepared", "installerExecuted": False,
                       "upgradePassed": False, "from": first["version"], "to": second["version"],

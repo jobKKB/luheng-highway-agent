@@ -50,8 +50,8 @@
     },
     {
       "path": ".github/workflows/beta-online-update-acceptance.yml",
-      "bytes": 3812,
-      "sha256": "8c091d5074d57e5d7d1fe41651a23a73ef8c8d7e33dee8c1b263782b16542aa5"
+      "bytes": 3891,
+      "sha256": "07a08e0f2edbe1ef1d1c178564ee70eca34a5d8f04c02e373e20d3d360d39712"
     },
     {
       "path": ".github/workflows/generic-workspace-acceptance.yml",
@@ -595,8 +595,8 @@
     },
     {
       "path": "scripts/prepare-native-beta-pair.py",
-      "bytes": 8246,
-      "sha256": "e14aad5d1e84a273f910fedaed0591d5efc4abc852861fadf6d35dcf748b26d0"
+      "bytes": 9166,
+      "sha256": "ab5100a2bf09a2df93c11e929d28f30a25fcb00339c602ca7a84cbc727f8659e"
     },
     {
       "path": "scripts/run-desktop.sh",
@@ -620,8 +620,8 @@
     },
     {
       "path": "scripts/verify-native-beta-updater.mjs",
-      "bytes": 19916,
-      "sha256": "98629557f6d1fe14489930dc811714ab8301772eb0f3d4ceefb95ea38cba14f8"
+      "bytes": 19918,
+      "sha256": "71de2d8a998f95ee9a047a14c23ef325c30a647027a910345db84f01e15be949"
     },
     {
       "path": "scripts/verify-windows-native.mjs",
