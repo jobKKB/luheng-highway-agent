@@ -8,7 +8,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import {
   closeSync, copyFileSync, createReadStream, createWriteStream, existsSync, fstatSync, lstatSync,
-  mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync, readSync, rmSync, writeFileSync,
+  mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync, readSync, renameSync, rmSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
@@ -1012,11 +1012,11 @@ function assertInstalledRuntime(install) {
   assert.ok(install && isAbsolute(install), 'Refusing: --install must be absolute');
   assert.equal(resolve(process.execPath).toLowerCase(), join(resolve(install), APP_EXE).toLowerCase(), 'Refusing: runtime is not the installed app EXE');
 }
-function parseArgs(argv, allowed) {
+function parseArgs(argv, allowed, optional = []) {
   const options = {};
   for (let i = 0; i < argv.length; i += 2) {
     const key = argv[i]?.slice(2);
-    assert.ok(argv[i]?.startsWith('--') && allowed.includes(key) && i + 1 < argv.length, `Unexpected argument ${argv[i]}`);
+    assert.ok(argv[i]?.startsWith('--') && (allowed.includes(key) || optional.includes(key)) && i + 1 < argv.length, `Unexpected argument ${argv[i]}`);
     assert.ok(!Object.hasOwn(options, key), `Duplicate argument --${key}`); options[key] = argv[i + 1];
   }
   for (const key of allowed) assert.ok(options[key], `Missing --${key}`);
@@ -1024,6 +1024,31 @@ function parseArgs(argv, allowed) {
 }
 const readJson = file => JSON.parse(readFileSync(file, 'utf8'));
 const writeJson = (file, value) => writeFileSync(file, JSON.stringify(value, null, 2) + '\n', { flag: 'wx' });
+// seed-recovery onSeeded. Full variant (Windows): the product starts the in-flight command non-detached, so it is in the
+// seed's kill-on-close job and ends with the seed. The driver therefore binds it (held handle + full identity) BEFORE
+// the crash: the seed publishes a bind request and returns to crashNow (SIGKILL) only after the driver confirms that
+// same PID. Any handshake failure exits 2, never the deliberate hard-kill code, so the driver fails closed.
+export function crashSeedHook({ out, variant, bind = '', waitMs = 120000 }) {
+  assert.equal(Boolean(bind), variant === 'full', '--bind is required for, and only for, the full variant');
+  if (bind) assert.ok(isAbsolute(bind) && lstatSync(bind).isDirectory(), 'Bind directory must be an existing absolute real directory');
+  return seed => {
+    writeJson(out, seed);
+    if (!bind) return;
+    try {
+      assert.ok(Number.isSafeInteger(seed.childPid) && seed.childPid > 0, 'Full seed has no in-flight command PID to bind');
+      assert.deepEqual(readdirSync(bind), [], 'Bind directory must be empty before the request');
+      const request = join(bind, 'bind-request.json'), confirmed = join(bind, 'bound.json');
+      writeFileSync(`${request}.tmp`, JSON.stringify({ childPid: seed.childPid, effects: seed.effects, sentinel: seed.sentinels.command }), { flag: 'wx' });
+      renameSync(`${request}.tmp`, request);
+      const pause = new Int32Array(new SharedArrayBuffer(4)), deadline = Date.now() + waitMs;
+      while (!existsSync(confirmed)) {
+        assert.ok(Date.now() < deadline, `Driver did not confirm the in-flight command bind within ${waitMs} ms`);
+        Atomics.wait(pause, 0, 0, 50);
+      }
+      assert.equal(readJson(confirmed).pid, seed.childPid, 'Driver confirmed a different PID than the in-flight command');
+    } catch (error) { console.error(`Refusing to crash without a confirmed bind: ${error?.message || error}`); process.exit(2); }
+  };
+}
 const outside = (install, ...paths) => { for (const p of paths) assert.ok(!within(resolve(install), resolve(p)), `Refusing: ${p} is inside the installation`); };
 const backendOf = install => join(resolve(install), 'resources', 'backend');
 const runNumber = value => { const run = Number(value); assert.ok([1, 2, 3].includes(run), '--run must be 1, 2 or 3'); return run; };
@@ -1045,14 +1070,14 @@ const MODES = {
   'seed-recovery-v04': { app: true, args: ['install', 'data', 'out'], run: async o => { outside(o.install, o.data, o.out); return seedRecoveryV04({ backendDir: backendOf(o.install), dataDir: resolve(o.data), onSeeded: seed => writeJson(o.out, seed) }); } },
   'verify-upgrade': { app: true, args: ['install', 'data', 'seed', 'before', 'out'], run: async o => { outside(o.install, o.data, o.out); writeJson(o.out, await verifyUpgrade({ backendDir: backendOf(o.install), dataDir: resolve(o.data), seed: readJson(o.seed), before: readJson(o.before) })); return 'upgrade-verified'; } },
   'verify-recovery-v04': { app: true, args: ['install', 'data', 'seed', 'run', 'out'], run: async o => { outside(o.install, o.data, o.out); writeJson(o.out, await verifyRecoveryV04({ backendDir: backendOf(o.install), dataDir: resolve(o.data), seed: readJson(o.seed), run: runNumber(o.run) })); return 'recovery-verified'; } },
-  'seed-recovery': { app: true, args: ['install', 'data', 'files', 'variant', 'node', 'out'], run: async o => { outside(o.install, o.data, o.files, o.out); return seedRecovery({ backendDir: backendOf(o.install), dataDir: resolve(o.data), filesDir: resolve(o.files), variant: o.variant, commandExecutable: resolve(o.node), onSeeded: seed => writeJson(o.out, seed) }); } },
+  'seed-recovery': { app: true, args: ['install', 'data', 'files', 'variant', 'node', 'out'], optional: ['bind'], run: async o => { outside(o.install, o.data, o.files, o.out, ...(o.bind ? [o.bind] : [])); return seedRecovery({ backendDir: backendOf(o.install), dataDir: resolve(o.data), filesDir: resolve(o.files), variant: o.variant, commandExecutable: resolve(o.node), onSeeded: crashSeedHook({ out: o.out, variant: o.variant, bind: o.bind ? resolve(o.bind) : '' }) }); } },
   'verify-recovery': { app: true, args: ['install', 'data', 'seed', 'run', 'out'], run: async o => { outside(o.install, o.data, o.out); writeJson(o.out, await verifyRecovery({ backendDir: backendOf(o.install), dataDir: resolve(o.data), seed: readJson(o.seed), run: runNumber(o.run) })); return 'recovery-verified'; } },
   'verify-reinstall': { app: true, args: ['install', 'data', 'before', 'manifest', 'out'], run: async o => { outside(o.install, o.data, o.out); writeJson(o.out, await verifyReinstall({ backendDir: backendOf(o.install), dataDir: resolve(o.data), before: readJson(o.before), manifest: readJson(o.manifest).artifactManifest })); return 'reinstall-verified'; } },
 };
 export async function main(argv = process.argv.slice(2)) {
   const [mode, ...rest] = argv, spec = MODES[mode];
   assert.ok(spec, `Usage: ${Object.keys(MODES).join(' | ')} --option value ...`);
-  const options = parseArgs(rest, spec.args);
+  const options = parseArgs(rest, spec.args, spec.optional);
   if (spec.app) assertInstalledRuntime(options.install);
   else { assertCI(); assert.ok(!process.versions.electron, 'Refusing: CI-node modes must not run inside the app'); }
   const result = await spec.run(options);

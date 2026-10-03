@@ -455,13 +455,13 @@
     },
     {
       "path": "scripts/verify-windows-upgrade.mjs",
-      "bytes": 87896,
-      "sha256": "b0434d8a2f6dec1b7c7b7c3690fec6dfdd85f0fd59f2dda76556b8e30a66b3c9"
+      "bytes": 90013,
+      "sha256": "e846452e4146102d7e76f5d6184b7507101e46e972e2a8be20ac1f1b7540ebba"
     },
     {
       "path": "scripts/verify-windows-upgrade.ps1",
-      "bytes": 40805,
-      "sha256": "289cd2b5cab5f778b58e6263fa5a6b7ed5faaf968814e35eac9031d48e08ea6c"
+      "bytes": 45559,
+      "sha256": "34738b36f4882622c67ad26917c69afca24a94c0cd206028af2a4e766d80de7c"
     },
     {
       "path": "scripts/windows-upgrade-lock.json",
@@ -660,8 +660,8 @@
     },
     {
       "path": "tests/windows-upgrade-acceptance.test.mjs",
-      "bytes": 67075,
-      "sha256": "4e071bbce503877bd6749f30ce850a0dfa21a77cad5573c243b1dbaad08cb1e4"
+      "bytes": 69385,
+      "sha256": "b64ac01bee48a9d56fa0a3777e52116f62b16c9b6b2156a66f5cc50a9102b08a"
     }
   ]
 }

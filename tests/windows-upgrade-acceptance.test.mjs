@@ -462,7 +462,10 @@ function Invoke-SupervisedCommand($T) {
     [IO.File]::Move("$($T.boundFile).tmp", [string]$T.boundFile)
     [void](Wait-File $T.consumeFile 290)
     if ($held.HasExited) { return 'exited-after-bind' }
-    return Stop-IdentifiedProcess $record $held
+    $verdict = Stop-IdentifiedProcess $record $held
+    if ($verdict -ne 'exited-before-kill') { return $verdict }
+    if ($held.HasExited) { return 'exited-after-bind' }   # e.g. CIM 0 rows: only the held handle can prove the exit
+    return "refused: PID $($record.pid) is alive but its identity could not be re-read; not killed and not treated as exited"
   } catch { return 'refused: ' + $_.Exception.Message } finally { $held.Dispose() }
 }
 `;
@@ -488,7 +491,7 @@ function startSupervisor(dir, seedPid, notBeforeMs, files) {
     })()),
   };
 }
-const WINDOWS_RELEASED = ['exited-after-bind', 'exited-before-kill', 'killed-after-identity-recheck'];
+const WINDOWS_RELEASED = ['exited-after-bind', 'killed-after-identity-recheck'];
 async function releaseOrphan(target, { platform = process.platform } = {}) {
   if (platform !== 'win32') return 'left-running-not-signalled';
   if (!target.supervisor) throw new Error('in-flight command cleanup refused (no handle was bound before the crash)');
@@ -532,6 +535,8 @@ test('in-flight command cleanup is one-shot, bound before the crash and never si
       ['gone before bind', fake(BOUND, 'refused: in-flight command PID 7001 was not running before the bind'), /cleanup refused \(refused: in-flight command PID 7001 was not running/],
       ['changed after bind', fake(BOUND, 'refused: PID 7001 no longer matches its recorded creationDateUtc; refusing to kill it.'), /cleanup refused \(refused: PID 7001/],
       ['unknown verdict', fake(BOUND, 'already-exited'), /cleanup refused \(already-exited\)/],
+      ['bare exited-before-kill (CIM 0 rows, held handle not proven exited)', fake(BOUND, 'exited-before-kill'), /cleanup refused \(exited-before-kill\)/],
+      ['held alive, CIM 0 rows', fake(BOUND, 'refused: PID 7001 is alive but its identity could not be re-read; not killed and not treated as exited'), /cleanup refused \(refused: PID 7001 is alive but its identity could not be re-read/],
     ]) {
       const cleanup = orphanCleanup(crashed(supervisor), t => releaseOrphan(t, { platform: 'win32' }));
       await assert.rejects(cleanup.consume(), pattern, label);
@@ -549,6 +554,10 @@ test('in-flight command cleanup is one-shot, bound before the crash and never si
     const at = needle => { const index = SUPERVISOR_PS.indexOf(needle); assert.ok(index >= 0, needle); return index; };
     assert.ok(at('Open-ProcessHandle ([int]$req.childPid)') < at('Register-OrphanCommand $seedRecord') && at('Register-OrphanCommand $seedRecord') < at('[IO.File]::Move(')
       && at('[IO.File]::Move(') < at('Wait-File $T.consumeFile 290') && at('Wait-File $T.consumeFile 290') < at("if ($held.HasExited) { return 'exited-after-bind' }"));
+    const pass = at("if ($verdict -ne 'exited-before-kill') { return $verdict }"), trusted = SUPERVISOR_PS.indexOf("if ($held.HasExited) { return 'exited-after-bind' }", pass);
+    assert.ok(at('$verdict = Stop-IdentifiedProcess $record $held') < pass && pass < trusted && trusted < SUPERVISOR_PS.indexOf('is alive but its identity could not be re-read', trusted)
+      && !SUPERVISOR_PS.includes('return Stop-IdentifiedProcess'), 'exited-before-kill may become a release only through the same held handle');
+    assert.deepEqual(WINDOWS_RELEASED, ['exited-after-bind', 'killed-after-identity-recheck']);
     // Seed-side hook, executed: it returns (letting crashNow kill the seed) only once the bound marker exists.
     const hook = { requestFile: join(dir, 'request.json'), boundFile: join(dir, 'bound.json'), consumeFile: join(dir, 'consume'), waitMs: 400 };
     const runHook = (name, bind, value = seed) => spawnSync(process.execPath, ['-e', `(${seededHook(join(dir, name), bind)})(${JSON.stringify(value)}); console.log('returned')`], { encoding: 'utf8', timeout: 30000, env: cleanEnv() });
@@ -587,13 +596,13 @@ $base = [DateTime]::new(2026, 10, 3, 0, 0, 0, [DateTimeKind]::Utc)
 function At([int]$Seconds) { return $base.AddSeconds($Seconds) }
 function Find($Map, [int]$Id) { $e = $Map.PSObject.Properties[[string]$Id]; if ($e) { return $e.Value }; return $null }
 $appExe = 'C:\\fake\\Luheng Office Agent.exe'; $node = 'C:\\fake\\node.exe'
-$kills = [Collections.Generic.List[int]]::new(); $identities = $s.identities; $found = @(); $opened = [Collections.Generic.List[object]]::new()
+$kills = [Collections.Generic.List[int]]::new(); $identities = $s.identities; $found = @(); $opened = [Collections.Generic.List[object]]::new(); $stopPhase = $false
 $owned = @($s.owned | ForEach-Object { [pscustomobject]@{ Id = [int]$_.pid; StartTimeUtc = (At $_.start) } })
 function Get-ProcessSnapshot { return @($s.snapshot | ForEach-Object { [pscustomobject]@{ ProcessId = [int]$_.pid; ParentProcessId = [int]$_.parent; CreationDate = (At $_.created).ToLocalTime(); ExecutablePath = [string]$_.exe } }) }
 function Open-ProcessHandle([int]$ProcessId) {
   $h = Find $s.handles $ProcessId
   if (-not $h) { throw [ArgumentException]::new("Process with an Id of $ProcessId is not running.") }
-  $fake = [pscustomobject]@{ Id = $ProcessId; Handle = [IntPtr]::new(1); HasExited = [bool]$h.exited; ExitAfterBind = [bool]$h.exitAfterBind; StartTime = (At $h.start).ToLocalTime() }
+  $fake = [pscustomobject]@{ Id = $ProcessId; Handle = [IntPtr]::new(1); HasExited = [bool]$h.exited; ExitAfterBind = [bool]$h.exitAfterBind; ExitOnStopRead = [bool]$h.exitOnStopRead; StartTime = (At $h.start).ToLocalTime() }
   $script:opened.Add($fake)
   $fake | Add-Member -MemberType ScriptMethod -Name Kill -Value { $script:kills.Add($this.Id); $this.HasExited = $true }
   $fake | Add-Member -MemberType ScriptMethod -Name WaitForExit -Value { param($ms) return $true }
@@ -601,12 +610,14 @@ function Open-ProcessHandle([int]$ProcessId) {
   return $fake
 }
 function Get-ProcessIdentity([int]$ProcessId) {
+  if ($script:stopPhase) { foreach ($h in $script:opened) { if ($h.Id -eq $ProcessId -and $h.ExitOnStopRead) { $h.HasExited = $true } } }   # exits while being re-read
   $i = Find $script:identities $ProcessId
   if (-not $i) { return $null }
   return [pscustomobject]@{ pid = $ProcessId; parentProcessId = [int]$i.parent; creationDateUtc = (At $i.created).ToString('o'); executablePath = [string]$i.exe; commandLineSha256 = [string]$i.cmd; commandLine = [string]$i.cmd }
 }
 function Wait-File([string]$Path, [int]$Seconds, [string]$Abort = '') {
   if ($Path -like '*consume') {   # time passes: the seed crashes; a job-bound command ends with it
+    $script:stopPhase = $true
     foreach ($h in $script:opened) { if ($h.ExitAfterBind) { $h.HasExited = $true } }
     if ($s.PSObject.Properties['identitiesAtStop']) { $script:identities = $s.identitiesAtStop }
     return $true
@@ -638,7 +649,7 @@ if ($s.mode -eq 'supervisor') {
 `;
 const NODE_FAKE = 'C:\\fake\\node.exe', C2_LINE = 'node.exe -e C2 C:\\fake\\files\\effects.log SENTINEL-1001';
 const row = (pid, parent, created, exe = NODE_FAKE) => ({ pid, parent, created, exe });
-const live = (start, exited = false, exitAfterBind = false) => ({ start, exited, exitAfterBind });
+const live = (start, exited = false, exitAfterBind = false, exitOnStopRead = false) => ({ start, exited, exitAfterBind, exitOnStopRead });
 const ident = (parent, created, exe = NODE_FAKE, cmd = `cmd-${parent}-${created}`) => ({ parent, created, exe, cmd });
 const KILLED = 'killed-after-identity-recheck';
 const PROCESS_MODEL = {
@@ -675,6 +686,10 @@ const PROCESS_MODEL = {
     { found: [], outcomes: ['refused: In-flight command is not the pinned node.exe.', 'bound=False'], kills: [] }],
   'supervisor: created before the seed': [{ mode: 'supervisor', handles: { 1001: live(5) }, identities: { 1001: ident(900, 5, NODE_FAKE, C2_LINE) } },
     { found: [], outcomes: ['refused: In-flight command predates the seed process.', 'bound=False'], kills: [] }],
+  'supervisor: bound, held process alive, CIM returns 0 rows at stop: refused, not killed': [{ mode: 'supervisor', handles: { 1001: live(20) }, identities: { 1001: ident(900, 20, NODE_FAKE, C2_LINE) }, identitiesAtStop: {} },
+    { found: [], outcomes: ['refused: PID 1001 is alive but its identity could not be re-read; not killed and not treated as exited', 'bound=True'], kills: [] }],
+  'supervisor: bound, CIM 0 rows because the held process really exited: trusted held-handle exit': [{ mode: 'supervisor', handles: { 1001: live(20, false, false, true) }, identities: { 1001: ident(900, 20, NODE_FAKE, C2_LINE) }, identitiesAtStop: {} },
+    { found: [], outcomes: ['exited-after-bind', 'bound=True'], kills: [] }],
   'supervisor: identity changes after the bind while alive': [{ mode: 'supervisor', handles: { 1001: live(20) }, identities: { 1001: ident(900, 20, NODE_FAKE, C2_LINE) }, identitiesAtStop: { 1001: ident(8001, 50, NODE_FAKE, C2_LINE) } },
     { found: [], outcomes: ['refused: PID 1001 no longer matches its recorded parentProcessId; refusing to kill it.', 'bound=True'], kills: [] }],
   'supervisor: the seed never asks for a bind': [{ mode: 'supervisor', noRequest: true, handles: {}, identities: {} },

@@ -218,6 +218,61 @@ function Stop-OrphanCommand($Record) {
   $Record.state = Stop-IdentifiedProcess $Record
   return $Record.state
 }
+function Wait-SeedFile([string]$Path, [int]$Seconds, $SeedRecord) {
+  # Bounded wait for a file the owned seed writes; $false once the seed has exited or the time is up.
+  $deadline = [DateTime]::UtcNow.AddSeconds($Seconds)
+  while (-not [IO.File]::Exists($Path)) {
+    if ($SeedRecord.Process.HasExited -or [DateTime]::UtcNow -gt $deadline) { return $false }
+    Start-Sleep -Milliseconds 50
+  }
+  return $true
+}
+function Register-BoundCommand($SeedRecord, [string]$BindDirectory) {
+  # The product starts the in-flight command non-detached (libuv kill-on-close job): it ends with the seed. Bind it
+  # BEFORE the seed may crash: hold its handle first, then verify and record its full identity (Register-OrphanCommand),
+  # prove the held handle IS that process (StartTime = CIM CreationDate), and only then confirm to the waiting seed.
+  $request = Join-Path $BindDirectory 'bind-request.json'; $confirm = Join-Path $BindDirectory 'bound.json'
+  if (-not (Wait-SeedFile $request 180 $SeedRecord)) { throw 'Seed did not ask to bind its in-flight command; crash state not reproduced.' }
+  $req = [IO.File]::ReadAllText($request) | ConvertFrom-Json
+  $childPid = [int]$req.childPid
+  if ($childPid -le 0) { throw 'Bind request names no in-flight command PID.' }
+  try { $held = Open-ProcessHandle $childPid } catch [ArgumentException], [InvalidOperationException] { throw "In-flight command PID $childPid was not running before the bind; crash state not reproduced." }
+  $record = $null
+  try {
+    $record = Register-OrphanCommand $SeedRecord ([pscustomobject]@{ childPid = $childPid; effects = [string]$req.effects; sentinels = [pscustomobject]@{ command = [string]$req.sentinel } })
+    $record.state = 'binding'   # Stop-OrphanCommand acts only on 'verified': a bound command is never stopped by bare PID
+    $created = [DateTime]::Parse($record.creationDateUtc, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind)
+    if ($held.HasExited -or [Math]::Abs(($held.StartTime.ToUniversalTime() - $created).Ticks) -gt 10000) { throw 'The held handle is not the registered in-flight command; refusing to bind.' }
+    $record | Add-Member -NotePropertyName process -NotePropertyValue $held
+    $record.state = 'bound'
+  } catch {
+    if ($record) { $record.state = 'refused-not-bound' }
+    $held.Dispose(); throw
+  }
+  $bound = [ordered]@{ pid = $record.pid; parentProcessId = $record.parentProcessId; creationDateUtc = $record.creationDateUtc; executablePath = $record.executablePath; commandLineSha256 = $record.commandLineSha256 }
+  [IO.File]::WriteAllText("$confirm.tmp", (ConvertTo-Json -Compress -InputObject $bound), $utf8)
+  [IO.File]::Move("$confirm.tmp", $confirm)
+  return $record
+}
+function Complete-BoundCommand($Record) {
+  # After the crash only the held, bound handle decides, once: a terminal HasExited of THAT process, or (still alive) a
+  # kill through the same handle after Stop-IdentifiedProcess re-verifies every recorded field. Never a bare PID; an
+  # identity that cannot be re-read while the held process is alive fails closed (neither killed nor called exited).
+  if ($Record.state -ne 'bound') { return $Record.state }
+  $Record.state = 'release-attempted'
+  try {
+    if ($Record.process.HasExited) { $verdict = 'exited-after-bind' }
+    else {
+      $verdict = Stop-IdentifiedProcess $Record $Record.process
+      if ($verdict -eq 'exited-before-kill') {
+        if (-not $Record.process.HasExited) { throw "PID $($Record.pid) is alive but its identity could not be re-read; refusing to kill it or treat it as exited." }
+        $verdict = 'exited-after-bind'
+      }
+    }
+    $Record.state = $verdict
+    return $verdict
+  } finally { $Record.process.Dispose() }
+}
 function Get-RowIdentity($Row) {
   return [pscustomobject]@{ pid = [int]$Row.ProcessId; parentProcessId = [int]$Row.ParentProcessId; creationDateUtc = $Row.CreationDate.ToUniversalTime().ToString('o'); executablePath = [string]$Row.ExecutablePath }
 }
@@ -384,8 +439,12 @@ function Show-AppWindow([string]$Pattern, [string]$Forbidden, [string]$Label) {
   if ($geometry.bounds.width -le 0 -or $geometry.bounds.height -le 0) { throw 'Normal close did not persist window geometry.' }
   return @{ title = $title; plainLaunch = $true; windowStatePersisted = $true }
 }
-function Invoke-CrashSeed([string]$Name, [string[]]$Arguments, [string]$SeedFile, [string]$Variant) {
+function Invoke-CrashSeed([string]$Name, [string[]]$Arguments, [string]$SeedFile, [string]$Variant, [string]$BindDirectory = '') {
+  if ($BindDirectory) { $Arguments = @($Arguments) + @('--bind', $BindDirectory) }
   $p = Start-OwnedProcess -File $appExe -Arguments (@($tool) + $Arguments) -ElectronNode -LogName $Name
+  $bound = $null
+  # Full variant: the in-flight command is bound (held handle + full identity) before the seed is allowed to crash.
+  if ($BindDirectory) { try { $bound = Register-BoundCommand $p $BindDirectory } catch { Stop-OwnedProcess $p; throw } }
   if (-not $p.Process.WaitForExit(180000)) { Stop-OwnedProcess $p; throw "$Name did not reach its crash point in time." }
   $p.Process.WaitForExit()
   $code = $p.Process.ExitCode
@@ -393,7 +452,11 @@ function Invoke-CrashSeed([string]$Name, [string[]]$Arguments, [string]$SeedFile
   if ($code -ne 1) { Save-ProcessLog $p; throw "$Name exited $code; expected the deliberate hard-kill exit code 1." }
   $seed = Get-Content -LiteralPath $SeedFile -Raw | ConvertFrom-Json
   if ($seed.status -ne 'seeded-before-kill' -or $seed.variant -ne $Variant) { Save-ProcessLog $p; throw "$Name did not record its crash point." }
-  return [pscustomobject]@{ record = $p; seed = $seed; exitCode = $code }
+  if ($bound) {
+    $req = [IO.File]::ReadAllText((Join-Path $BindDirectory 'bind-request.json')) | ConvertFrom-Json
+    if ([int]$seed.childPid -ne $bound.pid -or [int]$req.childPid -ne $bound.pid -or [string]$seed.effects -cne [string]$req.effects -or [string]$seed.sentinels.command -cne [string]$req.sentinel) { Save-ProcessLog $p; throw "$Name recorded a different in-flight command than the one bound before the crash." }
+  }
+  return [pscustomobject]@{ record = $p; seed = $seed; exitCode = $code; bound = $bound }
 }
 
 try {
@@ -486,12 +549,13 @@ try {
     [void](New-Item -ItemType Directory -Path $files)
     Assert-RealDirectoryChain $files
     $seedFile = Join-Path $work "seed-recovery-$variant.json"
-    $crash = Invoke-CrashSeed "seed-recovery-$variant" @('seed-recovery', '--install', $install, '--data', (Join-Path $root 'data'), '--files', $files, '--variant', $variant, '--node', $node, '--out', $seedFile) $seedFile $variant
+    $bind = ''
+    if ($variant -eq 'full') { $bind = Join-Path $work 'bind-full'; [void](New-Item -ItemType Directory -Path $bind); Assert-RealDirectoryChain $bind }
+    $crash = Invoke-CrashSeed "seed-recovery-$variant" @('seed-recovery', '--install', $install, '--data', (Join-Path $root 'data'), '--files', $files, '--variant', $variant, '--node', $node, '--out', $seedFile) $seedFile $variant $bind
     $orphan = 'none'
     if ($variant -eq 'full') {
-      $orphanRecord = Register-OrphanCommand $crash.record $crash.seed
-      $orphan = Stop-OrphanCommand $orphanRecord
-      if ($orphan -ne 'killed-after-identity-recheck') { throw "In-flight command cleanup ended '$orphan'." }
+      $orphan = Complete-BoundCommand $crash.bound
+      if ($orphan -notin @('exited-after-bind', 'killed-after-identity-recheck')) { throw "In-flight command cleanup ended '$orphan'." }
     }
     Save-ProcessLog $crash.record
     $recovery[$variant] = @{ root = $root; seed = $seedFile }
@@ -537,7 +601,7 @@ try {
   Write-Warning $report.error
 } finally {
   foreach ($r in @($owned)) { try { Stop-OwnedProcess $r } catch { Add-CleanupError "owned process $($r.Id): $($_.Exception.Message)" } }
-  foreach ($o in @($orphans)) { try { [void](Stop-OrphanCommand $o) } catch { Add-CleanupError "orphan command $($o.pid): $($_.Exception.Message)" } }
+  foreach ($o in @($orphans)) { try { if ($o.state -eq 'bound') { [void](Complete-BoundCommand $o) } else { [void](Stop-OrphanCommand $o) } } catch { Add-CleanupError "orphan command $($o.pid): $($_.Exception.Message)" } }
   $descendants = @()
   try {
     $descendants = @(Get-VerifiedDescendants)
