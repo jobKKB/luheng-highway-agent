@@ -1,0 +1,27 @@
+name: Actual Windows new-file owner functional check
+on:
+  push:
+    branches: ['probe/created-file-owner-functional']
+permissions:
+  contents: read
+jobs:
+  owned-files:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.21.0'
+      - name: Test only freshly created owned partial and journal files with actual Windows APIs
+        shell: pwsh
+        run: |
+          node --test --test-reporter=tap desktop/test/update-created-file-owner.test.cjs 2>&1 | Tee-Object -FilePath native-created-owner-functional.tap
+          if ($LASTEXITCODE -ne 0) { throw 'Actual native new-file owner contracts failed.' }
+      - name: Preserve actual native functional result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: actual-created-file-owner-${{ github.sha }}
+          path: native-created-owner-functional.tap
+          retention-days: 14

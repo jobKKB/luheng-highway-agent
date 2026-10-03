@@ -54,6 +54,11 @@
       "sha256": "07a08e0f2edbe1ef1d1c178564ee70eca34a5d8f04c02e373e20d3d360d39712"
     },
     {
+      "path": ".github/workflows/created-file-owner-functional.yml",
+      "bytes": 1003,
+      "sha256": "c63bcdbd71a256e16d442a104ec695ecbefece353f01d40c0a9430568a6445c9"
+    },
+    {
       "path": ".github/workflows/generic-workspace-acceptance.yml",
       "bytes": 3836,
       "sha256": "dd398ab701791f227afbea60e974adbc53c7c04eec864a69011d6947a5c0cc96"
@@ -254,6 +259,11 @@
       "sha256": "61d0a35d2ca5153007d9b28e6c6faa63f6931a182a82bc348da38b50e4b2d8d5"
     },
     {
+      "path": "desktop/test/update-created-file-owner.test.cjs",
+      "bytes": 16512,
+      "sha256": "acf3a2b12c9de1749c58fdb4bae22e43d61f95bd50d1fae2d19fb04656600436"
+    },
+    {
       "path": "desktop/test/update-manager.test.cjs",
       "bytes": 20974,
       "sha256": "7a77b659b2d81fa54f0d30c6e7c0092177747d4a139e3495f86d9bbd73f01efe"
@@ -285,8 +295,8 @@
     },
     {
       "path": "desktop/update-files.cjs",
-      "bytes": 12604,
-      "sha256": "3c2e7e220e931e7b5f23ac01373f867ab2c17faa9100179e2337f200298c05f1"
+      "bytes": 18254,
+      "sha256": "24447f00ded8766e655f756ee6a569557bf973cdbedb50a410b53983bfe44be9"
     },
     {
       "path": "desktop/update-manager.cjs",
