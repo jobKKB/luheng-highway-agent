@@ -119,12 +119,20 @@ try {
   app.store.put('tasks', task.id, { ...persisted, output: text });
   await page.locator('.task-result').filter({ hasText: text }).waitFor(); await draft(); await anchor();
   await page.evaluate(() => {
+    document.querySelector('#prompt-input').blur(); // Intentional switch from input selection to reading output.
     const output = document.querySelector('.task-result'), walker = document.createTreeWalker(output, NodeFilter.SHOW_TEXT); let node;
     while ((node = walker.nextNode())) if (node.data.length > 20) break;
     if (!node) throw new Error('Output has no selectable text');
     const r = document.createRange(); r.setStart(node, 3); r.setEnd(node, 14); const s = document.getSelection(); s.removeAllRanges(); s.addRange(r);
     window.__stability.range = { node, start: 3, end: 14, text: s.toString() };
   });
+  await page.waitForTimeout(150); // Let the native selection/focus gesture settle before measuring background work.
+  report.selectionGesture = await page.evaluate(() => {
+    const p = window.__stability, prompt = document.querySelector('#prompt-input');
+    const transition = { beforeInputOffsets: [p.start, p.end], afterInputOffsets: [prompt.selectionStart, prompt.selectionEnd], activeElement: document.activeElement?.id || document.activeElement?.tagName, selectedOutput: document.getSelection().toString() };
+    p.start = prompt.selectionStart; p.end = prompt.selectionEnd; p.scroll = prompt.scrollTop; return transition;
+  });
+  await stable({ focus: false, range: true }); // Validate the post-gesture baseline before changing server data.
   await shot('output-selected');
   app.store.put('tasks', task.id, { ...persisted, output: text + ' 新追加尾部仍须保持选中原文。' });
   await page.locator('.task-result').filter({ hasText: '新追加尾部' }).waitFor(); await stable({ focus: false, range: true });

@@ -655,8 +655,8 @@
     },
     {
       "path": "tests/ui-stability-60s.mjs",
-      "bytes": 13487,
-      "sha256": "3a9566e9028b382ac5298c9479542d166b3342474bfa426b024ff61b25b63bfc"
+      "bytes": 14352,
+      "sha256": "6470612bd2564ad717908807ed6cd358b9f6a7e06c59196239fe689072c6ab4d"
     },
     {
       "path": "tests/ui-v03.mjs",
