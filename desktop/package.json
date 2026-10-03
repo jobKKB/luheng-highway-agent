@@ -1,6 +1,6 @@
 {
   "name": "highway-agent-desktop",
-  "version": "0.6.0-beta.1",
+  "version": "0.6.0-beta.2",
   "private": true,
   "description": "Local-first desktop shell for the Highway Agent prototype",
   "main": "main.cjs",

@@ -1,6 +1,6 @@
 {
   "name": "路衡办公智能体",
-  "version": "0.6.0-beta.1",
+  "version": "0.6.0-beta.2",
   "type": "source-only-not-installer",
   "files": [
     {
@@ -106,7 +106,7 @@
     {
       "path": "desktop/package-lock.json",
       "bytes": 127662,
-      "sha256": "c1989fe0e330f2ebe45b8bbe7b792056b1edf04673d4e6e674ac2932b4900759"
+      "sha256": "49b7d13e54818b5ff70258b59d94f9ef98a4e91446f271bf3d01f4aa114ec528"
     },
     {
       "path": "desktop/package-windows.cjs",
@@ -116,7 +116,7 @@
     {
       "path": "desktop/package.json",
       "bytes": 868,
-      "sha256": "2410eddc084c389f8a2e5f5ac65089f639afdf616aadf6803c5b1ad38fc68754"
+      "sha256": "70f05952ef2e66c81aeebcbd84e6419778548a2477f8ff032603b66bc784d53d"
     },
     {
       "path": "desktop/security.cjs",
@@ -491,12 +491,12 @@
     {
       "path": "package-lock.json",
       "bytes": 21680,
-      "sha256": "162a81b911eb56bcbc4ad383cf66dc6c6c0d4fa94b1dc99f41028e6de172a16c"
+      "sha256": "feb97f059b26df92925c4f2ec1a2c3266b8077e41a701b6c4d91e74f13d7b2f0"
     },
     {
       "path": "package.json",
       "bytes": 611,
-      "sha256": "ab6b10dcfc9f472ee111df638739b8a082e4a38b00f310bedf220d7db98c0e2b"
+      "sha256": "f290c2102a525649dbe4d1c4ccc91445b7192b1586278e392602908790fb2443"
     },
     {
       "path": "public/agent-mark.svg",
@@ -521,7 +521,7 @@
     {
       "path": "public/index.html",
       "bytes": 2315,
-      "sha256": "aaea29ca3b758944982bdd8658986e76017f99d533d89dabf08fdf9cc8a3fb95"
+      "sha256": "88085d67e8080e4bf3e01df4a56150f00ca8e5f4c6c3b68b915d51e5c07608aa"
     },
     {
       "path": "public/ocean.css",
@@ -576,12 +576,12 @@
     {
       "path": "scripts/verify-windows-native.mjs",
       "bytes": 16580,
-      "sha256": "a59691b87f6227a5b0ea137b9fdcb0b306e0c9d6a9ee7bf06bdafc3bd7676b01"
+      "sha256": "1061fa9400e99e8812e58e8edd9fbe09a7239bd77fd569e252d06526342e084c"
     },
     {
       "path": "scripts/verify-windows-native.ps1",
       "bytes": 11553,
-      "sha256": "2125087ba312b410e6c1c79b7582a6c0bf2e84de393c5eb49788617016d7a7e3"
+      "sha256": "bda9cd6cf42a564e816affa4994fbe2f604db5f779a26641da80ed0c954aa14a"
     },
     {
       "path": "scripts/verify-windows-online-update.mjs",
@@ -811,7 +811,7 @@
     {
       "path": "tests/retained-chat-settings-ui.mjs",
       "bytes": 53042,
-      "sha256": "87d6a56184e16107be55daf94f474003846440b5c5ad86b18b60074e199a03b3"
+      "sha256": "86e387a31b41aa20b7c493a2e7036162c744ca571b4d92ffbbcc6dbc406551cc"
     },
     {
       "path": "tests/runtime-reliability.test.mjs",
@@ -906,7 +906,7 @@
     {
       "path": "tests/windows-native-smoke.test.mjs",
       "bytes": 7423,
-      "sha256": "73e98e91d94c1c2b48d0d5a857811e8376702c11a737f85c1cb08fa3296dec6e"
+      "sha256": "d8ad6b512ad55a26b4e69fdecc9e54fef5fefd0a271139874384ea0bb7356b38"
     },
     {
       "path": "tests/windows-upgrade-acceptance.test.mjs",
