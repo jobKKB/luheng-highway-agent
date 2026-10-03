@@ -17,7 +17,7 @@ function Write-JsonData($Value) {
 }
 $appGuid = '20be089a-e364-59fe-9bf1-70ea22b78d3f'
 $appLeaf = 'Luheng Office Agent'
-$helperHash = 'fcfaf03a4f140ced8839cee5f81c6639d52fb2cf0963c48720e5795dae9684c4'
+$helperHash = 'b7190fdd950c88c94d421d33d60a3cc344f1a64b16c1c3ad6dcd6bda3afc9f2f'
 $keys = @("Software\$appGuid", "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appGuid")
 $registryChecks = @()
 foreach ($hive in @([Microsoft.Win32.RegistryHive]::CurrentUser, [Microsoft.Win32.RegistryHive]::LocalMachine)) {

@@ -9,7 +9,7 @@ The copied helper is byte-exact:
 
 `helper/current-user-install-directory.nsh`
 
-SHA-256: `fcfaf03a4f140ced8839cee5f81c6639d52fb2cf0963c48720e5795dae9684c4`
+SHA-256: `b7190fdd950c88c94d421d33d60a3cc344f1a64b16c1c3ad6dcd6bda3afc9f2f`
 
 The helper guards, numeric mask comparisons, functions, and callbacks are
 unchanged. The fixture defines its normal compile-time inputs, inserts the
@@ -162,4 +162,6 @@ PowerShell preflight, the actual Windows probe, native status/ACL readback, and
 cleanup behavior are **unrun and unverified on Windows** until the publisher's
 actual probe supplies evidence.
 
-This diagnostic revision additionally compares original and corrected initialized-pointer output forms using one actual read-only TokenUser call. The included product helper remains byte-exact original fcfaf…; 15 source contracts pass. Windows execution remains pending.
+Token sizing diagnostic revision
+
+The fixture itself now uses initialized output destinations as 0 rN. Its read-only TokenUser probe uses a valid queried token and compares original *i 0 .r3 against corrected *i 0 r3, recording immediate raw return, required length and Win32 error. The included product helper is the corrected initialized-output candidate b7190fdd950c88c94d421d33d60a3cc344f1a64b16c1c3ad6dcd6bda3afc9f2f; all other product helper bytes match the original, so this second fixture exercises actual corrected preflight/create/finish. This revision has 15 source contracts; compilation and Windows runtime of this revised fixture remain unrun here.

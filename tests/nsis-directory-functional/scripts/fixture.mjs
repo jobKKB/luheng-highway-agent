@@ -9,7 +9,7 @@ export const artifactRoot = path.dirname(path.dirname(fileURLToPath(import.meta.
 export const constants = Object.freeze({
   guid: '20be089a-e364-59fe-9bf1-70ea22b78d3f',
   leaf: 'Luheng Office Agent',
-  helperSHA256: 'fcfaf03a4f140ced8839cee5f81c6639d52fb2cf0963c48720e5795dae9684c4',
+  helperSHA256: 'b7190fdd950c88c94d421d33d60a3cc344f1a64b16c1c3ad6dcd6bda3afc9f2f',
   prefix: 'luheng-nsis-functional-',
 });
 export const sha256 = bytes => crypto.createHash('sha256').update(bytes).digest('hex');

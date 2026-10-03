@@ -14,7 +14,7 @@ AutoCloseWindow true
 !define UNINSTALL_FILENAME "Uninstall Luheng Office Agent.exe"
 !define INSTALL_REGISTRY_KEY "Software\${APP_GUID}"
 !define UNINSTALL_REGISTRY_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_GUID}"
-!define FIXTURE_HELPER_SHA256 "fcfaf03a4f140ced8839cee5f81c6639d52fb2cf0963c48720e5795dae9684c4"
+!define FIXTURE_HELPER_SHA256 "b7190fdd950c88c94d421d33d60a3cc344f1a64b16c1c3ad6dcd6bda3afc9f2f"
 ; The complete argument allowlist below rejects delete-app-data/allusers/etc.
 ; This is the generated flag predicate's fixed-false equivalent, not a bypass.
 !define isDeleteAppData '"" != ""'

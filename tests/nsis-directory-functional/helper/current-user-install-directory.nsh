@@ -159,12 +159,12 @@
     StrCpy $1 0
     StrCpy $4 0
     System::Call 'kernel32::GetCurrentProcess() ${SYSTYPE_PTR} .r0'
-    System::Call 'advapi32::OpenProcessToken(${SYSTYPE_PTR} r0, i 0x8, *${SYSTYPE_PTR} 0 .r1) i .r2'
+    System::Call 'advapi32::OpenProcessToken(${SYSTYPE_PTR} r0, i 0x8, *${SYSTYPE_PTR} 0 r1) i .r2'
     ${If} $2 == 0
       StrCpy $luidError "无法读取当前用户的安全令牌。"
       Goto luid_token_done
     ${EndIf}
-    System::Call 'advapi32::GetTokenInformation(${SYSTYPE_PTR} r1, i 1, ${SYSTYPE_PTR} 0, i 0, *i 0 .r3) i .r2'
+    System::Call 'advapi32::GetTokenInformation(${SYSTYPE_PTR} r1, i 1, ${SYSTYPE_PTR} 0, i 0, *i 0 r3) i .r2'
     ${If} $3 < 8
     ${OrIf} $3 > 65536
       StrCpy $luidError "当前用户 SID 缓冲区长度无效。"
@@ -176,7 +176,7 @@
       StrCpy $luidError "无法分配当前用户 SID 缓冲区。"
       Goto luid_token_done
     ${EndIf}
-    System::Call 'advapi32::GetTokenInformation(${SYSTYPE_PTR} r1, i 1, ${SYSTYPE_PTR} $luidTokenData, i r3, *i 0 .r5) i .r2'
+    System::Call 'advapi32::GetTokenInformation(${SYSTYPE_PTR} r1, i 1, ${SYSTYPE_PTR} $luidTokenData, i r3, *i 0 r5) i .r2'
     ${If} $2 == 0
       StrCpy $luidError "读取当前用户 SID 失败。"
       Goto luid_token_done
@@ -188,7 +188,7 @@
       StrCpy $luidError "当前用户 SID 无效。"
       Goto luid_token_done
     ${EndIf}
-    System::Call 'advapi32::ConvertSidToStringSidW(${SYSTYPE_PTR} r0, *${SYSTYPE_PTR} 0 .r4) i .r2'
+    System::Call 'advapi32::ConvertSidToStringSidW(${SYSTYPE_PTR} r0, *${SYSTYPE_PTR} 0 r4) i .r2'
     ${If} $2 == 0
       StrCpy $luidError "转换当前用户 SID 失败。"
       Goto luid_token_done
@@ -201,20 +201,20 @@
     StrCpy $0 "O:$luidUserSidText"
     StrCpy $6 "D:P(A;OICI;FA;;;$luidUserSidText)(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)"
     StrCpy $0 "$0$6"
-    System::Call 'advapi32::ConvertStringSecurityDescriptorToSecurityDescriptorW(w r0, i 1, *${SYSTYPE_PTR} 0 .r5, ${SYSTYPE_PTR} 0) i .r2'
+    System::Call 'advapi32::ConvertStringSecurityDescriptorToSecurityDescriptorW(w r0, i 1, *${SYSTYPE_PTR} 0 r5, ${SYSTYPE_PTR} 0) i .r2'
     StrCpy $luidCreateSd $5
     ${If} $2 == 0
     ${OrIf} $5 == 0
       StrCpy $luidError "无法准备新应用目录的安全描述符。"
       Goto luid_token_done
     ${EndIf}
-    System::Call 'advapi32::ConvertStringSidToSidW(w "S-1-5-18", *${SYSTYPE_PTR} 0 .r5) i .r2'
+    System::Call 'advapi32::ConvertStringSidToSidW(w "S-1-5-18", *${SYSTYPE_PTR} 0 r5) i .r2'
     StrCpy $luidSystemSid $5
     ${If} $2 == 0
       StrCpy $luidError "无法准备 SYSTEM SID。"
       Goto luid_token_done
     ${EndIf}
-    System::Call 'advapi32::ConvertStringSidToSidW(w "S-1-5-32-544", *${SYSTYPE_PTR} 0 .r5) i .r2'
+    System::Call 'advapi32::ConvertStringSidToSidW(w "S-1-5-32-544", *${SYSTYPE_PTR} 0 r5) i .r2'
     StrCpy $luidAdminsSid $5
     ${If} $2 == 0
       StrCpy $luidError "无法准备 Administrators SID。"
@@ -341,7 +341,7 @@
       Goto luid_native_done
     ${EndIf}
     ; Share read/write, never delete. FILE_CREATE=2 must return FILE_CREATED=2.
-    System::Call 'ntdll::NtCreateFile(*${SYSTYPE_PTR} 0 .r6, i $luidNativeAccess, ${SYSTYPE_PTR} r3, ${SYSTYPE_PTR} r4, ${SYSTYPE_PTR} 0, i 0x80, i 3, i $luidNativeDisposition, i $luidNativeOptions, ${SYSTYPE_PTR} 0, i 0) i .r7'
+    System::Call 'ntdll::NtCreateFile(*${SYSTYPE_PTR} 0 r6, i $luidNativeAccess, ${SYSTYPE_PTR} r3, ${SYSTYPE_PTR} r4, ${SYSTYPE_PTR} 0, i 0x80, i 3, i $luidNativeDisposition, i $luidNativeOptions, ${SYSTYPE_PTR} 0, i 0) i .r7'
     StrCpy $luidNativeHandle $6
     StrCpy $luidNativeStatus $7
     System::Call '*$4(${SYSTYPE_PTR}, ${SYSTYPE_PTR} .r8)'
@@ -388,7 +388,7 @@
       Goto luid_verify_done
     ${EndIf}
     StrCpy $luidCheckIdentity "$3/$4/$5"
-    System::Call 'advapi32::GetSecurityInfo(${SYSTYPE_PTR} $luidCheckHandle, i 1, i 5, *${SYSTYPE_PTR} 0 .r2, ${SYSTYPE_PTR} 0, *${SYSTYPE_PTR} 0 .r3, ${SYSTYPE_PTR} 0, *${SYSTYPE_PTR} 0 .r9) i .r0'
+    System::Call 'advapi32::GetSecurityInfo(${SYSTYPE_PTR} $luidCheckHandle, i 1, i 5, *${SYSTYPE_PTR} 0 r2, ${SYSTYPE_PTR} 0, *${SYSTYPE_PTR} 0 r3, ${SYSTYPE_PTR} 0, *${SYSTYPE_PTR} 0 r9) i .r0'
     ${If} $0 != 0
     ${OrIf} $2 == 0
     ${OrIf} $9 == 0
@@ -405,7 +405,7 @@
         StrCpy $luidError "新应用目录未返回有效 DACL。"
         Goto luid_verify_done
       ${EndIf}
-      System::Call 'advapi32::GetSecurityDescriptorControl(${SYSTYPE_PTR} r9, *i 0 .r4, *i 0 .r5) i .r0'
+      System::Call 'advapi32::GetSecurityDescriptorControl(${SYSTYPE_PTR} r9, *i 0 r4, *i 0 r5) i .r0'
       IntOp $4 $4 & 0x1004
       ${If} $0 == 0
       ${OrIf} $4 <> 0x1004
@@ -420,7 +420,7 @@
       StrCpy $4 0
       StrCpy $5 0
       ${DoWhile} $4 < 3
-        System::Call 'advapi32::GetAce(${SYSTYPE_PTR} r3, i r4, *${SYSTYPE_PTR} 0 .r6) i .r0'
+        System::Call 'advapi32::GetAce(${SYSTYPE_PTR} r3, i r4, *${SYSTYPE_PTR} 0 r6) i .r0'
         ${If} $0 == 0
         ${OrIf} $6 == 0
           StrCpy $luidError "无法读取新应用目录访问控制项。"
