@@ -31,7 +31,7 @@ $probeScript = Join-Path $SourceRoot 'scripts/verify-windows-native.mjs'
 $uninstaller = Join-Path $install 'Uninstall Luheng Office Agent.exe'
 $uninstallerCopy = Join-Path $work 'uninstall-ci.exe'
 $report = [ordered]@{
-  status = 'native-smoke-failed'; checkedAt = [DateTime]::UtcNow.ToString('o'); version = '0.5.1'
+  status = 'native-smoke-failed'; checkedAt = [DateTime]::UtcNow.ToString('o'); version = '0.5.2'
   commit = $env:GITHUB_SHA; runnerOS = $env:RUNNER_OS; runnerImage = $env:ImageOS; runnerImageVersion = $env:ImageVersion
   stages = [ordered]@{}; installer = $null; error = $null; cleanupError = $null
   deliverableReady = $false
@@ -77,7 +77,7 @@ try {
   $existing = @(Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -like 'Luheng Office Agent*' })
   if ($existing.Count) { throw 'Existing per-user Luheng installation found; refusing upgrade/uninstall.' }
   $version = (Get-Content -LiteralPath (Join-Path $SourceRoot 'package.json') -Raw | ConvertFrom-Json).version
-  if ($version -ne '0.5.1') { throw 'This smoke gate is pinned to release 0.5.1.' }
+  if ($version -ne '0.5.2') { throw 'This smoke gate is pinned to release 0.5.2.' }
   $release = Join-Path $SourceRoot 'desktop/dist/win-unpacked'
   $installer = Join-Path $SourceRoot "desktop/dist/Luheng-Office-Agent-$version-windows-x64.exe"
   $installerItem = Get-Item -LiteralPath $installer
@@ -113,10 +113,10 @@ try {
   do {
     if ($ui.HasExited) { throw "Desktop exited before showing its window (code $($ui.ExitCode))." }
     $ui.Refresh()
-    if ($ui.MainWindowHandle -ne 0 -and $ui.MainWindowTitle -match '路衡.*办公智能体.*v0\.5\.1$') { break }
+    if ($ui.MainWindowHandle -ne 0 -and $ui.MainWindowTitle -match '路衡.*办公智能体.*v0\.5\.2$') { break }
     Start-Sleep -Milliseconds 250
   } while ([DateTime]::UtcNow -lt $deadline)
-  if ($ui.MainWindowHandle -eq 0 -or $ui.MainWindowTitle -notmatch '路衡.*办公智能体.*v0\.5\.1$') { throw 'Expected v0.5.1 application window was not shown.' }
+  if ($ui.MainWindowHandle -eq 0 -or $ui.MainWindowTitle -notmatch '路衡.*办公智能体.*v0\.5\.2$') { throw 'Expected v0.5.2 application window was not shown.' }
   $report.stages.desktopWindow = @{ title = $ui.MainWindowTitle; pid = $ui.Id; plainLaunch = $true }
   if (-not $ui.CloseMainWindow()) { throw 'Native WM_CLOSE could not be sent to the app window.' }
   Wait-OwnedProcess $ui 20

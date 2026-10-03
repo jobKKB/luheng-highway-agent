@@ -67,6 +67,10 @@ jobs:
         shell: pwsh
         run: node tests/ui-local-access.mjs --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-ui-local-proof')
         timeout-minutes: 8
+      - name: Test real 60-second idle and live DOM stability
+        shell: pwsh
+        run: node tests/ui-stability-60s.mjs --require-windows --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-ui-stability-proof')
+        timeout-minutes: 5
       - name: Upload isolated UI evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -78,6 +82,7 @@ jobs:
             artifacts/redesign/
             artifacts/recovery/
             ${{ runner.temp }}/luheng-ui-local-proof/
+            ${{ runner.temp }}/luheng-ui-stability-proof/
           if-no-files-found: warn
           retention-days: 14
       - run: npm --prefix desktop run package:win

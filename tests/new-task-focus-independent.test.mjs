@@ -68,12 +68,34 @@ function fixture() {
       if (this.id === 'main') renderLog.push({ view: this.dataset.view, prompt: this.children.find(n => n.id === 'prompt-input') });
     }
     get innerHTML() { return this.html || ''; }
+    // Stable-DOM slice: a same-view chat refresh parses into a <template> and
+    // patches #main's children in place, so the bounded DOM needs node moves.
+    get nodeType() { return 1; }
+    get nodeName() { return this.tagName; }
+    get childNodes() { return this.children; }
+    get firstChild() { return this.children[0] || null; }
+    get nextSibling() { const siblings = this.parent?.children || []; return siblings[siblings.indexOf(this) + 1] || null; }
+    get attributes() { return []; }
+    getAttribute(name) { return name === 'id' ? this.id || null : name === 'data-key' ? this.dataset.key ?? null : null; }
+    hasAttribute(name) { return this.getAttribute(name) !== null; }
+    insertBefore(node, ref) {
+      if (node.parent) node.parent.children.splice(node.parent.children.indexOf(node), 1);
+      const index = ref ? this.children.indexOf(ref) : -1;
+      this.children.splice(index < 0 ? this.children.length : index, 0, node); node.parent = this; node.isConnected = this.isConnected;
+      return node;
+    }
+    removeChild(node) {
+      this.children.splice(this.children.indexOf(node), 1); node.isConnected = false;
+      if (document.activeElement === node) document.activeElement = document.body;
+      return node;
+    }
   }
   const body = new Element('body', 'body'), main = new Element('main', 'main'), modalRoot = new Element('div', 'modal-root');
   const launcher = new Element('button', 'new-task-launcher'); launcher.dataset.action = 'new-task';
   body.style.overflow = ''; document.body = body; document.activeElement = body;
   const all = () => [body, main, ...main.children, modalRoot, ...modalRoot.children, launcher];
   Object.assign(document, {
+    createElement(tag) { const node = new Element(tag); node.content = node; return node; },
     contains: node => all().includes(node) && node.isConnected,
     addEventListener: (type, callback) => { if (!events.has(type)) events.set(type, []); events.get(type).push(callback); },
     querySelector(selector) {
@@ -149,7 +171,7 @@ test('Ctrl+K closes modal, preserves draft, and focuses the final prompt after s
   const earlyPrompt = f.document.querySelector('#prompt-input');
   await f.respond(0); await f.advance(30);
   const finalPrompt = f.document.querySelector('#prompt-input');
-  assert.notEqual(finalPrompt, earlyPrompt, 'forced shipped render should replace the prompt');
+  assert.equal(finalPrompt, earlyPrompt, 'a same-view forced refresh keeps the mounted prompt node');
   assert.equal(finalPrompt.value, 'synthetic saved draft');
   assert.equal(f.document.activeElement, finalPrompt, 'the current connected prompt must receive focus after refresh');
 });
@@ -219,7 +241,7 @@ test('an independent forced refresh after new-task completion preserves prompt f
   const refresh = f.run('loadState(true)');
   await f.respond(1); await refresh; await f.advance(30);
   const after = f.document.querySelector('#prompt-input');
-  assert.notEqual(after, before, 'the independent force refresh replaces the composer');
+  assert.equal(after, before, 'the independent force refresh keeps the composer node');
   assert.equal(f.document.activeElement, after, 'forced refresh must preserve focus even with unchanged local-access state');
   assert.equal(after.selectionStart, 3); assert.equal(after.selectionEnd, 11);
   assert.equal(after.value, 'synthetic saved draft');
