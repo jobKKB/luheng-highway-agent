@@ -1,0 +1,30 @@
+name: Observe exact failed installer own error
+on:
+  push:
+    branches: ['probe/compiled-beta3-own-error']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  observe-owned:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: '11287097666'
+          merge-multiple: true
+          run-id: '37159958594'
+          repository: jobKKB/luheng-highway-agent
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/luheng-failed-beta3-exact
+      - name: Observe only owned known installer error and never bypass OS warnings
+        shell: pwsh
+        run: ./scripts/read-owned-installer-error.ps1 -Installer (Join-Path $env:RUNNER_TEMP 'luheng-failed-beta3-exact/Luheng-Office-Agent-0.6.0-beta.3-windows-x64.exe') -EvidenceDirectory (Join-Path $env:RUNNER_TEMP 'luheng-owned-error-proof')
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: actual-owned-installer-error-${{ github.sha }}
+          path: ${{ runner.temp }}/luheng-owned-error-proof/
+          retention-days: 14
