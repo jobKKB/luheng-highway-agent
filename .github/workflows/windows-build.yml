@@ -3,8 +3,12 @@
 name: Windows prototype installer
 on:
   push:
-    branches: [main]
+    branches: [main, "candidate/**"]
+  pull_request:
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -55,17 +59,8 @@ jobs:
       - name: Test backend with serialized test files
         run: node --test --test-concurrency=1 tests/*.test.mjs
       - run: npm --prefix desktop run check
-      - name: Test existing browser UI flows
-        run: node tests/ui-smoke.mjs
-        timeout-minutes: 8
-      - name: Test scheduled and desktop browser UI flows
-        run: node tests/ui-v03.mjs
-        timeout-minutes: 8
-      - name: Test responsive layout and navigation
-        run: node tests/ui-v04.mjs
-        timeout-minutes: 8
-      - name: Test interrupted UI recovery
-        run: node tests/ui-recovery.mjs
+      - name: Test generic chat, Skills, tools, attachments and responsive UI
+        run: node tests/generic-chat-ui.mjs
         timeout-minutes: 8
       - name: Test local file and command permission UI
         shell: pwsh

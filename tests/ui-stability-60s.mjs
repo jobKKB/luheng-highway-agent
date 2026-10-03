@@ -23,7 +23,7 @@ await mkdir(out, { recursive: true });
 const owned = await mkdtemp(join(tmpdir(), 'luheng-stability-'));
 const docs = join(owned, 'selected'); await mkdir(docs);
 const draftText = Array.from({ length: 65 }, (_, i) => `未发送草稿 ${i + 1}：真实浏览器、选区和滚动仅用合成资料`).join('\n');
-const report = { screenshotOptions: { animations: 'allow', caret: 'initial' }, status: 'failed', platform: process.platform, commit: process.env.GITHUB_SHA || null, expectedVersion: JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version, sandbox: true, fakeClock: false, checks: [], frames: [], errors: [], scope: 'Owned temporary data; actual local demo engine and live HTTP polling; one synthetic output suffix fixture; no real provider or user data' };
+const report = { screenshotOptions: { animations: 'allow', caret: 'initial' }, status: 'failed', platform: process.platform, commit: process.env.GITHUB_SHA || null, expectedVersion: JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version, sandbox: true, fakeClock: false, checks: [], frames: [], errors: [], scope: 'Owned temporary data; actual engine with an explicit synthetic API completion provider and live HTTP polling; one synthetic output suffix fixture; no real provider or user data' };
 let app, browser, context, page;
 const counters = { stateRequests: 0, taskPosts: 0, detailRequests: 0 }, heartbeatValues = new Set();
 const check = (name, value = true) => { assert.ok(value, name); report.checks.push(name); console.log('PASS ' + name); };
@@ -65,7 +65,10 @@ async function draft() {
   await page.locator('#prompt-input').evaluate(el => { el.focus(); el.setSelectionRange(37, 61, 'forward'); el.scrollTop = Math.min(240, el.scrollHeight - el.clientHeight); });
 }
 try {
-  app = await startServer({ port: 0, dataDir: join(owned, 'app-data'), stepDelay: 550 });
+  app = await startServer({ port: 0, dataDir: join(owned, 'app-data'), stepDelay: 550, completion: async () => ({message:{role:'assistant',content:'合成通用资料已整理，仅用于真实DOM稳定性测试。'}}) });
+  // This owned fixture deliberately narrows local permissions so the following
+  // persistent-result suffix test never attempts to persist private local text.
+  app.store.put('agents','coordinator',{...app.store.get('agents','coordinator'),permissions:['knowledge.read','workspace.write']});
   browser = await chromium.launch({ headless: true, chromiumSandbox: true, executablePath: process.env.HIGHWAY_CHROMIUM_PATH || (existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined) });
   context = await browser.newContext({ viewport: { width: 1180, height: 812 }, locale: 'zh-CN', recordVideo: { dir: join(out, 'video'), size: { width: 1180, height: 812 } } });
   page = await context.newPage();
@@ -80,6 +83,8 @@ try {
   assert.equal(health.version, report.expectedVersion);
   if (await page.locator('.modal').isVisible()) { await page.keyboard.press('Escape'); await page.locator('.modal').waitFor({ state: 'hidden' }); }
   await post('/api/local-access/configure', { mode: 'disabled', onboardingComplete: true });
+  await post('/api/settings',{mode:'api',endpoint:'https://8.8.8.8/v1',model:'synthetic-stability-model',budget:30,apiKey:'SYNTHETIC-STABILITY-KEY-NOT-REAL'});
+  await until(()=>page.evaluate(()=>state.settings.hasApiKey&&!pollBusy),'synthetic API fixture configured');
   await page.waitForTimeout(2500); await page.evaluate(() => document.fonts.ready);
   await draft(); await anchor(); await shot('idle-00');
   const start = performance.now(), requestsAt = counters.stateRequests;
@@ -94,7 +99,7 @@ try {
   check('Idle main DOM writes/root replacements zero; native textarea draft, focus, range and scroll stable');
   await page.evaluate(() => window.__stability.observer.disconnect());
 
-  await page.locator('#prompt-input').fill('汇总演示养护待办并生成周报');
+  await page.locator('#prompt-input').fill('请讨论一个通用资料组织方法');
   const response = page.waitForResponse(r => new URL(r.url()).pathname === '/api/tasks' && r.request().method() === 'POST');
   await page.locator('#task-form button[type="submit"]').click();
   const task = await (await response).json(); assert.ok(task.id); assert.equal(typeof task.status, 'string');
@@ -106,7 +111,7 @@ try {
     const s = await (await page.request.get(app.url + '/api/state')).json(), t = s.tasks.find(t => t.id === task.id);
     assert.ok(t); statuses.add(t.status); await stable();
     return t.status === 'completed';
-  }, 'actual local demo engine completion');
+  }, 'actual engine completion with explicit synthetic API provider');
   await page.locator('.task-result').waitFor(); await page.waitForTimeout(2250); await stable(); await shot('task-completed');
   check('One task submission only', counters.taskPosts === 1);
   check('Actual task completion updates preserve composer and mounted chat nodes', statuses.has('completed') && statuses.size >= 2);
@@ -117,7 +122,9 @@ try {
   const persisted = app.store.get('tasks', task.id); assert.ok(persisted && !persisted.localContext);
   const text = '原生输出选区稳定性测试：' + '仅合成资料，段落保持可读。'.repeat(25);
   app.store.put('tasks', task.id, { ...persisted, output: text });
-  await page.locator('.task-result').filter({ hasText: text }).waitFor(); await draft(); await anchor();
+  await page.locator('.task-result').filter({ hasText: text }).waitFor();
+  await page.locator('[data-action="toggle-options"]').click();
+  await draft(); await anchor();
   await page.evaluate(() => {
     document.querySelector('#prompt-input').blur(); // Intentional switch from input selection to reading output.
     const output = document.querySelector('.task-result'), walker = document.createTreeWalker(output, NodeFilter.SHOW_TEXT); let node;

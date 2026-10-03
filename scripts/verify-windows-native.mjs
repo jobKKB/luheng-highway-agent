@@ -71,7 +71,7 @@ async function probe(installed, workDir, out) {
   assert.ok(!within(installed, out) && !within(installed, workDir), 'Probe output and state must be outside the installation');
   const backend = join(installed, 'resources', 'backend');
   const expected = JSON.parse(readFileSync(join(backend, 'package.json'), 'utf8'));
-  assert.equal(expected.version, '0.5.2', 'This is a v0.5.2 release gate');
+  assert.equal(expected.version, '0.6.0-candidate.2', 'This gate is pinned to the exact generic workspace candidate');
   const manifest = JSON.parse(readFileSync(join(installed, 'resources', 'bundle-manifest.json'), 'utf8'));
   const executable = resolve(installed, 'resources', 'browser-runtime', manifest.browserExecutable);
   assert.ok(within(join(installed, 'resources', 'browser-runtime'), executable));
@@ -88,9 +88,16 @@ async function probe(installed, workDir, out) {
     assert.equal(packages[name].version, expected.dependencies[name]);
   }
   const { startServer } = await import(pathToFileURL(join(backend, 'server.mjs')).href);
-  let app;
+  let app, runtimeBrowser;
   try {
-    app = await startServer({ port: 0, dataDir: workDir, stepDelay: 1 });
+    const call = (name,args,id) => ({id,type:'function',function:{name,arguments:JSON.stringify(args)}});
+    app = await startServer({ port: 0, dataDir: workDir, stepDelay: 1, completion: async request => ({message:{role:'assistant',content:null,
+      tool_calls: request.messages.some(message=>message.role==='tool')
+        ? [call('agent_finish',{status:'completed',summary:'Synthetic generic report created for native runtime verification.',claimType:'action',evidenceToolCallIds:['native-save']},'native-finish')]
+        : [call('workspace_save',{name:'native-generic.txt',content:'SYNTHETIC GENERIC REPORT; test-only, no business demo.'},'native-save')]}}) });
+    // Explicit non-local synthetic role for persistent document export; native
+    // local-operation privacy is tested separately below using exact approvals.
+    app.store.put('agents','coordinator',{...app.store.get('agents','coordinator'),permissions:['knowledge.read','workspace.write']});
     const get = async (path, cookie) => {
       const r = await fetch(app.url + path, { headers: cookie ? { cookie } : {}, signal: AbortSignal.timeout(10000) });
       assert.ok(r.ok, `GET ${path}: ${r.status}`); return r;
@@ -103,10 +110,10 @@ async function probe(installed, workDir, out) {
       const response = await fetch(app.url + path, { method: 'POST', headers: { cookie, origin: app.url, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(20000) });
       const result = await response.json(); assert.ok(response.ok, `${path}: ${JSON.stringify(result)}`); return result;
     };
-    const task = await post('/api/tasks', { prompt: '汇总演示养护待办并生成周报' });
+    const task = await post('/api/tasks', { prompt: 'Create a synthetic generic test report' });
     const deadline = Date.now() + 30000;
     while (!['completed', 'failed', 'cancelled'].includes(app.engine.task(task.id).status)) {
-      assert.ok(Date.now() < deadline, 'Demo report exceeded 30 seconds'); await new Promise(r => setTimeout(r, 50));
+      assert.ok(Date.now() < deadline, 'Synthetic API tool report exceeded 30 seconds'); await new Promise(r => setTimeout(r, 50));
     }
     assert.equal(app.engine.task(task.id).status, 'completed');
     const artifacts = [];
@@ -163,28 +170,31 @@ async function probe(installed, workDir, out) {
       exactWriteApproval: true, readVerified: true, commandExitCode: 0, nonzeroCommandClassifiedFailed: true,
       sqlitePayloadExcluded: true, sqliteRawBytesExcluded: true, databaseFilesChecked: databaseFiles.length,
       revoked: true, executionBoundary: 'host_process_no_os_sandbox' };
-    // This invokes the packaged BrowserBroker with its unchanged chromiumSandbox:true.
-    const session = await app.broker.create('ci-native-browser-probe');
-    const text = await app.broker.read(session.id); assert.match(text, /虚构样例/);
-    const browser = await app.broker.browserInstance();
-    assert.equal(browser.version(), manifest.browserVersion);
-    const cdp = await browser.newBrowserCDPSession();
+    // Verify the packaged Playwright + pinned Chromium directly on synthetic
+    // HTML. There is no removed business fixture or legacy Broker invocation.
+    runtimeBrowser = await require('playwright').chromium.launch({executablePath:executable,headless:true,chromiumSandbox:true});
+    assert.equal(runtimeBrowser.version(), manifest.browserVersion);
+    const cdp = await runtimeBrowser.newBrowserCDPSession();
     const { arguments: args } = await cdp.send('Browser.getBrowserCommandLine');
     assert.ok(args.some(arg => resolve(arg).toLowerCase() === executable.toLowerCase()), 'Running browser command does not identify the bundled executable');
     const bypasses = args.filter(arg => /^--(?:no-sandbox|disable-(?:setuid|gpu|seccomp-filter|namespace)-sandbox)(?:=|$)/.test(arg));
     assert.deepEqual(bypasses, [], 'Chromium launched with a sandbox bypass');
     await cdp.detach();
-    const screenshot = readFileSync(await app.broker.screenshot(session.id));
+    const page = await runtimeBrowser.newPage();
+    await page.setContent('<!doctype html><html lang="zh-CN"><title>路衡通用候选验收</title><main>LUHENG_NATIVE_GENERIC_TEST_ONLY</main></html>');
+    assert.equal(await page.locator('main').innerText(),'LUHENG_NATIVE_GENERIC_TEST_ONLY');
+    const screenshot = await page.screenshot();
     assert.equal(screenshot.subarray(1, 4).toString(), 'PNG');
     const result = { status: 'native-runtime-passed', checkedAt: new Date().toISOString(), version: expected.version,
       platform: process.platform, arch: process.arch, node: process.versions.node, electron: process.versions.electron, sqlite: process.versions.sqlite,
       health, stateVersion: state.system.version, executable: process.execPath, packages, artifacts, localAccess,
-      browser: { version: browser.version(), sha256: manifest.browserExecutableSha256, sandboxRequested: true, sandboxBypassFlags: bypasses, localFixtureRead: true, screenshotBytes: screenshot.length },
+      browser: { version: runtimeBrowser.version(), sha256: manifest.browserExecutableSha256, sandboxRequested: true, sandboxBypassFlags: bypasses, syntheticHtmlRead: true, screenshotBytes: screenshot.length },
       limitations: ['Bundled backend is tested in Electron run-as-node mode, not through the desktop utility-process IPC', 'Sandbox requested with no bypass flags; Windows restricted-token internals are not inspected', 'OOXML structure and download tested; Microsoft Office visual rendering not tested', 'Only fabricated local data; no real model, mail or external website integration'] };
+    await runtimeBrowser.close(); runtimeBrowser = null;
     await app.close(); app = null;
     writeFileSync(out, JSON.stringify(result, null, 2) + '\n', { flag: 'wx' });
     console.log(JSON.stringify({ status: result.status, version: result.version, node: result.node, browser: result.browser.version }));
-  } finally { await app?.close(); }
+  } finally { await runtimeBrowser?.close(); await app?.close(); }
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {

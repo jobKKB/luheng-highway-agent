@@ -15,6 +15,13 @@ import { startServer } from "../server.mjs";
 const tc = (name, args, id) => ({ id, type: "function", function: { name, arguments: typeof args === "string" ? args : JSON.stringify(args) } });
 const tools = (...calls) => ({ message: { role: "assistant", content: null, tool_calls: calls }, usage: { prompt_tokens: 10, completion_tokens: 2, total_tokens: 12 } });
 const text = content => ({ message: { role: "assistant", content }, usage: { prompt_tokens: 10, completion_tokens: 2, total_tokens: 12 } });
+const SYNTHETIC_KNOWLEDGE = { id: "synthetic-runtime-note", scope: "workspace", title: "合成检索记录",
+  content: "排水沟淤积；仅用于离线测试", source: "SYNTHETIC-SOURCE-RUNTIME-001", version: 1 };
+const controlledFixture = overrides => ({
+  listTargets: () => [{ id: "synthetic-target", enabled: true }],
+  cancel: async () => {},
+  ...overrides,
+});
 async function fixture(t, completion = async () => text("完成"), options = {}) {
   const dir = await mkdtemp(join(tmpdir(), "luheng-runtime-"));
   const store = new Store(dir);
@@ -35,12 +42,21 @@ test("malformed JSON is a structured safe input error; planner can correct it", 
       assert.equal(error.code, "TOOL_ARGUMENTS_JSON"); assert.equal(error.recoverable, true); assert.equal(error.inputStarted, false);
       return tools(tc("knowledge_search", { query: "排水沟 淤积" }, "corrected"));
     }
-    assert.equal(JSON.parse(messages.at(-1).content).records[0].id, "demo-maintenance");
+    const result = JSON.parse(messages.at(-1).content);
+    assert.equal(result.records.length, 1);
+    assert.equal(result.records[0].id, SYNTHETIC_KNOWLEDGE.id);
+    assert.equal(result.records[0].source, SYNTHETIC_KNOWLEDGE.source);
     return text("已查到有来源的排水沟记录");
   });
+  assert.deepEqual(h.store.all("memories"), [], "fresh installs have no demo knowledge");
+  h.store.put("memories", SYNTHETIC_KNOWLEDGE.id, SYNTHETIC_KNOWLEDGE);
   h.task.toolQueue = [tc("knowledge_search", "{", "malformed")];
   await h.engine.runAgentLoop(h.task, h.signal);
   assert.equal(n, 2); assert.match(h.task.output, /已查到/);
+  assert.equal(h.task.completion.status, "completed");
+  assert.deepEqual(h.task.completion.evidenceToolCallIds, ["corrected"]);
+  assert.deepEqual(h.task.toolEvidence.map(({ callId, success, nonempty }) => ({ callId, success, nonempty })),
+    [{ callId: "malformed", success: false, nonempty: false }, { callId: "corrected", success: true, nonempty: true }]);
 });
 test("a malformed call defers its dependent batch without writing a file", async t => {
   const h = await fixture(t, async ({ messages }) => {
@@ -74,16 +90,37 @@ test("pre-execution semantic input failures are amendable without side effects",
   await h.engine.runAgentLoop(h.task, h.signal); assert.equal(h.store.all("reminders").length, 0);
 });
 test("typed stale observation can be read again; forged recoverable flags do not grant recovery", async t => {
-  const h = await fixture(t);
+  let model = 0, reads = 0, proposals = 0;
+  const h = await fixture(t, async ({ messages }) => {
+    model++;
+    if (model === 1) {
+      const error = JSON.parse(messages.at(-1).content);
+      assert.equal(error.code, "OBSERVATION_STALE");
+      assert.equal(error.recoverable, true); assert.equal(error.inputStarted, false);
+      return tools(tc("browser_observe", { sessionId: "owned-session" }, "fresh-read"));
+    }
+    assert.equal(JSON.parse(messages.at(-1).content).observationId, "fresh-observation");
+    return text("已重新观察；旧动作未执行");
+  });
   h.task.controlledSessionId = "owned-session";
-  h.engine.controlledBrowser = { proposeActions: async () => { throw new BrowserPolicyError("页面已改变，请重新观察", "OBSERVATION_STALE"); }, cancel: async () => {} };
+  h.engine.controlledBrowser = controlledFixture({
+    proposeActions: async () => { proposals++; throw new BrowserPolicyError("页面已改变，请重新观察", "OBSERVATION_STALE"); },
+    read: async sessionId => { reads++; assert.equal(sessionId, "owned-session"); return { observationId: "fresh-observation", text: "synthetic page", controls: [] }; },
+  });
   h.task.toolQueue = [tc("browser_propose_actions", { sessionId: "owned-session", observationId: "old", actions: [{ type: "click", controlId: "c1" }] }, "stale")];
   await h.engine.runAgentLoop(h.task, h.signal);
-  assert.equal(JSON.parse(h.task.modelMessages[0].content).code, "OBSERVATION_STALE");
+  assert.equal(model, 2); assert.equal(proposals, 1); assert.equal(reads, 1);
+  assert.equal(h.task.completion.status, "completed");
+  assert.deepEqual(h.task.completion.evidenceToolCallIds, ["fresh-read"]);
+  assert.equal(h.store.all("approvals").length, 0);
   const forged = Object.assign(new Error("uncertain input"), { code: "OBSERVATION_STALE", recoverable: true });
-  h.engine.controlledBrowser.proposeActions = async () => { throw forged; };
+  h.engine.controlledBrowser.proposeActions = async () => { proposals++; throw forged; };
   h.task.toolQueue = [tc("browser_propose_actions", { sessionId: "owned-session", observationId: "old", actions: [{ type: "click", controlId: "c1" }] }, "forged")];
+  const historyLength = h.task.modelMessages.length;
   await assert.rejects(h.engine.runAgentLoop(h.task, h.signal), /uncertain input/);
+  assert.equal(model, 2); assert.equal(reads, 1); assert.equal(proposals, 2);
+  assert.equal(h.task.modelMessages.length, historyLength);
+  assert.equal(h.store.all("approvals").length, 0);
 });
 test("generic, network-policy, secret, cancellation and uncertain-effect errors remain hard stops", async t => {
   for (const code of [undefined, "ENDPOINT_BLOCKED", "MAIL_SECRET_CONTENT", "MAIL_CANCELLED", "MAIL_RETRY_BLOCKED", "BROWSER_UNKNOWN"]) {
@@ -95,14 +132,20 @@ test("generic, network-policy, secret, cancellation and uncertain-effect errors 
     assert.equal(model, 0); assert.equal(h.task.modelMessages.length, 0);
   }
 });
-test("permission denied malformed input and unknown tool are never returned for recovery", async t => {
-  const h = await fixture(t);
+test("permission denied malformed input, unknown and removed tools are never returned for recovery", async t => {
+  let model = 0;
+  const h = await fixture(t, async () => { model++; return text("must not run"); });
   h.store.put("agents", "coordinator", { ...h.store.get("agents", "coordinator"), permissions: ["knowledge.read"] });
   h.task.toolQueue = [tc("workspace_save", "{", "forbidden")];
   await assert.rejects(h.engine.runAgentLoop(h.task, h.signal), /workspace.write/);
   assert.equal(h.task.modelMessages.length, 0);
   h.task.toolQueue = [tc("unknown_tool", "{", "unknown")];
   await assert.rejects(h.engine.runAgentLoop(h.task, h.signal), /未开放/);
+  for (const name of ["browser_read", "browser_submit", "mail_draft"]) {
+    h.task.toolQueue = [tc(name, "{", "removed-" + name)];
+    await assert.rejects(h.engine.runAgentLoop(h.task, h.signal), error => error.code === "TOOL_UNIMPLEMENTED");
+  }
+  assert.equal(model, 0); assert.equal(h.task.modelMessages.length, 0); assert.equal(h.task.budgetUsed, 0);
 });
 test("duplicate IDs in a batch stop before the first side effect", async t => {
   const h = await fixture(t);
@@ -123,27 +166,39 @@ test("closed, aborted, cancelled and rejected tasks cannot replan malformed inpu
   }
 });
 test("cross-task browser and cross-role private-context attempts remain terminal", async t => {
-  const h = await fixture(t);
-  h.engine.controlledBrowser = { read: async () => { throw Error("must not read"); } };
+  let reads = 0, model = 0;
+  const h = await fixture(t, async () => { model++; return text("must not run"); });
+  h.engine.controlledBrowser = controlledFixture({ read: async () => { reads++; throw Error("must not read"); } });
   h.task.controlledSessionId = "owned";
   h.task.toolQueue = [tc("browser_observe", { sessionId: "other-task" }, "cross-task")];
   await assert.rejects(h.engine.runAgentLoop(h.task, h.signal), /本任务/);
   h.task.privateContextOwner = "coordinator";
   h.task.toolQueue = [tc("agent_delegate", { agentId: "researcher", instruction: "transfer private" }, "cross-role")];
   await assert.rejects(h.engine.runAgentLoop(h.task, h.signal), /私有知识/);
+  assert.equal(reads, 0); assert.equal(model, 0);
+  assert.equal(h.task.modelMessages.length, 0); assert.equal(h.task.budgetUsed, 0);
 });
 test("identifiable forbidden targets still hard stop when other schema fields are malformed", async t => {
-  const h = await fixture(t); let model = 0; h.engine.completion = async () => { model++; return text("must not run"); };
+  const h = await fixture(t); let model = 0, reads = 0, sends = 0;
+  h.engine.completion = async () => { model++; return text("must not run"); };
+  h.engine.controlledBrowser = controlledFixture({ read: async () => { reads++; throw Error("must not read"); } });
   h.task.controlledSessionId = "owned";
   h.task.toolQueue = [tc("browser_observe", { sessionId: "other-task", unexpected: true }, "bad-target")];
   await assert.rejects(h.engine.runAgentLoop(h.task, h.signal), /本任务/);
   h.task.privateContextOwner = "coordinator";
   h.task.toolQueue = [tc("agent_delegate", { agentId: "writer", instruction: 17 }, "bad-delegate")];
   await assert.rejects(h.engine.runAgentLoop(h.task, h.signal), /跨角色/);
-  h.engine.mail = { getOutbox: () => ({ taskId: "other-task" }) };
+  h.task.mailDraftId = "owned-draft";
+  h.engine.mail = {
+    getPublicConfig: () => [{ accountId: "synthetic-account", smtp: {}, hasCredentials: { smtp: true } }],
+    getOutbox: () => ({ taskId: "other-task" }),
+    requestSend: async () => { sends++; throw Error("must not request send"); },
+  };
   h.task.toolQueue = [tc("mail_request_send", { draftId: "foreign", unexpected: true }, "bad-draft")];
   await assert.rejects(h.engine.runAgentLoop(h.task, h.signal), /当前任务/);
-  assert.equal(model, 0); assert.equal(h.task.modelMessages.length, 0);
+  assert.equal(model, 0); assert.equal(reads, 0); assert.equal(sends, 0);
+  assert.equal(h.task.modelMessages.length, 0); assert.equal(h.task.budgetUsed, 0);
+  assert.equal(h.store.all("approvals").length, 0);
 });
 test("stale and expired evidence is recorded as unexecuted, never completed, in bounded summary", async t => {
   const h = await fixture(t); h.task.budgetUsed = h.task.budget;
@@ -203,11 +258,18 @@ test("worst-size bounded batch keeps metadata under 64KiB and full output under 
 test("8-round cap preserves eight results and 96 tokens with no ninth request", async t => {
   let n = 0;
   const h = await fixture(t, async () => tools(tc("knowledge_search", {}, "round-" + ++n)));
+  assert.deepEqual(h.store.all("memories"), []);
+  h.store.put("memories", SYNTHETIC_KNOWLEDGE.id, SYNTHETIC_KNOWLEDGE);
   await assert.rejects(h.engine.runAgentLoop(h.task, h.signal), /8轮/);
   assert.equal(n, 8); assert.equal(h.task.usage.total_tokens, 96);
   assert.equal(h.task.completionSummary.completed.length, 8);
   assert.equal(h.task.completionSummary.finalModelAnswerAvailable, false);
-  assert.match(h.task.output, /未完成/); assert.match(h.task.output, /DEMO-001/);
+  assert.equal(h.task.modelRounds, 8); assert.equal(h.task.budgetUsed, 16);
+  assert.equal(h.task.modelMessages.filter(message => message.role === "tool").length, 8);
+  assert.deepEqual(h.task.executedToolIds, Array.from({ length: 8 }, (_, i) => "round-" + (i + 1)));
+  assert.equal(h.task.toolEvidence.every(item => item.success && item.nonempty), true);
+  assert.match(h.task.output, /未完成/); assert.match(h.task.output, /SYNTHETIC-SOURCE-RUNTIME-001/);
+  assert.doesNotMatch(h.task.output, /DEMO-/);
 });
 test("budget exhaustion preserves saved artifact and reports unexecuted tool", async t => {
   let n = 0;

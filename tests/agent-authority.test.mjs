@@ -60,6 +60,11 @@ async function finish(h, t) {
 test("private memory visibility requires all delegating roles; owner UI storage remains accessible", async () => {
   const h = await setup();
   try {
+    assert.deepEqual(h.store.all("memories"), [], "new installs contain no seeded role context");
+    h.store.put("memories", "synthetic-shared", {
+      id: "synthetic-shared", scope: "workspace", ownerAgentId: null,
+      title: "Synthetic shared note", source: "authority fixture", content: "SHARED_SYNTHETIC",
+    });
     h.store.put("memories", "private-main", {
       id: "private-main",
       scope: "agent",
@@ -96,7 +101,8 @@ test("private memory visibility requires all delegating roles; owner UI storage 
       ),
       false,
     );
-    assert.equal(h.store.all("memories").length, 4);
+    assert.deepEqual(visibleMemories(h.store, "coordinator", "researcher").map(memory => memory.id), ["synthetic-shared"]);
+    assert.equal(h.store.all("memories").length, 3, "owner UI retains shared and both private records");
   } finally {
     await h.close();
   }
@@ -210,6 +216,7 @@ test("knowledge_search returns only selected role private and workspace entries"
         },
       };
     const records = JSON.parse(args.messages.at(-1).content).records;
+    assert.deepEqual(new Set(records.map(record => record.id)), new Set(["mine", "shared"]));
     assert.equal(
       records.some((m) => m.id === "mine"),
       true,
@@ -221,6 +228,9 @@ test("knowledge_search returns only selected role private and workspace entries"
     return { message: { role: "assistant", content: "done" } };
   });
   try {
+    h.store.put("memories", "shared", {
+      id: "shared", scope: "workspace", content: "synthetic shared note", source: "authority fixture",
+    });
     h.store.put("memories", "mine", {
       id: "mine",
       scope: "agent",
@@ -238,6 +248,7 @@ test("knowledge_search returns only selected role private and workspace entries"
       h.engine.create({ prompt: "检索自己知识", agentId: "researcher" }),
     );
     assert.equal(t.status, "completed", t.error);
+    assert.deepEqual(new Set(t.sources.map(record => record.id)), new Set(["mine", "shared"]));
     assert.equal(
       t.sources.some((m) => m.id === "other"),
       false,

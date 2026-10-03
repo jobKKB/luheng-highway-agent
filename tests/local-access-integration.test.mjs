@@ -93,7 +93,7 @@ test("local permission migration preserves custom, edited and disabled roles", a
     assert.ok(store.get("agents", "coordinator").permissions.includes("commands.run"));
     for (const id of ["researcher", "writer"])
       assert.equal(store.get("agents", id).permissions.includes("commands.run"), false);
-    const old = permissions.filter(p => !["files.read", "files.write", "commands.run"].includes(p));
+    const old = permissions.filter(p => !["files.read", "files.write", "commands.run", "web.read"].includes(p));
     store.put("agents", "coordinator", { ...store.get("agents", "coordinator"), permissions: old });
     store.put("agents", "researcher", { ...store.get("agents", "researcher"), permissions: ["knowledge.read"] });
     store.put("agents", "writer", { ...store.get("agents", "writer"), enabled: false,
@@ -102,6 +102,7 @@ test("local permission migration preserves custom, edited and disabled roles", a
     store.db.exec("DELETE FROM migrations WHERE version=4");
     store.close(); store = new Store(dir);
     assert.ok(store.get("agents", "coordinator").permissions.includes("commands.run"));
+    assert.equal(store.get("agents", "coordinator").permissions.includes("web.read"),false,"new public web permission never auto-expands existing roles");
     assert.deepEqual(store.get("agents", "researcher").permissions, ["knowledge.read"]);
     assert.equal(store.get("agents", "writer").permissions.includes("files.write"), false);
     assert.deepEqual(store.get("agents", "custom").permissions, old);
@@ -137,7 +138,7 @@ test("model local tools require both global authorization and current role permi
   try {
     target = join(c.files, "source.txt"); await writeFile(target, "source");
     const first = (await c.api("/api/tasks", { prompt: "read fixture" })).data;
-    assert.match((await settled(c, first.id)).error, /本机访问权限/);
+    assert.match((await settled(c, first.id)).error, /未开启本机访问/);
     assert.equal(c.app.localAccess.state().operations.length, 0);
     await c.configure("read_only");
     const agent = c.app.store.get("agents", "coordinator");
