@@ -229,7 +229,9 @@ async function nativeFixture(t) {
       beforeOwnerPreparation.push({ file, snapshot });
     }
     // This is always the actual native subprocess result, never an injected success.
-    return spawnSync(command, args, options);
+    const result = spawnSync(command, args, options);
+    if (result.error || result.status !== 0) t.diagnostic(JSON.stringify({ nativeCommand: command, stage: args[4] === WINDOWS_NEW_FILE_OWNER_SCRIPT ? 'new-file-owner' : args[4] === WINDOWS_INSPECT_SCRIPT ? 'existing-inspect' : 'private-directory', status: result.status, error: result.error?.message, stdout: result.stdout, stderr: result.stderr, PSModulePath: options.env.PSModulePath }));
+    return result;
   };
   files = await createUpdateFiles({ stateRoot, privateDirectoryModule, run });
   return { stateRoot, files, records, beforeOwnerPreparation };
