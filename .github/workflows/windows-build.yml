@@ -10,7 +10,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -50,6 +50,35 @@ jobs:
       - run: npx playwright install chromium
       - run: npm test
       - run: npm --prefix desktop run check
+      - name: Test existing browser UI flows
+        run: node tests/ui-smoke.mjs
+        timeout-minutes: 8
+      - name: Test scheduled and desktop browser UI flows
+        run: node tests/ui-v03.mjs
+        timeout-minutes: 8
+      - name: Test responsive layout and navigation
+        run: node tests/ui-v04.mjs
+        timeout-minutes: 8
+      - name: Test interrupted UI recovery
+        run: node tests/ui-recovery.mjs
+        timeout-minutes: 8
+      - name: Test local file and command permission UI
+        shell: pwsh
+        run: node tests/ui-local-access.mjs --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-ui-local-proof')
+        timeout-minutes: 8
+      - name: Upload isolated UI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: luheng-ui-verification-${{ github.sha }}
+          path: |
+            artifacts/screenshots/
+            artifacts/screenshots-v03/
+            artifacts/redesign/
+            artifacts/recovery/
+            ${{ runner.temp }}/luheng-ui-local-proof/
+          if-no-files-found: warn
+          retention-days: 14
       - run: npm --prefix desktop run package:win
       - name: Verify native Windows installer and bundled runtime
         shell: pwsh

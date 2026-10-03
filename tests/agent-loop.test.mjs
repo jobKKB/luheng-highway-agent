@@ -237,7 +237,7 @@ test("tool loop is bounded at 8 model rounds", async () => {
     await c.close();
   }
 });
-test("model-requested mock OA approval persists and resumes with tool result after server restart", async () => {
+test("non-local role mock OA approval persists and resumes with tool result after server restart", async () => {
   let n = 0;
   const completion = async (args) => {
     n++;
@@ -256,6 +256,10 @@ test("model-requested mock OA approval persists and resumes with tool result aft
   };
   let c = await client(completion);
   try {
+    // Persistence remains supported for a role that cannot acquire local context.
+    const actor = c.app.store.get("agents", "coordinator");
+    c.app.store.put("agents", actor.id, { ...actor,
+      permissions: actor.permissions.filter(permission => !["files.read", "files.write", "commands.run"].includes(permission)) });
     const task = (
       await c.api("/api/tasks", { prompt: "在模拟OA新增演示安排", budget: 30 })
     ).data;

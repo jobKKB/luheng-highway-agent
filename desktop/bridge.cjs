@@ -4,7 +4,7 @@ const { exactKeys, validateBundle } = require('./vault.cjs');
 
 // This RPC channel exists only between the main and utility processes. There is
 // deliberately no ipcMain handler, preload, contextBridge, or renderer API.
-const METHODS = new Set(['status', 'preferences', 'saveCredentials', 'forgetCredentials', 'setPreferences']);
+const METHODS = new Set(['status', 'preferences', 'saveCredentials', 'forgetCredentials', 'setPreferences', 'selectFolders']);
 const ERRORS = Object.freeze({
   unavailable: '桌面安全功能暂不可用，请重新打开应用。',
   timeout: '桌面安全操作超时，请检查状态后重试。',
@@ -12,6 +12,7 @@ const ERRORS = Object.freeze({
   vault: '系统安全密钥库操作失败；未使用明文回退，请检查凭据保存状态。',
   tray: '系统托盘不可用，关闭窗口将退出应用。',
   preferences: '桌面偏好保存失败，请重试。',
+  folders: '文件夹选择暂不可用；未授予任何权限，请重试或填写绝对路径。',
 });
 
 function publicStatus(value) {
@@ -29,6 +30,12 @@ function publicPreferences(value) {
   if (!value || typeof value.backgroundEnabled !== 'boolean' || typeof value.trayAvailable !== 'boolean') throw new Error(ERRORS.invalid);
   return { backgroundEnabled: value.backgroundEnabled, trayAvailable: value.trayAvailable };
 }
+function publicFolders(value) {
+  const { isAbsolute } = require('node:path');
+  if (!value || typeof value.cancelled !== 'boolean' || !Array.isArray(value.paths) || value.paths.length > 12
+    || value.paths.some(p => typeof p !== 'string' || !isAbsolute(p) || p.length > 4096 || p.includes('\0'))) throw new Error(ERRORS.invalid);
+  return { cancelled: value.cancelled, paths: value.cancelled ? [] : [...value.paths] };
+}
 function validRequest(message) {
   return message && Number.isSafeInteger(message.id) && message.id > 0
     && METHODS.has(message.method)
@@ -36,7 +43,7 @@ function validRequest(message) {
     && message.type === 'desktop:request';
 }
 
-function createDesktopHandler({ vault, preferences, tray, getRestoreError = () => false, clearRestoreError = () => {} }) {
+function createDesktopHandler({ vault, preferences, tray, getRestoreError = () => false, clearRestoreError = () => {}, selectFolders }) {
   const readPreferences = () => publicPreferences({ backgroundEnabled: preferences.backgroundEnabled, trayAvailable: tray.available() });
   return async function handle(message) {
     if (message?.type !== 'desktop:request' || !Number.isSafeInteger(message.id) || message.id <= 0) return null;
@@ -47,7 +54,11 @@ function createDesktopHandler({ vault, preferences, tray, getRestoreError = () =
       const hasPayload = Object.hasOwn(message, 'payload');
       if (!['saveCredentials', 'setPreferences'].includes(message.method) && hasPayload) throw new Error('invalid');
       let result;
-      if (message.method === 'preferences') result = readPreferences();
+      if (message.method === 'selectFolders') {
+        code = 'folders';
+        if (typeof selectFolders !== 'function') throw new Error('folders');
+        result = publicFolders(await selectFolders());
+      } else if (message.method === 'preferences') result = readPreferences();
       else if (message.method === 'setPreferences') {
         if (!exactKeys(message.payload, ['backgroundEnabled']) || typeof message.payload.backgroundEnabled !== 'boolean') throw new Error('invalid');
         code = 'tray';
@@ -83,7 +94,7 @@ function createDesktopClient(send, { timeoutMs = 8000 } = {}) {
     if (pending.size >= 32) return Promise.reject(new Error(ERRORS.unavailable));
     return new Promise((resolve, reject) => {
       const id = ++nextId;
-      const timer = setTimeout(() => { pending.delete(id); reject(new Error(ERRORS.timeout)); }, timeoutMs);
+      const timer = setTimeout(() => { pending.delete(id); reject(new Error(ERRORS.timeout)); }, method === 'selectFolders' ? 120000 : timeoutMs);
       pending.set(id, { resolve, reject, timer, method });
       try { send({ type: 'desktop:request', id, method, ...(payload === undefined ? {} : { payload }) }); }
       catch { clearTimeout(timer); pending.delete(id); reject(new Error(ERRORS.unavailable)); }
@@ -98,7 +109,7 @@ function createDesktopClient(send, { timeoutMs = 8000 } = {}) {
     if (message.ok !== true) entry.reject(new Error(ERRORS[message.error?.code] || ERRORS.unavailable));
     else {
       try {
-        entry.resolve(['preferences', 'setPreferences'].includes(entry.method) ? publicPreferences(message.result) : publicStatus(message.result));
+        entry.resolve(entry.method === 'selectFolders' ? publicFolders(message.result) : ['preferences', 'setPreferences'].includes(entry.method) ? publicPreferences(message.result) : publicStatus(message.result));
       } catch { entry.reject(new Error(ERRORS.invalid)); }
     }
     return true;
@@ -116,8 +127,9 @@ function createDesktopClient(send, { timeoutMs = 8000 } = {}) {
       saveCredentials: bundle => { validateBundle(bundle); return request('saveCredentials', bundle); },
       forgetCredentials: () => request('forgetCredentials'),
       setPreferences: value => request('setPreferences', value),
+      selectFolders: () => request('selectFolders'),
     }),
   };
 }
 
-module.exports = { createDesktopHandler, createDesktopClient, publicStatus, publicPreferences, ERRORS };
+module.exports = { createDesktopHandler, createDesktopClient, publicStatus, publicPreferences, publicFolders, ERRORS };

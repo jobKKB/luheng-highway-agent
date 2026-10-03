@@ -2,7 +2,7 @@ import http from "node:http";
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { resolve, join, dirname, basename, extname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes, timingSafeEqual, createHash } from "node:crypto";
 import { Store, id, now, permissions } from "./lib/store.mjs";
 import { Engine } from "./lib/engine.mjs";
 import { BrowserBroker, fixtureHtml } from "./lib/browser.mjs";
@@ -15,6 +15,7 @@ import { ControlledBrowserService } from "./lib/controlled-browser.mjs";
 import { CredentialSnapshots } from "./lib/persisted-credentials.mjs";
 import { ScheduleService } from "./lib/schedules.mjs";
 import { saveOfficeArtifact } from "./lib/office-artifacts.mjs";
+import { LocalAccessService } from "./lib/local-access.mjs";
 const root = dirname(fileURLToPath(import.meta.url));
 const applicationVersion = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
 const MIME = {
@@ -55,6 +56,14 @@ async function body(req) {
     throw new Error("JSON格式无效");
   }
 }
+async function objectBody(req, allowed) {
+  const value = await body(req);
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("请求内容必须为JSON对象");
+  if (allowed && Object.keys(value).some(key => !allowed.includes(key)))
+    throw new Error("请求包含未获允许的字段");
+  return value;
+}
 export async function startServer({
   port = 4318,
   dataDir = join(root, "data"),
@@ -67,6 +76,7 @@ export async function startServer({
   desktopBridge,
   persistedCredentials,
   scheduleOptions,
+  localAccessOptions,
 } = {}) {
   if (host !== "127.0.0.1")
     throw new Error("原型仅允许绑定127.0.0.1，不提供公网服务");
@@ -92,6 +102,13 @@ export async function startServer({
       ...mail.getSecrets(),
     ],
   });
+  const localAccess = new LocalAccessService(store, {
+    ...localAccessOptions,
+    protectedPaths: [root, dataDir, ...(localAccessOptions?.protectedPaths || [])],
+    getSecrets: () => [apiKey, ...roleKeys.secrets(), ...mail.getSecrets()],
+  });
+  const localAccessState = () => ({ ...localAccess.state(),
+    pickerAvailable: typeof desktopBridge?.selectFolders === "function" });
   const credentials = new CredentialSnapshots({ store, roleKeys, mail,
     getGlobal: endpoint => !endpoint || new URL(endpoint).origin === keyOrigin ? apiKey : '',
     setGlobal: (secret, endpoint) => { apiKey = secret; keyOrigin = new URL(endpoint).origin; },
@@ -209,9 +226,10 @@ export async function startServer({
       if (path.startsWith("/api/")) {
         if (!apiAuthenticated(req))
           return error(res, "本地会话已失效，请刷新客户端", 401);
-        if (req.method === "GET" && path === "/api/state")
+        if (req.method === "GET" && path === "/api/state") {
+          engine.reconcileLocalAccess();
           return json(res, {
-            tasks: store.all("tasks").map((t) => engine.task(t.id)),
+            tasks: store.all("tasks").map((t) => t.localContext ? t : engine.task(t.id)),
             agents: store
               .all("agents")
               .reverse()
@@ -226,6 +244,7 @@ export async function startServer({
             desktop: await desktopState(),
             audit: store.all("audit").slice(0, 250),
             approvals: store.all("approvals"),
+            localAccess: { ...localAccessState(), pending: localAccessState().pending.map(({ snapshot, ...metadata }) => metadata), summariesOnly: true },
             settings: {
               ...store.get("settings", "main"),
               hasApiKey: !!apiKey,
@@ -248,7 +267,7 @@ export async function startServer({
               localOnly: true,
               browser: "隔离Chromium：内置模拟OA与用户明确配置的目标白名单",
               sandbox:
-                "受限工具与工作区；不是操作系统级沙箱；任意代码执行已禁用",
+                "应用层本地授权与角色权限；不是操作系统级沙箱。本机命令使用当前账户权限，目录范围不能隔离进程行为",
               mail: mail.getPublicConfig().length
                 ? "真实邮件适配器已配置；每次发送必须完整审批"
                 : "真实IMAP/SMTP适配器尚未配置；演示任务仅本地草稿",
@@ -256,7 +275,10 @@ export async function startServer({
                 ? new Date(engine.lastHeartbeat).toISOString()
                 : null,
               capabilities: {
-                arbitraryCode: false,
+                arbitraryCode: ["confirm", "full"].includes(localAccess.state().mode),
+                localFiles: localAccess.state().mode !== "disabled",
+                localCommands: ["confirm", "full"].includes(localAccess.state().mode),
+                osSandbox: false,
                 realMail: true,
                 mailAccountsConfigured: mail.getPublicConfig().length,
                 realOa: false,
@@ -275,6 +297,60 @@ export async function startServer({
               security: "仅环回监听；同源校验；会话Cookie；凭据默认内存，桌面端可明确选择系统加密快照",
             },
           });
+        }
+        if (req.method === "GET" && path === "/api/local-access/state") {
+          engine.reconcileLocalAccess();
+          return json(res, localAccessState());
+        }
+        if (req.method === "POST" && path === "/api/local-access/select-folders") {
+          await objectBody(req, []);
+          if (typeof desktopBridge?.selectFolders !== "function")
+            throw new Error("当前没有桌面文件夹选择器；请手动填写本机文件夹的绝对路径");
+          return json(res, await desktopBridge.selectFolders());
+        }
+        if (req.method === "POST" && path === "/api/local-access/configure") {
+          const input = await objectBody(req, ["mode", "roots", "allFiles", "onboardingComplete", "challenge", "confirmation"]);
+          const state = await localAccess.configure(input);
+          engine.reconcileLocalAccess();
+          return json(res, { ...state, pickerAvailable: typeof desktopBridge?.selectFolders === "function" });
+        }
+        if (req.method === "POST" && path === "/api/local-access/full-access-request")
+          return json(res, await localAccess.requestFullAccess(await objectBody(req, ["roots", "allFiles"])));
+        if (req.method === "POST" && path === "/api/local-access/revoke") {
+          await objectBody(req, []);
+          const state = await localAccess.revoke();
+          engine.reconcileLocalAccess("你已撤销本地访问，旧审批已失效；未执行待审批操作，请重新发起任务");
+          return json(res, { ...state, pickerAvailable: typeof desktopBridge?.selectFolders === "function" });
+        }
+        if (req.method === "POST" && path === "/api/local-access/operations") {
+          const input = await objectBody(req, ["kind", "path", "content", "executable", "args", "cwd", "timeoutMs"]);
+          return json(res, await localAccess.propose(input, { actor: "user" }), 201);
+        }
+        let localMatch;
+        if (req.method === "POST" && (localMatch = path.match(
+          /^\/api\/local-access\/operations\/([^/]+)\/(approve|reject|cancel)$/))) {
+          const input = await objectBody(req, ["digest"]);
+          const operationId = localMatch[1], action = localMatch[2];
+          const state = localAccess.state();
+          const operation = [...state.pending, ...state.operations].find(op => op.id === operationId);
+          if (!operation) return error(res, "本地操作不存在或已失效", 404);
+          if (input.digest !== undefined && input.digest !== operation.digest)
+            throw new Error("审批内容摘要不一致");
+          const central = store.all("approvals").find(a => a.localOperationId === operationId);
+          if (operation.taskId && store.get("tasks", operation.taskId)) {
+            if (!central || central.taskId !== operation.taskId)
+              throw new Error("任务本地操作缺少对应审批，禁止绕过任务执行");
+            if (action === "cancel") {
+              const task = engine.cancel(operation.taskId);
+              await localAccess.cancel(operationId);
+              return json(res, { task, operation: localAccess.state().operations.find(op => op.id === operationId) });
+            }
+            const task = await engine.decide(central.id, action);
+            return json(res, { task, operation: localAccess.state().operations.find(op => op.id === operationId) });
+          }
+          if (operation.taskId) throw new Error("任务绑定已失效，禁止直接执行此操作");
+          return json(res, await localAccess[action](operationId));
+        }
         if (req.method === "GET" && path === "/api/schedules") return json(res, schedules.list());
         if (req.method === "POST" && path === "/api/schedules") return json(res, schedules.create(await body(req)), 201);
         let scheduleMatch;
@@ -478,13 +554,15 @@ export async function startServer({
         if (req.method === "POST" && (m = path.match(/^\/api\/tasks\/([^/]+)\/export$/))) {
           const b = await body(req);
           if (!b || Object.keys(b).length !== 1 || !['docx','xlsx'].includes(b.format)) throw new Error('请选择 DOCX 或 XLSX 文件格式');
-          const task = store.get('tasks', m[1]);
+          const task = engine.liveTask(m[1]);
           if (!task) return error(res, '任务不存在', 404);
           if (task.status !== 'completed') throw new Error('仅可导出已完成任务');
           const agent = store.get('agents', task.agentId);
           if (!agent?.enabled || !agent.permissions.includes('workspace.write')) throw new Error('执行角色未获 workspace.write 权限');
           const existing = (task.exports || []).find(a => a.format === b.format);
           if (existing && existsSync(join(dataDir, 'artifacts', existing.filename))) return json(res, existing);
+          if (task.localContext && !engine.localTasks.has(task.id))
+            throw new Error('本地任务正文已随重启清除；可下载已有文件，但不能使用占位内容新建导出');
           const filename = `${task.id}-office.${b.format}`;
           const artifact = await saveOfficeArtifact({ directory: join(dataDir, 'artifacts'), filename, format: b.format, data: {
             title: task.title, period: task.createdAt.slice(0,10), author: agent.name,
@@ -495,8 +573,9 @@ export async function startServer({
             risks: ['本文件整理已完成任务的结果与执行记录；生成文件不代表材料已被人工审核。'],
             nextSteps: ['核对内容与来源后，按单位流程使用或分发。'],
           }});
-          const result = { ...artifact, format: b.format, url: '/api/artifacts/' + encodeURIComponent(filename) };
-          store.put('tasks', task.id, { ...task, exports: [...(task.exports || []).filter(a => a.format !== b.format), result] });
+          const result = { ...artifact, format: b.format, url: '/api/artifacts/' + encodeURIComponent(filename),
+            sha256: createHash('sha256').update(readFileSync(join(dataDir, 'artifacts', filename))).digest('hex') };
+          engine.save({ ...task, exports: [...(task.exports || []).filter(a => a.format !== b.format), result] });
           store.audit('artifact.exported', `生成 ${b.format.toUpperCase()} 文件`, task.id);
           return json(res, result, 201);
         }
@@ -512,6 +591,13 @@ export async function startServer({
           (m = path.match(/^\/api\/approvals\/([^/]+)$/))
         ) {
           const b = await body(req);
+          if (store.get("approvals", m[1])?.type?.startsWith("local.")) {
+            if (!b || typeof b !== "object" || Array.isArray(b) ||
+              Object.keys(b).some(key => !["decision", "digest"].includes(key)))
+              throw new Error("本地审批只接受决定与精确内容摘要");
+            if (b.digest !== undefined && b.digest !== store.get("approvals", m[1]).digest)
+              throw new Error("审批内容摘要不一致");
+          }
           return json(res, await engine.decide(m[1], b.decision));
         }
         if (
@@ -756,8 +842,14 @@ export async function startServer({
           const filename = decodeURIComponent(m[1]);
           if (basename(filename) !== filename || filename.includes(".."))
             return error(res, "文件名无效", 403);
-          const artifact = store.all("tasks").flatMap(t => [t.artifact, ...(t.exports || [])]).find(a => a?.filename === filename);
-          if (!artifact) return error(res, "文件不存在", 404);
+          const owner = store.all("tasks").find(task => [task.artifact, ...(task.artifacts || []), ...(task.exports || [])]
+            .some(artifact => artifact?.filename === filename));
+          if (!owner) return error(res, "文件不存在", 404);
+          const actor = store.get("agents", owner.agentId);
+          if (!actor?.enabled || !actor.permissions.includes("workspace.write"))
+            return error(res, "文件所属角色未获 workspace.write 权限", 403);
+          const artifact = [owner.artifact, ...(owner.artifacts || []), ...(owner.exports || [])]
+            .find(artifact => artifact?.filename === filename);
           const file = join(dataDir, "artifacts", filename);
           res.setHeader("Content-Type", artifact.mimeType || "text/plain; charset=utf-8");
           res.setHeader(
@@ -816,12 +908,13 @@ export async function startServer({
     getSecrets: () => [apiKey, ...roleKeys.secrets(), ...mail.getSecrets()],
     mailService: mail,
     controlledBrowser,
+    localAccess,
     delay: stepDelay,
     completion,
   });
   schedules = new ScheduleService(store, engine, scheduleOptions);
   schedules.tick();
-  store.audit("system.started", "本机服务启动；仅环回地址，未开放任意代码执行");
+  store.audit("system.started", "本机服务启动；仅环回地址，本地文件与命令受用户授权和角色权限控制；没有OS级代码沙箱");
   engine.tick();
   return {
     server,
@@ -831,6 +924,7 @@ export async function startServer({
     broker,
     mail,
     controlledBrowser,
+    localAccess,
     schedules,
     url: baseUrl,
     async close() {

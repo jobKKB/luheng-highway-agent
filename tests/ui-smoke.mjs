@@ -64,7 +64,7 @@ try {
   page.on('pageerror', error => consoleErrors.push(error.message));
   page.on('console', msg => {if(msg.type()==='error')consoleErrors.push(msg.text()+' ['+(msg.location().url||'page')+']');});
   page.on('response', async response=>{if(response.status()<400)return;const failed={method:response.request().method(),url:response.url(),status:response.status(),body:''};httpFailures.push(failed);try{failed.body=(await response.text()).slice(0,1500);}catch{}console.error('HTTP_FAILURE',JSON.stringify(failed));});
-  await page.goto(app.url);
+  await page.goto(app.url);await page.locator('#prompt-input').waitFor();if((await page.request.get(app.url+'/api/local-access/state')).ok()){await page.locator('[data-action="local-defer"]').waitFor({state:'visible',timeout:3000}).then(()=>page.locator('[data-action="local-defer"]').click()).catch(()=>{});}
   await page.locator('#prompt-input').waitFor();
   assert.match(await page.locator('#mode-chip').innerText(), /任务演示模式/);
   assert.equal((await getState()).tasks.length, 0);
@@ -110,14 +110,15 @@ try {
   assert.equal((await getState()).agents.find(a=>a.id===createdAgent.id).hasApiKey,false);
   log('Role-specific model configuration and memory-only key clearing work without calling model');
   // Editing the coordinator must not silently remove newer backend permissions.
+  const coordinatorPermissions=(await getState()).agents.find(a=>a.id==='coordinator').permissions.slice().sort();
   await page.locator('[data-action="edit-agent"][data-id="coordinator"]').click();
-  assert.equal(await page.locator('#agent-form [name="permissions"]:checked').count(),9);
+  assert.equal(await page.locator('#agent-form [name="permissions"]:checked').count(),coordinatorPermissions.length);
   await screenshot('agent-editor');
   await page.locator('#agent-form button[type="submit"]').click();
   await page.locator('#agent-form').waitFor({state:'hidden'});
-  assert.equal((await getState()).agents.find(a=>a.id==='coordinator').permissions.length,9);
+  assert.deepEqual((await getState()).agents.find(a=>a.id==='coordinator').permissions.slice().sort(),coordinatorPermissions);
   await screenshot('agents');
-  log('Agent create/edit/disable works and coordinator preserves all 9 permissions');
+  log('Agent create/edit/disable works and coordinator preserves all current backend permissions');
 
   await nav('knowledge');
   await page.locator('[data-action="add-memory"]').first().click();

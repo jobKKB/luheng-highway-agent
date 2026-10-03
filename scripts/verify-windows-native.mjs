@@ -2,7 +2,7 @@
 // the INSTALLED application EXE with ELECTRON_RUN_AS_NODE=1, never the CI Node.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { createReadStream, lstatSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createReadStream, lstatSync, readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, resolve, relative, isAbsolute } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -71,7 +71,7 @@ async function probe(installed, workDir, out) {
   assert.ok(!within(installed, out) && !within(installed, workDir), 'Probe output and state must be outside the installation');
   const backend = join(installed, 'resources', 'backend');
   const expected = JSON.parse(readFileSync(join(backend, 'package.json'), 'utf8'));
-  assert.equal(expected.version, '0.4.0', 'This is a v0.4.0 release gate');
+  assert.equal(expected.version, '0.5.0', 'This is a v0.5.0 release gate');
   const manifest = JSON.parse(readFileSync(join(installed, 'resources', 'bundle-manifest.json'), 'utf8'));
   const executable = resolve(installed, 'resources', 'browser-runtime', manifest.browserExecutable);
   assert.ok(within(join(installed, 'resources', 'browser-runtime'), executable));
@@ -121,6 +121,48 @@ async function probe(installed, workDir, out) {
       assert.ok([...parts.values()].every(xml => !/vbaProject|TargetMode="External"|<w:instrText/.test(xml)));
       artifacts.push({ format, size: data.length, sha256: createHash('sha256').update(data).digest('hex'), parts: parts.size, mimeType: exported.mimeType });
     }
+    // Exercise only synthetic files and exact harmless commands inside this
+    // disposable runner. This is a host-process permission feature, not an OS sandbox.
+    const selected = join(workDir, '..', 'native-selected-files');
+    mkdirSync(selected, { recursive: false });
+    const localMarker = 'LUHENG_NATIVE_LOCAL_ONLY_731';
+    const localFile = join(selected, 'approved.txt');
+    const localInitial = await (await get('/api/local-access/state', cookie)).json();
+    assert.equal(localInitial.mode, 'disabled');
+    await post('/api/local-access/configure', { mode: 'confirm', roots: [selected], allFiles: false, onboardingComplete: true });
+    const approveLocal = async operation => {
+      assert.equal(operation.pending, true); assert.equal(operation.operation.status, 'pending');
+      return post(`/api/local-access/operations/${operation.operation.id}/approve`, { digest: operation.operation.digest });
+    };
+    const proposed = await post('/api/local-access/operations', { kind: 'write', path: localFile, content: localMarker });
+    assert.equal(existsSync(localFile), false, 'Pending approval must not write a file');
+    assert.equal((await approveLocal(proposed)).operation.status, 'completed');
+    assert.equal(readFileSync(localFile, 'utf8'), localMarker);
+    const read = await post('/api/local-access/operations', { kind: 'read', path: localFile });
+    assert.equal(read.result.content, localMarker);
+    const systemRoot = process.env.SystemRoot || process.env.WINDIR;
+    assert.ok(systemRoot && isAbsolute(systemRoot));
+    const command = async code => approveLocal(await post('/api/local-access/operations', {
+      kind: 'command', executable: join(systemRoot, 'System32', 'cmd.exe'),
+      args: ['/d', '/c', code], cwd: selected, timeoutMs: 5000,
+    }));
+    const commandOK = await command('echo LUHENG_NATIVE_LOCAL_ONLY_731');
+    assert.equal(commandOK.result.exitCode, 0); assert.equal(commandOK.operation.status, 'completed');
+    assert.match(commandOK.result.stdout, /LUHENG_NATIVE_LOCAL_ONLY_731/);
+    const commandFailed = await command('exit /b 7');
+    assert.equal(commandFailed.result.exitCode, 7); assert.equal(commandFailed.operation.status, 'failed');
+    assert.ok(!JSON.stringify(app.store.db.prepare('SELECT * FROM records').all()).includes(localMarker), 'Local payload entered SQLite records');
+    const databaseFiles = readdirSync(workDir).filter(name => /\.(?:sqlite|db)(?:-(?:wal|shm))?$/.test(name));
+    assert.ok(databaseFiles.length, 'Expected synthetic database files for raw-byte privacy check');
+    for (const name of databaseFiles) {
+      const file = join(workDir, name); assert.ok(lstatSync(file).isFile() && !lstatSync(file).isSymbolicLink());
+      assert.ok(!readFileSync(file).includes(Buffer.from(localMarker)), 'Local payload entered SQLite or WAL bytes');
+    }
+    const revoked = await post('/api/local-access/revoke', {}); assert.equal(revoked.mode, 'disabled');
+    const localAccess = { filePermissionRootIsTemporary: true, commandCwdIsTemporary: true, pendingWriteDidNotExecute: true,
+      exactWriteApproval: true, readVerified: true, commandExitCode: 0, nonzeroCommandClassifiedFailed: true,
+      sqlitePayloadExcluded: true, sqliteRawBytesExcluded: true, databaseFilesChecked: databaseFiles.length,
+      revoked: true, executionBoundary: 'host_process_no_os_sandbox' };
     // This invokes the packaged BrowserBroker with its unchanged chromiumSandbox:true.
     const session = await app.broker.create('ci-native-browser-probe');
     const text = await app.broker.read(session.id); assert.match(text, /虚构样例/);
@@ -136,7 +178,7 @@ async function probe(installed, workDir, out) {
     assert.equal(screenshot.subarray(1, 4).toString(), 'PNG');
     const result = { status: 'native-runtime-passed', checkedAt: new Date().toISOString(), version: expected.version,
       platform: process.platform, arch: process.arch, node: process.versions.node, electron: process.versions.electron, sqlite: process.versions.sqlite,
-      health, stateVersion: state.system.version, executable: process.execPath, packages, artifacts,
+      health, stateVersion: state.system.version, executable: process.execPath, packages, artifacts, localAccess,
       browser: { version: browser.version(), sha256: manifest.browserExecutableSha256, sandboxRequested: true, sandboxBypassFlags: bypasses, localFixtureRead: true, screenshotBytes: screenshot.length },
       limitations: ['Bundled backend is tested in Electron run-as-node mode, not through the desktop utility-process IPC', 'Sandbox requested with no bypass flags; Windows restricted-token internals are not inspected', 'OOXML structure and download tested; Microsoft Office visual rendering not tested', 'Only fabricated local data; no real model, mail or external website integration'] };
     await app.close(); app = null;

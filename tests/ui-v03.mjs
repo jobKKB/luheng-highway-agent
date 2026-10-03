@@ -42,7 +42,7 @@ try {
   browser = await chromium.launch({headless:true,chromiumSandbox:true,executablePath:process.env.HIGHWAY_CHROMIUM_PATH||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined)});
   page = await browser.newPage({viewport:{width:1440,height:1000},locale:'zh-CN',timezoneId:'Asia/Shanghai',acceptDownloads:true});
   page.on('pageerror',e=>errors.push(e.message));
-  await page.goto(app.url);
+  await page.goto(app.url);await page.locator('#prompt-input').waitFor();if((await page.request.get(app.url+'/api/local-access/state')).ok()){await page.locator('[data-action="local-defer"]').waitFor({state:'visible',timeout:3000}).then(()=>page.locator('[data-action="local-defer"]').click()).catch(()=>{});}
   await page.locator('#prompt-input').waitFor();
   await nav('schedules');
   assert.match(await page.locator('#main').innerText(),/错过的多次执行合并为最多一次/);

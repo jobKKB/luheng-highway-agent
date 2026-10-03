@@ -200,6 +200,11 @@ if (!app.requestSingleInstanceLock()) {
     vault = new SecretVault({ safeStorage, stateRoot });
     desktopHandler = createDesktopHandler({
       vault, preferences, tray,
+      selectFolders: async () => {
+        const options = { title: '选择允许路衡访问的本机文件夹', properties: ['openDirectory', 'multiSelections', 'dontAddToRecent'] };
+        const result = window && !window.isDestroyed() ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
+        return { cancelled: result.canceled, paths: result.canceled ? [] : result.filePaths };
+      },
       getRestoreError: () => restoreError,
       clearRestoreError: () => { restoreError = false; },
     });

@@ -1,12 +1,12 @@
 {
   "name": "路衡办公智能体",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "type": "source-only-not-installer",
   "files": [
     {
       "path": ".github/workflows/windows-build.yml",
-      "bytes": 2835,
-      "sha256": "b4f233ee48b6b59d96d8676972628d04247876a6fee899cadd04ece9e34a31bf"
+      "bytes": 3949,
+      "sha256": "07b1b4c218e1da36160bc2cdc187986cda669f0e7d3928852610a2d5d80809e9"
     },
     {
       "path": ".gitignore",
@@ -20,8 +20,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 10956,
-      "sha256": "ac7cf605c8838a76f3a882c62ee7dc40168f91094e1b904cece404ff97780c0a"
+      "bytes": 12918,
+      "sha256": "78e165be4c7c72f0e6089a111fd3b523251a1cc1cdab4723f036e7584d60687b"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -45,8 +45,8 @@
     },
     {
       "path": "desktop/bridge.cjs",
-      "bytes": 6127,
-      "sha256": "7fcc7acfaa56f05ee3decd5f51c5a36b088162d07bf122bb2739c4c90bf351c1"
+      "bytes": 7071,
+      "sha256": "bd9d55bc1752a70cc63082b17560709acc9c268b5380b7261a578eec59950af6"
     },
     {
       "path": "desktop/electron-builder.cjs",
@@ -65,13 +65,13 @@
     },
     {
       "path": "desktop/main.cjs",
-      "bytes": 9633,
-      "sha256": "f8ca9bd382ba4e0a21c0ba0c24a697ab855dc7bc2f65102ff353ec01e5b2b9f7"
+      "bytes": 10064,
+      "sha256": "116649d6215cf6598864d4bb5074eb8346aeac98bff58f8b2c677c4e1b3b3a45"
     },
     {
       "path": "desktop/package-lock.json",
       "bytes": 127648,
-      "sha256": "1deb9251886e097e2da0d5aa444fe111e1a9086fbdfda526188e574664c0d3b6"
+      "sha256": "c9ff2512b99fc3b3d94a0242f4f7e03bad1610ed2e92ebaac6ea07499fc632d1"
     },
     {
       "path": "desktop/package-windows.cjs",
@@ -81,7 +81,7 @@
     {
       "path": "desktop/package.json",
       "bytes": 722,
-      "sha256": "523a0c188decc629db9f7f315d4b2f444b81ea626c74607f15ccc164771e0d85"
+      "sha256": "e158c771d32b36094ebb3d034740a1011875d08a172e6d952681ab058149dca4"
     },
     {
       "path": "desktop/security.cjs",
@@ -117,6 +117,11 @@
       "path": "desktop/test/lifecycle.test.cjs",
       "bytes": 5549,
       "sha256": "65d152f507f8035184ef9a8b944aa40762d12389ed54df507feb321ae9f1ff60"
+    },
+    {
+      "path": "desktop/test/local-folder-picker.test.cjs",
+      "bytes": 1559,
+      "sha256": "bc7fcf722f0d04fb89ff755cce108624a6d40a01d70d6c95bca0e06ce71e43c8"
     },
     {
       "path": "desktop/test/model-environment.test.cjs",
@@ -185,8 +190,8 @@
     },
     {
       "path": "desktop/windows-build.workflow.yml",
-      "bytes": 2835,
-      "sha256": "b4f233ee48b6b59d96d8676972628d04247876a6fee899cadd04ece9e34a31bf"
+      "bytes": 3949,
+      "sha256": "07b1b4c218e1da36160bc2cdc187986cda669f0e7d3928852610a2d5d80809e9"
     },
     {
       "path": "docs/CONTROLLED-BROWSER.md",
@@ -202,6 +207,16 @@
       "path": "docs/IMPLEMENTATION-STATUS.md",
       "bytes": 3909,
       "sha256": "425a6da2a6882941286632ad886989ebf4da8eadae9fac0ccdf5cf9530856056"
+    },
+    {
+      "path": "docs/LOCAL-ACCESS-PERMISSIONS.zh-CN.md",
+      "bytes": 8554,
+      "sha256": "6e7524699f615c14533583e11f2ca924efc942c3c7d3b01e0d021b9802dad7ee"
+    },
+    {
+      "path": "docs/LOCAL-ACCESS-VALIDATION.zh-CN.md",
+      "bytes": 3920,
+      "sha256": "01cbc8fd5e89611e6d31ea59871438180d98471a6391f473e197274263fc2071"
     },
     {
       "path": "docs/MAIL-ADAPTER.md",
@@ -222,6 +237,11 @@
       "path": "docs/RELEASE-CHECKLIST.md",
       "bytes": 2546,
       "sha256": "2614cfe613d308411583841debb30d7fb1f76f97242ecbcb61f7b0540ad34e70"
+    },
+    {
+      "path": "docs/RUNTIME-RELIABILITY.zh-CN.md",
+      "bytes": 3688,
+      "sha256": "ab953e223da316e11a2ad9176aaf5b232a55509ae5c0c0f0db4799ec10ddc1d2"
     },
     {
       "path": "docs/TEST-REPORT.md",
@@ -255,8 +275,8 @@
     },
     {
       "path": "lib/agent-tools.mjs",
-      "bytes": 5948,
-      "sha256": "76e9177ea8b6ab1c7845e6ea7f85e8679d2cce68da5a7f8a22f5e84742eefaeb"
+      "bytes": 7743,
+      "sha256": "54a9163ed290a7d786e2a0e019c8afa521a8b07ab114a30997e64983f80b5218"
     },
     {
       "path": "lib/browser.mjs",
@@ -265,13 +285,13 @@
     },
     {
       "path": "lib/controlled-browser.mjs",
-      "bytes": 45026,
-      "sha256": "a1ee42cda463b721b2326b6d3db620b61072ef48d1d98e1ddd0d939b58140c21"
+      "bytes": 44197,
+      "sha256": "7b388d770fed9f37e98a15fd4a21544da18087c558e0d2242318b378ffe6f4b0"
     },
     {
       "path": "lib/engine.mjs",
-      "bytes": 51519,
-      "sha256": "5a2bc9e034b11cc5007e4a3717ce1b7ed3ba3f5a35ca23996229946ae251a97f"
+      "bytes": 84005,
+      "sha256": "4ba2c942999f37ffd08defb124020c9cc5c323856be54d44ef5b45eed26a05e1"
     },
     {
       "path": "lib/fixture-client.js",
@@ -279,9 +299,19 @@
       "sha256": "c9363c6736c20cedf9dc6fb82c3a83c211f1f8908e5c95f2834e2a647095d553"
     },
     {
+      "path": "lib/knowledge-search.mjs",
+      "bytes": 1419,
+      "sha256": "dea8269a2e5b3ba9feed6ca61f30eb5915aeb89b0a61db0b25e5ab9614238aa3"
+    },
+    {
+      "path": "lib/local-access.mjs",
+      "bytes": 25943,
+      "sha256": "a33e6318bdeb58f0d15f2f554739e64bf0800e863af971024533d91df7389177"
+    },
+    {
       "path": "lib/mail-adapter.mjs",
-      "bytes": 24261,
-      "sha256": "f9c899b87987b73837c4661c5181f13be0a338f133aab6f381219ec37c342c4f"
+      "bytes": 23970,
+      "sha256": "f067a7e3b6a41f5150a3a19a99faacc3f2c5671a8f79d0578fe20365ad7b4ef9"
     },
     {
       "path": "lib/model-transport.mjs",
@@ -289,9 +319,14 @@
       "sha256": "a2a31ab50fda6bd3802795153a94d7f2126d9f403ce8866d1aecb88df1186f81"
     },
     {
+      "path": "lib/model-usage.mjs",
+      "bytes": 1542,
+      "sha256": "2a28a09421f700437c54f0ddbbba7f8c5b1325f2be130001d5f52a8acbce6a78"
+    },
+    {
       "path": "lib/model.mjs",
-      "bytes": 11477,
-      "sha256": "deb96c2cd290cbd2794f8221772a74c1439c155a9a6dadb61470a118bafb28ce"
+      "bytes": 11124,
+      "sha256": "2d04e98ca0a3d0d50c9e72c73d94e1250198b6934e732d4ea39fbe7eac962356"
     },
     {
       "path": "lib/office-artifacts.mjs",
@@ -314,9 +349,19 @@
       "sha256": "66322979447481443e666c9af7fdb40b3e9a4eb8d6118786234a56383296d4e2"
     },
     {
+      "path": "lib/public-ip.mjs",
+      "bytes": 1329,
+      "sha256": "5883ee3c4c957466db659638833fd37730f991adbd9e9c71f8df558dbcfc43bc"
+    },
+    {
       "path": "lib/redact.mjs",
       "bytes": 1337,
       "sha256": "75c11ad658981c615c6f56903373d1e4399b403eb6ff9d71d73dba1124db3647"
+    },
+    {
+      "path": "lib/runtime-errors.mjs",
+      "bytes": 495,
+      "sha256": "a7c2a95d14e8f05f5a8d88e8380fefd2952fff8a30aefcde1e7295e24bea9718"
     },
     {
       "path": "lib/schedules.mjs",
@@ -325,18 +370,18 @@
     },
     {
       "path": "lib/store.mjs",
-      "bytes": 5951,
-      "sha256": "3683efab389dfb38e996b1e4418fca087b2bc7b7a24013e3f8fe50b50dfe471e"
+      "bytes": 7237,
+      "sha256": "4bca2efdd4e89b62894689efb8849eea835e3d69d531cebefd5a376bd549629e"
     },
     {
       "path": "package-lock.json",
       "bytes": 21666,
-      "sha256": "d4fe0bd42d6d425620542642565ce76204af75873330ee8d4d22a89eb23b4b71"
+      "sha256": "e02aedff0d3d37587ec67968ce01e65553a9b779c2da46d3e47e770c6bc767a2"
     },
     {
       "path": "package.json",
       "bytes": 543,
-      "sha256": "224401dc5ff9dec32747d52b0cb27d14c0fa5c512b94a4120670b2dde32813f7"
+      "sha256": "629968effced68cd912579c0c00243a110db00b4f2ed5c3a5e10b076f5ca848a"
     },
     {
       "path": "public/agent-mark.svg",
@@ -345,8 +390,8 @@
     },
     {
       "path": "public/app.js",
-      "bytes": 125267,
-      "sha256": "5dc23c18d4103ac1f169b9d0210d8c0f1caca5eb640128a54461150464859f18"
+      "bytes": 158323,
+      "sha256": "203a2876c5059941a38b517e9aae654f61025fe9243e775f781d0c1c38fdfb4d"
     },
     {
       "path": "public/favicon.svg",
@@ -355,13 +400,13 @@
     },
     {
       "path": "public/index.html",
-      "bytes": 2248,
-      "sha256": "01b80f1c03453430455230ccb0f8a6ec787c2b77cc25a227d9dde2a3bcd4bba1"
+      "bytes": 2260,
+      "sha256": "4a2c85b78f45f241012c2aceb3df3c6620d8f914c45e1da32e9f68762fed0c6e"
     },
     {
       "path": "public/ocean.css",
-      "bytes": 37185,
-      "sha256": "3765964affebaf2c0bb7739d7b1bbea450bec4254ea04d9c8d8f1db409a0fc51"
+      "bytes": 49691,
+      "sha256": "919f011e1da1746cb9b38194f93dccdf38906a871293767f286618945aa1ae9a"
     },
     {
       "path": "public/styles.css",
@@ -390,13 +435,13 @@
     },
     {
       "path": "scripts/verify-windows-native.mjs",
-      "bytes": 11857,
-      "sha256": "4016896a4f213bc2e08b3c774e297dffed38731d94659c2d6b0aa6e055912bb5"
+      "bytes": 15262,
+      "sha256": "119f8308d120139f5b76500f9ae1d921c10cbb67a6340ef33724fd7395ff3873"
     },
     {
       "path": "scripts/verify-windows-native.ps1",
       "bytes": 11483,
-      "sha256": "59e9fcff677cbb7239050a49b099c9b9ee1a19ecc28d0744cd60a9d7efc6de87"
+      "sha256": "bf69b979e68b313f49f8b845ef140007bfb763d4c410f08ce64819f782c34d2d"
     },
     {
       "path": "scripts/verify-windows-release.mjs",
@@ -405,8 +450,8 @@
     },
     {
       "path": "server.mjs",
-      "bytes": 36917,
-      "sha256": "77a122395dd3096ff8ad0610d0d48f32e382b51095f150e40040c0111f80385c"
+      "bytes": 43143,
+      "sha256": "0c26e650979a457a75c3396957003b3d8b664c9960751c6f3cefacbb8aa46152"
     },
     {
       "path": "tests/agent-authority.test.mjs",
@@ -415,8 +460,8 @@
     },
     {
       "path": "tests/agent-loop.test.mjs",
-      "bytes": 9435,
-      "sha256": "33445ff8cb300dd1dabaf546e195f48a1a23d3b1e4ad7c65694493984cd79ba3"
+      "bytes": 9760,
+      "sha256": "55c9806c7b604808053e4bfadf27d8ce5811aca171f654bd84173bc378ff2348"
     },
     {
       "path": "tests/controlled-browser.test.mjs",
@@ -449,6 +494,36 @@
       "sha256": "f73d771b88cb99516e34a9db0110c79282bc5d51e7b20308168fc963526395b3"
     },
     {
+      "path": "tests/local-access-integration.test.mjs",
+      "bytes": 33857,
+      "sha256": "49ec30839efd94fc6d68553233eb78a1a9b74939098b66a02e89186e68eff4ce"
+    },
+    {
+      "path": "tests/local-access-security-review.test.mjs",
+      "bytes": 35014,
+      "sha256": "84b068436ff79a890819a69f922795f1bd5dd7e9600cfd982b0f4ae5e21fbdf2"
+    },
+    {
+      "path": "tests/local-access-ui.test.mjs",
+      "bytes": 12610,
+      "sha256": "cd3db41bde6a68a08d6749177f742a28199157244fbaba2898e6ec84b219fd02"
+    },
+    {
+      "path": "tests/local-access.test.mjs",
+      "bytes": 7447,
+      "sha256": "7f172601f8ede6636181484fa36787ef6d8334b4ec099e3af33027176fbd79d6"
+    },
+    {
+      "path": "tests/local-recovery-privacy.test.mjs",
+      "bytes": 9288,
+      "sha256": "d79b89131e2a09734c7b13783faa44c2be59d32d706c4cb85ff9a449b71b4766"
+    },
+    {
+      "path": "tests/local-runtime-ui.test.mjs",
+      "bytes": 2490,
+      "sha256": "ee53f3061f4b0e363f5e925e16e5be8e70c0d188bc222d40f80c1bc39e01ad89"
+    },
+    {
       "path": "tests/mail-adapter.test.mjs",
       "bytes": 17323,
       "sha256": "edc23029ee274472c59f36fd6ae681437597bf7eb06f9920bb7881e81c493c36"
@@ -474,6 +549,11 @@
       "sha256": "60407f400a1356b9ca64fa39d814b24d1d62ace76ee50341ff948368e22cc2d0"
     },
     {
+      "path": "tests/network-ip-policy.test.mjs",
+      "bytes": 14365,
+      "sha256": "11f555e83ecf05f7c6c4a2fc31c29abcaa6a829caf3a900bee33a3b3899be1ca"
+    },
+    {
       "path": "tests/office-artifacts.test.mjs",
       "bytes": 10859,
       "sha256": "90960c6c3d7b44724b95dbc59fa249bdb1d4834ccabaf7962e1f7c0a84da61d3"
@@ -489,6 +569,11 @@
       "sha256": "ecc8981d504a000f3241664b84c7b8e57a92c9f4b9944e3381821a6363aea72d"
     },
     {
+      "path": "tests/runtime-reliability.test.mjs",
+      "bytes": 23445,
+      "sha256": "a9463f2c21b58fbcd1584590332d64e8893f03287abf43d06205dca536dde8ea"
+    },
+    {
       "path": "tests/schedules.test.mjs",
       "bytes": 18423,
       "sha256": "13d6ebd688b3fc92806317ce452c822f9554d27216228dbbe9b60fd807919dd2"
@@ -499,9 +584,14 @@
       "sha256": "e692038828dec8f8e04de17e4b5a5d879b9604c04547dda48338e7d2a4bf1627"
     },
     {
+      "path": "tests/ui-local-access.mjs",
+      "bytes": 11469,
+      "sha256": "d712e380631ae1ce4fb4ed81067a9baf01750790189f39511eef621920638da1"
+    },
+    {
       "path": "tests/ui-recovery.mjs",
-      "bytes": 15226,
-      "sha256": "b4518db9e21f22fb229e89b96c0e98121dab934a737ac9ab671d1e3b3dc2de9b"
+      "bytes": 15630,
+      "sha256": "5bd71cd8bae0b7b52cb5525e3087954c52ce1babc8719e83409314526b8981f6"
     },
     {
       "path": "tests/ui-recovery.test.mjs",
@@ -510,18 +600,18 @@
     },
     {
       "path": "tests/ui-smoke.mjs",
-      "bytes": 28307,
-      "sha256": "d02bc59369f43a2a84cf75bc0b122333fb9f05bf41edf29903000aef62e5f439"
+      "bytes": 28779,
+      "sha256": "683d03170de77bdaa13c2a5d141d086eae21db098954384901c9eaf06fddb61c"
     },
     {
       "path": "tests/ui-v03.mjs",
-      "bytes": 14681,
-      "sha256": "716382c0539e9bed6aed64b4ee89bab4c737c92bfa96040f571f9c2d13b79735"
+      "bytes": 14963,
+      "sha256": "3a5aaf8047b3286abaf337d6c160e51dd53d0a17370935fa037a49f660128886"
     },
     {
       "path": "tests/ui-v04.mjs",
-      "bytes": 8887,
-      "sha256": "966af781d64cb840848bab2f4e4f9b5048dac1e65b2192cfa77a1c6c61360bd3"
+      "bytes": 9291,
+      "sha256": "5449d4386f43e1c134f9e014a0efb7104f509c492c7153254e8b55e3b5378d69"
     },
     {
       "path": "tests/v03-integration.test.mjs",

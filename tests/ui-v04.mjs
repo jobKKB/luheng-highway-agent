@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import {existsSync} from 'node:fs';
+import {tmpdir} from 'node:os';
 import {mkdtemp,mkdir,writeFile,rm} from 'node:fs/promises';
 import {resolve,join} from 'node:path';
 import {chromium} from 'playwright';
 import {startServer} from '../server.mjs';
-const dir=await mkdtemp('/tmp/luheng-v04-ui-'),out=resolve('artifacts/redesign');
+const dir=await mkdtemp(join(tmpdir(),'luheng-v04-ui-')),out=resolve('artifacts/redesign');
 const checks=[],errors=[];let app,browser,page;
 const pass=m=>{checks.push(m);console.log('PASS '+m);};
 const state=async()=>await(await page.request.get(app.url+'/api/state')).json();
@@ -12,9 +14,9 @@ const nav=async name=>{if(await page.locator('.mobile-menu').isVisible()&&!((awa
 const shot=async name=>{await page.locator('#toast-root .toast').waitFor({state:'hidden',timeout:10000});await page.screenshot({path:join(out,name+'.png'),animations:'disabled'});};
 try{
  await mkdir(out,{recursive:true});app=await startServer({port:0,dataDir:dir,stepDelay:15});
- browser=await chromium.launch({executablePath:process.env.HIGHWAY_CHROMIUM_PATH||'/usr/bin/chromium',headless:true,chromiumSandbox:true});
+ browser=await chromium.launch({executablePath:process.env.HIGHWAY_CHROMIUM_PATH||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),headless:true,chromiumSandbox:true});
  page=await browser.newPage({viewport:{width:1440,height:1000},locale:'zh-CN',reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
- await page.goto(app.url);await page.locator('#prompt-input').waitFor();
+ await page.goto(app.url);await page.locator('#prompt-input').waitFor();if((await page.request.get(app.url+'/api/local-access/state')).ok()){await page.locator('[data-action="local-defer"]').waitFor({state:'visible',timeout:3000}).then(()=>page.locator('[data-action="local-defer"]').click()).catch(()=>{});}await page.locator('#prompt-input').waitFor();
  assert.equal(await page.locator('#home-overview').isHidden(),true);assert.equal(await page.locator('#nav-tools').isHidden(),true);assert.equal(await page.locator('.recent-section').getAttribute('open'),null);assert.equal(await page.locator('#composer-options').isHidden(),true);pass('Clean initial chat: overview, tools, recent records and task options collapsed');
  await shot('Luheng-v0.4-Desktop');
  await page.locator('#prompt-input').fill('未发送的测试草稿，只用于界面回归');

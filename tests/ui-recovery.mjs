@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import {existsSync} from 'node:fs';
+import {tmpdir} from 'node:os';
 import {mkdtemp,mkdir,writeFile,rm} from 'node:fs/promises';
 import {resolve,join} from 'node:path';
 import {chromium} from 'playwright';
@@ -6,7 +8,7 @@ import {startServer} from '../server.mjs';
 
 // All writes stay in a fresh synthetic local database. No external service,
 // real mailbox, model credential, shared browser or screenshot is used.
-const dir=await mkdtemp('/tmp/luheng-ui-recovery-');
+const dir=await mkdtemp(join(tmpdir(),'luheng-ui-recovery-'));
 const out=resolve(process.env.HIGHWAY_RECOVERY_OUT||'artifacts/recovery');
 const checks=[],failures=[],browserErrors=[];
 let app,browser;
@@ -25,10 +27,10 @@ async function holdPost(page,path,mode='success'){
  await page.route('**'+path,handler);
  return {seen,release,posts:()=>posts,dispose:async()=>{release();await page.unroute('**'+path,handler);}};
 }
-async function run(name,body){if(process.env.HIGHWAY_RECOVERY_CASE&&!name.includes(process.env.HIGHWAY_RECOVERY_CASE))return;let context,page;try{context=await browser.newContext({viewport:{width:1440,height:1000},locale:'zh-CN',reducedMotion:'reduce'});page=await context.newPage();page.on('pageerror',e=>browserErrors.push({case:name,message:e.message}));await context.route('**/*',route=>{const url=new URL(route.request().url());return url.origin===new URL(app.url).origin?route.continue():route.abort('blockedbyclient');});await page.goto(app.url);await page.locator('#prompt-input').waitFor();await body(page);checks.push(name);console.log('PASS '+name);}catch(error){failures.push({name,error:error.stack||error.message});console.error('FAIL '+name+'\n'+(error.stack||error.message));}finally{await context?.close();}}
+async function run(name,body){if(process.env.HIGHWAY_RECOVERY_CASE&&!name.includes(process.env.HIGHWAY_RECOVERY_CASE))return;let context,page;try{context=await browser.newContext({viewport:{width:1440,height:1000},locale:'zh-CN',reducedMotion:'reduce'});page=await context.newPage();page.on('pageerror',e=>browserErrors.push({case:name,message:e.message}));await context.route('**/*',route=>{const url=new URL(route.request().url());return url.origin===new URL(app.url).origin?route.continue():route.abort('blockedbyclient');});await page.goto(app.url);await page.locator('#prompt-input').waitFor();if((await page.request.get(app.url+'/api/local-access/state')).ok()){await page.locator('[data-action="local-defer"]').waitFor({state:'visible',timeout:3000}).then(()=>page.locator('[data-action="local-defer"]').click()).catch(()=>{});}await page.locator('#prompt-input').waitFor();await body(page);checks.push(name);console.log('PASS '+name);}catch(error){failures.push({name,error:error.stack||error.message});console.error('FAIL '+name+'\n'+(error.stack||error.message));}finally{await context?.close();}}
 try{
  await mkdir(out,{recursive:true});app=await startServer({port:0,dataDir:dir,stepDelay:15});
- browser=await chromium.launch({executablePath:process.env.HIGHWAY_CHROMIUM_PATH||'/usr/bin/chromium',headless:true,chromiumSandbox:true});
+ browser=await chromium.launch({executablePath:process.env.HIGHWAY_CHROMIUM_PATH||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),headless:true,chromiumSandbox:true});
  await run('Initial chat has tools, overview, recent records and task options collapsed',async page=>{
   assert.equal(await page.locator('#nav-tools').isHidden(),true);assert.equal(await page.locator('#home-overview').isHidden(),true);assert.equal(await page.locator('#composer-options').isHidden(),true);assert.equal(await page.locator('.recent-section').getAttribute('open'),null);assert.equal(await submit(page).isEnabled(),true);
  });
