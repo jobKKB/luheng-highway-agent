@@ -545,8 +545,8 @@
     },
     {
       "path": "tests/existing-integrations-ui.mjs",
-      "bytes": 41911,
-      "sha256": "f2d63ffc48b2e5884ce2621af114f308bcb5eddc67eff2c67d3a3f956099093c"
+      "bytes": 42320,
+      "sha256": "d2b892d3dc25268a6833299ac9f9f3a21b3b6dc2fc6d7b2343c58ce73b9ab7b1"
     },
     {
       "path": "tests/fixtures/controlled-sites.mjs",
