@@ -615,8 +615,8 @@
     },
     {
       "path": "scripts/verify-native-beta-update.ps1",
-      "bytes": 10196,
-      "sha256": "d6c322345a13b7f2f12bea0d4f96baab7c8066c3953d3e552170bf1dd7cf43ca"
+      "bytes": 12019,
+      "sha256": "795b33a1d28e4805b76ce66ca08c535c9bbc69fbee60a7aaf22d3793e18f530e"
     },
     {
       "path": "scripts/verify-native-beta-updater.mjs",

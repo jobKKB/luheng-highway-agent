@@ -41,6 +41,29 @@ function Start-Owned([string]$file,[string[]]$arguments,[string]$raw=''){
  $p=[Diagnostics.Process]::Start($info);$owned.Add($p);return $p
 }
 function Wait-Owned([Diagnostics.Process]$p,[int]$seconds){if(-not $p.WaitForExit($seconds*1000)){throw 'Owned process timed out'};if($p.ExitCode -ne 0){throw ('Owned process failed: '+$p.ExitCode)}}
+function Describe-Owned([Diagnostics.Process]$p){
+ $p.Refresh();$result=[ordered]@{pid=$p.Id;hasExited=$p.HasExited}
+ if(-not $p.HasExited){$result.startUtc=$p.StartTime.ToUniversalTime().ToString('o');$result.image=$p.MainModule.FileName;$result.title=$p.MainWindowTitle;$result.windowHandle=$p.MainWindowHandle.ToInt64();$result.sessionId=$p.SessionId}
+ return $result
+}
+function Wait-ActualBaselineUi([Diagnostics.Process]$p){
+ Add-Type -AssemblyName UIAutomationClient
+ Add-Type -AssemblyName UIAutomationTypes
+ $deadline=[DateTime]::UtcNow.AddSeconds(60);$names=@()
+ do{
+  $p.Refresh();if($p.HasExited){throw 'Baseline exited before real renderer readiness'}
+  $window=[System.Windows.Automation.AutomationElement]::FromHandle($p.MainWindowHandle)
+  $controls=$window.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition)
+  $names=@();foreach($control in $controls){$name=$control.Current.Name;if($name -and $names.Count -lt 300){$names+=$name}}
+  $text=$names -join "`n"
+  if($text.Contains('新建对话') -and $text.Contains('智能对话') -and $text.Contains('设置')){
+   $report.stages.baselineRendererReady=@{process=(Describe-Owned $p);observedNames=$names};return
+  }
+  Start-Sleep -Milliseconds 200
+ }while([DateTime]::UtcNow -lt $deadline)
+ $report.stages.baselineRendererDiagnostic=@{process=(Describe-Owned $p);observedNames=$names}
+ throw 'Real Beta1 accessibility tree did not expose its actual chat and settings UI'
+}
 function Run-Driver([string]$phase){
  $p=Start-Owned $node @((Join-Path $PSScriptRoot 'verify-native-beta-updater.mjs'),'--source-root',$SourceRoot,'--lock',(Join-Path $EvidenceDirectory 'runtime-lock.json'),'--phase',$phase,'--output-dir',$EvidenceDirectory)
  Wait-Owned $p 900
@@ -71,6 +94,7 @@ try{
  if(-not(Test-Path -LiteralPath $appExe)){throw 'Baseline did not install'}
  if((Get-ItemProperty -LiteralPath $productKey).InstallLocation -ine $install){throw 'Actual HKCU install location mismatch'}
  if(Test-Path -LiteralPath $machineKey){throw 'Unexpected machine product installation'}
+ $report.stages.baselineInstall='passed'
  $pair | Add-Member -NotePropertyName installedExecutable -NotePropertyValue $appExe -Force
  $pair | Add-Member -NotePropertyName stateRoot -NotePropertyValue $data -Force
  $pair | Add-Member -NotePropertyName runMarker -NotePropertyValue $marker -Force
@@ -79,7 +103,11 @@ try{
  $ui=Start-Owned $appExe @();$deadline=[DateTime]::UtcNow.AddSeconds(60)
  do{$ui.Refresh();if($ui.HasExited){throw 'Baseline exited before window'};if($ui.MainWindowHandle -ne 0 -and $ui.MainWindowTitle -match 'v0\.6\.0-beta\.1$'){break};Start-Sleep -Milliseconds 200}while([DateTime]::UtcNow -lt $deadline)
  if($ui.MainWindowHandle -eq 0 -or $ui.MainWindowTitle -notmatch 'v0\.6\.0-beta\.1$'){throw 'Exact plain Beta1 window absent'}
- if(-not $ui.CloseMainWindow()){throw 'Cannot normally close baseline window'};Wait-Owned $ui 30
+ $report.stages.baselineWindow=(Describe-Owned $ui)
+ Wait-ActualBaselineUi $ui
+ $report.stages.baselineCloseRequest=@{sent=$ui.CloseMainWindow();atUtc=[DateTime]::UtcNow.ToString('o')}
+ if(-not $report.stages.baselineCloseRequest.sent){throw 'Cannot normally close baseline window'}
+ try{Wait-Owned $ui 30}catch{$report.stages.baselineCloseDiagnostic=(Describe-Owned $ui);throw}
  if(-not(Test-Path -LiteralPath $data)){throw 'Real default profile absent'}
  $createdProfile=$true;[IO.File]::WriteAllText((Join-Path $data '.owned-beta-qa'),$marker)
  $report.stages.baselinePlainLaunch='passed'
