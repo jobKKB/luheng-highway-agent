@@ -5,13 +5,13 @@
   "files": [
     {
       "path": ".github/workflows/generic-workspace-acceptance.yml",
-      "bytes": 2609,
-      "sha256": "8952ae9eb3cd43293c535719f61cebf13a20c6e13badc9797c474957977be3a3"
+      "bytes": 2930,
+      "sha256": "a56d25b63088e93739480643908ee1852783c25932c86c59dd428eaffc746bb9"
     },
     {
       "path": ".github/workflows/windows-build.yml",
-      "bytes": 4205,
-      "sha256": "15b1ad367688d03685e7c2c25b491bdfa2c9ac74c02c65496612f526f88d652e"
+      "bytes": 4520,
+      "sha256": "8ebe58783ede06f9501b0ad19311bcff9f3dbb86fde174e37db3c04b8b341a66"
     },
     {
       "path": ".github/workflows/windows-upgrade-acceptance.yml",
@@ -200,8 +200,8 @@
     },
     {
       "path": "desktop/windows-build.workflow.yml",
-      "bytes": 4205,
-      "sha256": "15b1ad367688d03685e7c2c25b491bdfa2c9ac74c02c65496612f526f88d652e"
+      "bytes": 4520,
+      "sha256": "8ebe58783ede06f9501b0ad19311bcff9f3dbb86fde174e37db3c04b8b341a66"
     },
     {
       "path": "docs/CONTROLLED-BROWSER.md",
@@ -544,6 +544,11 @@
       "sha256": "bc386019d8f72767b1ab76be3d1ff7e5c72a053098dd21386a42a3d6c9e629cb"
     },
     {
+      "path": "tests/existing-integrations-ui.mjs",
+      "bytes": 41799,
+      "sha256": "35a4531a5be9b4316235566e4f76da195d3e8f2ea0c22a1c06344964c28d78f4"
+    },
+    {
       "path": "tests/fixtures/controlled-sites.mjs",
       "bytes": 4748,
       "sha256": "0492876a4a34b4ca1dd37427cf78867257c61c98b7860f427dee080aae88cf38"
@@ -665,8 +670,8 @@
     },
     {
       "path": "tests/public-web-engine.test.mjs",
-      "bytes": 11998,
-      "sha256": "7612f0b75b564704a0749872940f5bf28674de5b628699e0fad4fa64349a8418"
+      "bytes": 13708,
+      "sha256": "ec8fb47d78531f3269450a5634c4b7b1410af759b0af4b27ccf04103d9606f7a"
     },
     {
       "path": "tests/public-web-revocation.test.mjs",

@@ -51,6 +51,10 @@ jobs:
         shell: pwsh
         run: node tests/ui-local-access.mjs --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-generic-local-access')
         timeout-minutes: 8
+      - name: Verify retained mail and controlled-browser approval UI
+        shell: pwsh
+        run: node tests/existing-integrations-ui.mjs --output-dir (Join-Path $env:RUNNER_TEMP 'luheng-generic-existing-integrations')
+        timeout-minutes: 10
       - name: Upload candidate QA evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -60,5 +64,6 @@ jobs:
             artifacts/screenshots/generic-chat/
             ${{ runner.temp }}/luheng-generic-stability/
             ${{ runner.temp }}/luheng-generic-local-access/
+            ${{ runner.temp }}/luheng-generic-existing-integrations/
           if-no-files-found: warn
           retention-days: 14
