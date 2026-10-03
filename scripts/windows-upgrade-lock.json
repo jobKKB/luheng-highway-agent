@@ -1,0 +1,40 @@
+{
+  "schema": "luheng-windows-upgrade-lock/v1",
+  "repository": "jobKKB/luheng-highway-agent",
+  "from": {
+    "version": "0.4.0",
+    "runNumber": 7,
+    "runId": 37018138122,
+    "commit": "c6244b63439346287a5bd0dde2dac42a24baa2df",
+    "artifact": {
+      "id": 11232716427,
+      "name": "luheng-windows-unsigned-prototype",
+      "zipBytes": 243730534,
+      "zipSha256": "cff6b32a85bf69e0ad647c0efddb03bb2e72dfe8b7bb1155ec81fea0a94f7089",
+      "expiresAt": "2026-10-16T14:17:09Z"
+    },
+    "installer": {
+      "name": "Luheng-Office-Agent-0.4.0-windows-x64.exe",
+      "bytes": 244012810,
+      "sha256": "bfe14f5a9c22bd1863b8500f80249d44ff8da818d4ccbc413d8040a6cbd584b7"
+    }
+  },
+  "to": {
+    "version": "0.5.0",
+    "runNumber": 11,
+    "runId": 37088470380,
+    "commit": "d822591c5e58de5b08c802b2ac4d5508c8200260",
+    "artifact": {
+      "id": 11261364641,
+      "name": "luheng-windows-unsigned-prototype",
+      "zipBytes": 243759530,
+      "zipSha256": "7a28c58e51bbdf0c871db150e1bc666452b9163257d652ce7fa48626f5a3f767",
+      "expiresAt": "2026-10-17T02:15:53Z"
+    },
+    "installer": {
+      "name": "Luheng-Office-Agent-0.5.0-windows-x64.exe",
+      "bytes": 244042045,
+      "sha256": "3f00bb736b351cd7f0daf7eeb977f5ebd02b5f80655492a122908e09dbc0505e"
+    }
+  }
+}
