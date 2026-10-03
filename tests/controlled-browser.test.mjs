@@ -72,7 +72,13 @@ test('controlled browser: human lease is exclusive, manual changes reobserved, s
   assert.equal(JSON.stringify(store.all('controlled_sessions')).includes(manual.leaseToken),false);
   const input=await service.manualAction(session.id,{leaseToken:manual.leaseToken,observationId:manual.observation.observationId,action:{type:'fill',controlId:find(manual.observation,'巡查安排').controlId,value:'人工填入虚构安排'}});
   const saved=await service.manualAction(session.id,{leaseToken:manual.leaseToken,observationId:input.observation.observationId,action:{type:'click',controlId:find(input.observation,'保存安排').controlId}});
-  assert.match(saved.observation.text,/人工填入虚构安排/);assert.equal(stats.saves,1);
+  // Input dispatch and a bounded network quiet period do not guarantee that the
+  // fixture's async /save -> /whoami handler has finished updating the DOM.
+  // Reobserve only: never replay the fill/click or release the manual lease.
+  const savedText=/已保存 1：人工填入虚构安排/;let savedObservation=saved.observation;
+  const savedDeadline=Date.now()+5000;
+  while(!savedText.test(savedObservation.text)&&Date.now()<savedDeadline){await wait(50);savedObservation=await service.read(session.id);}
+  assert.match(savedObservation.text,savedText,JSON.stringify({stats,session:service.getSession(session.id)}));assert.equal(stats.saves,1);
   const resumed=await service.resume(session.id,{leaseToken:manual.leaseToken});assert.match(resumed.observation.text,/人工填入虚构安排/);
   assert.equal((await service.decide(old.id,{decision:'approve',digest:old.digest})).approval.status,'stale');assert.equal(stats.saves,1);
   await assert.rejects(service.manualAction(session.id,{leaseToken:manual.leaseToken,observationId:resumed.observation.observationId,action:{type:'click',controlId:find(resumed.observation,'保存安排').controlId}}),e=>e.code==='MANUAL_LEASE');

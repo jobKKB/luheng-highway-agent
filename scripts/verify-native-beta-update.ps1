@@ -121,7 +121,7 @@ try{
  $verified=Run-Driver 'verify'
  if($verified.status -cne 'beta-upgrade-verified' -or -not $verified.upgradePassed -or -not $verified.installerExecuted){throw 'Actual exact Beta2 verification incomplete'}
  $report.stages.upgrade='passed'
- $db=Join-Path $data 'agent.sqlite';$before=Hash $db
+ $db=Join-Path $data 'data/agent.sqlite';$before=Hash $db
  Uninstall-Owned
  if((Hash $db) -ne $before -or [IO.File]::ReadAllText((Join-Path $data '.owned-beta-qa')) -cne $marker){throw 'Uninstall changed owned persisted profile'}
  $report.stages.uninstallPreservesProfile='passed'

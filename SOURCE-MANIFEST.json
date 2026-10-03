@@ -615,13 +615,13 @@
     },
     {
       "path": "scripts/verify-native-beta-update.ps1",
-      "bytes": 12019,
-      "sha256": "795b33a1d28e4805b76ce66ca08c535c9bbc69fbee60a7aaf22d3793e18f530e"
+      "bytes": 12024,
+      "sha256": "7715c9ae800ced79f310d3728e39dc52005a51f652d90a32d05ace39e920ef83"
     },
     {
       "path": "scripts/verify-native-beta-updater.mjs",
-      "bytes": 20869,
-      "sha256": "60c97d7f5bbf1913f580a82ea1d0a4b4134274b23e5a4fc320bd7dbae12be8f9"
+      "bytes": 20883,
+      "sha256": "2a29201d041d93ed7e333db410425308c06a2aad2f35435b535c6606862bf9d1"
     },
     {
       "path": "scripts/verify-windows-native.mjs",
@@ -685,8 +685,8 @@
     },
     {
       "path": "tests/controlled-browser.test.mjs",
-      "bytes": 14536,
-      "sha256": "3dd189246d0530aa30ba5a773f8bf7bb89b67f2012de8f6a62caa2857d46ac2f"
+      "bytes": 15094,
+      "sha256": "d7fc3a2a41e1dfcf3760c9b0cdff8b86648dd50099b112cc7e1cf3a40c63245b"
     },
     {
       "path": "tests/controlled-engine.test.mjs",
