@@ -169,7 +169,7 @@ $rules = @($acl.GetAccessRules($true, $true, [System.Security.Principal.Security
   propagation = [int]$_.PropagationFlags
  }
 })
-$zone = if ($readZone -eq '1') { Get-Content -LiteralPath $target -Stream Zone.Identifier -Raw -Encoding ASCII } else { $null }
+$zone = if ($readZone -eq '1') { $streamText = Get-Content -LiteralPath $target -Stream Zone.Identifier -Raw -Encoding ASCII; [Text.Encoding]::ASCII.GetString([Text.Encoding]::ASCII.GetBytes([string]$streamText)) } else { $null }
 [ordered]@{
  currentSid = $currentSid
  ownerSid = $acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value

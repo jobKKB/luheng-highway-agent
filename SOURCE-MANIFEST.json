@@ -275,8 +275,8 @@
     },
     {
       "path": "desktop/test/update-created-file-owner.test.cjs",
-      "bytes": 18203,
-      "sha256": "9ca888e650650f6f84b1e5d4e8246f6c48a8e7323f9c56346d8816981c94fac3"
+      "bytes": 18305,
+      "sha256": "771b54907b61bfddd0a783e2c6678fa65974459be5ae9b40766f9a0bd496490d"
     },
     {
       "path": "desktop/test/update-manager.test.cjs",
