@@ -72,7 +72,10 @@ try {
   page.on('request', r => { const u = new URL(r.url()); if (u.pathname === '/api/state') counters.stateRequests++; if (u.pathname === '/api/tasks' && r.method() === 'POST') counters.taskPosts++; if (/^\/api\/tasks\/[^/]+$/.test(u.pathname) && r.method() === 'GET') counters.detailRequests++; });
   page.on('response', async r => { if (new URL(r.url()).pathname === '/api/state' && r.ok()) { try { const s = await r.json(); if (s.system?.lastHeartbeat) heartbeatValues.add(s.system.lastHeartbeat); } catch {} } });
   await page.goto(app.url); await page.locator('#prompt-input').waitFor();
-  const health = await (await page.request.get(app.url + '/api/health')).json();
+  const healthResponse = await page.request.get(app.url + '/health');
+  assert.equal(healthResponse.status(), 200, 'Actual health endpoint must succeed');
+  const health = await healthResponse.json();
+  assert.equal(health.ok, true);
   assert.equal(health.version, report.expectedVersion);
   if (await page.locator('.modal').isVisible()) { await page.keyboard.press('Escape'); await page.locator('.modal').waitFor({ state: 'hidden' }); }
   await post('/api/local-access/configure', { mode: 'disabled', onboardingComplete: true });
