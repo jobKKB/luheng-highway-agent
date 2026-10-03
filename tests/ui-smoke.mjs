@@ -40,7 +40,12 @@ async function nav(name) {
 }
 async function createPrompt(prompt) {
   await page.locator('.new-task-button').click();
+  // New-task navigation refreshes state and then focuses the new composer.
+  // Wait for that actual UI state before filling once; do not refill lost text.
+  await page.waitForFunction(() => view === 'chat' && !pollBusy && refreshWaiters.length === 0 && !submitting && document.activeElement === document.querySelector('#prompt-input'));
   await page.locator('#prompt-input').fill(prompt);
+  assert.equal(await page.locator('#prompt-input').inputValue(), prompt, 'Composer DOM must retain the requested task');
+  assert.equal(await page.evaluate(() => draft), prompt, 'Application input handler must capture the requested task');
   const response = page.waitForResponse(r => r.url().endsWith('/api/tasks') && r.request().method() === 'POST');
   await page.locator('#task-form button[type="submit"]').click();
   const task = await (await response).json();

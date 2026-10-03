@@ -590,8 +590,8 @@
     },
     {
       "path": "tests/ui-recovery.mjs",
-      "bytes": 15630,
-      "sha256": "5bd71cd8bae0b7b52cb5525e3087954c52ce1babc8719e83409314526b8981f6"
+      "bytes": 15929,
+      "sha256": "f538a7c3f09b792a3ec4e65472960d77abae26802bbbf2f477cf083ab5318b79"
     },
     {
       "path": "tests/ui-recovery.test.mjs",
@@ -600,8 +600,8 @@
     },
     {
       "path": "tests/ui-smoke.mjs",
-      "bytes": 28779,
-      "sha256": "683d03170de77bdaa13c2a5d141d086eae21db098954384901c9eaf06fddb61c"
+      "bytes": 29358,
+      "sha256": "98d4f1b2fb205fc628a921139d7784da4b049cdd7c2efa16c52a29958b69c16f"
     },
     {
       "path": "tests/ui-v03.mjs",
