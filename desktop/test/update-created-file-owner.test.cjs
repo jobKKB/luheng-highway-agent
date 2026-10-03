@@ -211,6 +211,11 @@ function assertCurrentUserAndInheritedAcl(snapshot) {
 }
 
 async function nativeFixture(t) {
+  // The Windows PowerShell 5 subprocess must load its own built-in modules,
+  // not PowerShell 7 modules inherited from the CI command shell.
+  const previousModules = process.env.PSModulePath;
+  process.env.PSModulePath = path.win32.join(process.env.SystemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'Modules');
+  t.after(() => { if (previousModules === undefined) delete process.env.PSModulePath; else process.env.PSModulePath = previousModules; });
   const stateRoot = fs.mkdtempSync(path.join(tmpdir(), 'luheng-update-created-owner-'));
   const records = [];
   let files;
