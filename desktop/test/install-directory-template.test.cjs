@@ -253,6 +253,26 @@ test('directory creation uses the actual TokenUser owner in a new-object securit
   assert.match(verify, /\$5 != 7/);
 });
 
+test('native output pointers use one source slot and one real destination slot', () => {
+  const source = helperSource();
+  // System's parser advances the source/output slot for both an explicit 0
+  // and a dot. An initialized pointer therefore uses `0 rN`, not `0 .rN`.
+  // Check the API contracts that supply token, SD, native-handle and ACL data.
+  assert.doesNotMatch(source, /\*(?:i|\$\{SYSTYPE_PTR\}) 0 \.r\d+/);
+  const token = nsisFunction(source, 'luhengReadCurrentUser');
+  assert.match(token, /OpenProcessToken\([^\n]+\*\$\{SYSTYPE_PTR\} 0 r1\) i \.r2/);
+  assert.match(token, /GetTokenInformation\([^\n]+, i 0, \*i 0 r3\) i \.r2/);
+  assert.match(token, /GetTokenInformation\([^\n]+, i r3, \*i 0 r5\) i \.r2/);
+  assert.match(token, /ConvertSidToStringSidW\([^\n]+\*\$\{SYSTYPE_PTR\} 0 r4\)/);
+  assert.match(token, /ConvertStringSecurityDescriptorToSecurityDescriptorW\([^\n]+\*\$\{SYSTYPE_PTR\} 0 r5,/);
+  const native = nsisFunction(source, 'luhengNativeDirectory');
+  assert.match(native, /NtCreateFile\(\*\$\{SYSTYPE_PTR\} 0 r6,/);
+  const verify = nsisFunction(source, 'luhengVerifyDirectoryHandle');
+  assert.match(verify, /GetSecurityInfo\([^\n]+\*\$\{SYSTYPE_PTR\} 0 r2,[^\n]+\*\$\{SYSTYPE_PTR\} 0 r3,[^\n]+\*\$\{SYSTYPE_PTR\} 0 r9\)/);
+  assert.match(verify, /GetSecurityDescriptorControl\([^\n]+\*i 0 r4, \*i 0 r5\)/);
+  assert.match(verify, /GetAce\([^\n]+\*\$\{SYSTYPE_PTR\} 0 r6\)/);
+});
+
 test('native decimal DWORD readback compares bit masks numerically in LogicLib', () => {
   const verify = nsisFunction(helperSource(), 'luhengVerifyDirectoryHandle');
   // LogicLib != is StrCmp; <> is IntCmp. IntOp and System return decimal

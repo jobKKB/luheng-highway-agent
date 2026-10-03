@@ -125,8 +125,8 @@
     },
     {
       "path": "desktop/current-user-install-directory.nsh",
-      "bytes": 31826,
-      "sha256": "fcfaf03a4f140ced8839cee5f81c6639d52fb2cf0963c48720e5795dae9684c4"
+      "bytes": 31812,
+      "sha256": "b7190fdd950c88c94d421d33d60a3cc344f1a64b16c1c3ad6dcd6bda3afc9f2f"
     },
     {
       "path": "desktop/current-user-install.nsh",
@@ -210,8 +210,8 @@
     },
     {
       "path": "desktop/test/install-directory-template.test.cjs",
-      "bytes": 21108,
-      "sha256": "3ffd31f13bfd8607c06df04f5556c821052cf1177eb57c83d247e091f0944205"
+      "bytes": 22526,
+      "sha256": "da17958bb88c9b1575cf18305016e2cb9c6d564323824e9be90454fd17ff8d92"
     },
     {
       "path": "desktop/test/launch-cmd.test.cjs",
