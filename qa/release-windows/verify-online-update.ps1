@@ -250,11 +250,15 @@ try {
     $report.targetDataVerified=$true; $report.automaticUpdateVerified=$true; $report.status='online-update-verified'
 } catch {
     $report.error=$_.Exception.Message
+    $report.errorLocation=$_.InvocationInfo.PositionMessage
+    $report.errorStack=$_.ScriptStackTrace
+    $report | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $out 'online-update.json') -Encoding utf8NoBOM
 } finally {
     foreach ($process in $owned) {
         if (-not $process.HasExited) {
             $report.forcedCleanup=$true
-            & (Join-Path $env:SystemRoot 'System32/taskkill.exe') /PID $process.Id /T /F | Out-Null
+            try { $process.Kill($true); [void]$process.WaitForExit(10000) }
+            catch { $report.cleanupError=$_.Exception.Message }
         }
     }
     $cleanupDeadline=[DateTime]::UtcNow.AddSeconds(20)

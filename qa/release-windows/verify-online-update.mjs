@@ -181,6 +181,7 @@ async function main() {
     }
   } catch (error) {
     report.error = error.message;
+    await evidence(`renderer-${phase}.json`, report);
     process.exitCode = 1;
   } finally {
     if (app) await app.close();

@@ -24,7 +24,7 @@ if (-not (Test-Path -LiteralPath $exe -PathType Leaf) -or [IO.Path]::GetFileName
 Add-Type -Path (Join-Path $PSScriptRoot 'RestrictedTokenLauncher.cs')
 # Only named ordinary environment values. Never copy the full Actions environment.
 $environment = @{}
-foreach ($name in @('SystemRoot', 'WINDIR', 'SystemDrive', 'COMSPEC', 'TEMP', 'TMP', 'USERPROFILE', 'LOCALAPPDATA', 'APPDATA', 'PATH')) {
+foreach ($name in @('SystemRoot', 'WINDIR', 'SystemDrive', 'COMSPEC', 'TEMP', 'TMP', 'USERPROFILE', 'LOCALAPPDATA', 'APPDATA', 'PATH', 'PATHEXT')) {
     $value = [Environment]::GetEnvironmentVariable($name, 'Process')
     if ($null -ne $value) { $environment[$name] = $value }
 }
