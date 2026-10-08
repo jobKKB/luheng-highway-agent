@@ -137,7 +137,9 @@ def verify_source(source, manifest):
     return {"source_count": len(expected), "source_tree_sha256": tree_digest(expected), "license_preserved": True}
 
 
-def restore_raw_git_blobs(source, head):
+def restore_raw_git_blobs(source, head, manifest):
+    expected = rows_by_path(manifest["source_files"])
+    overlay_paths = {row["path"] for row in manifest["files"]}
     entries = []
     inventory = subprocess.check_output(["git", "-C", str(source), "ls-tree", "-rz", "--full-tree", head])
     for record in inventory.split(b"\0"):
@@ -160,6 +162,16 @@ def restore_raw_git_blobs(source, head):
         data = stream.read(int(size))
         if len(data) != int(size) or stream.read(1) != b"\n":
             raise ValueError("Truncated raw upstream Git object")
+        if name not in overlay_paths:
+            row = expected[name]
+            # The frozen checkout retains explicit CRLF PowerShell attributes.
+            # Admit that newline form only when its exact frozen hash matches.
+            candidates = (data, data.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+            data = next((candidate for candidate in candidates
+                         if len(candidate) == row["bytes"]
+                         and hashlib.sha256(candidate).hexdigest() == row["sha256"]), None)
+            if data is None:
+                raise ValueError("Raw upstream or pinned newline bytes differ: " + name)
         destination = owned_path(source, name)
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(data)
@@ -182,7 +194,7 @@ def main():
     if subprocess.check_output(["git", "-C", str(source), "status", "--porcelain"], text=True):
         raise SystemExit("Upstream checkout must be clean before materialization")
     # Git archive applies checkout filters too. cat-file returns exact raw blobs.
-    restore_raw_git_blobs(source, head)
+    restore_raw_git_blobs(source, head, manifest)
     apply_overlay(source, manifest, content)
     result = verify_source(source, manifest)
     paths = source.parent / "overlay-paths.bin"
