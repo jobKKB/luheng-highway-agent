@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "qualified": true,
+  "repository": "jobKKB/luheng-highway-agent",
+  "build": {
+    "runId": 37748002770,
+    "head": "90424705b9ca9f8537ffee15635b914ce52d0183",
+    "runAttempt": 1,
+    "workflowPath": ".github/workflows/hermes-native-package-experiment.yml"
+  },
+  "source": {
+    "commit": "5c04cb5491d047ad7546e5d74895e75d3e28e658",
+    "treeSha256": "d37c08c19b1e57ce4829682c4f84ec5fc89bf1fd3c5fc56e0e2b7153f462b4cb",
+    "count": 17260,
+    "baseVersion": "0.0.0"
+  },
+  "portableArtifact": {
+    "id": 11539186382,
+    "name": "luheng-fixed-qualified-windows-portable",
+    "bytes": 1638384330,
+    "digest": "sha256:47cd1f262a521ee42c57bc0f41564d545be951b7dee811fc5872bbc374bcb080"
+  },
+  "evidenceArtifact": {
+    "id": 11539405818,
+    "name": "luheng-fixed-windows-native-evidence",
+    "bytes": 5745400,
+    "digest": "sha256:c8fddb3adeda3814a7e0697c18fe8578ba8f426c73fed9f5a69f93c5593b7712"
+  },
+  "archive": {
+    "path": "Luheng-Windows-x64-verified.7z",
+    "bytes": 1638383946,
+    "sha256": "2664bba15d3de34f0f7ebc6984efc52d848098df29740b7353c72e48df39952b"
+  },
+  "evidenceFiles": {
+    "sourceAdmission": {
+      "path": "luheng-highway-agent/luheng-highway-agent/source-admission.json",
+      "bytes": 468,
+      "sha256": "b2bc02a056bcbccce203515659c9428b8ed848533e8dff552500e79b03b9e99f"
+    },
+    "structure": {
+      "path": "luheng-highway-agent/luheng-highway-agent/windows-unpacked-structure.json",
+      "bytes": 28475037,
+      "sha256": "5b4153ce1240efacd244353651e65d149e55a6205fa11c3b4f753857f7a72ec2"
+    },
+    "health": {
+      "path": "luheng-highway-agent/luheng-highway-agent/native-smoke-evidence/native-startup.json",
+      "bytes": 430,
+      "sha256": "6dbee3a7695a1d763df23f1a0f6b2e1c031fce4a1f8ae8380f529ca469f85b54"
+    },
+    "portableReceipt": {
+      "path": "luheng-highway-agent/luheng-highway-agent/native-smoke-evidence/verified-portable-archive.json",
+      "bytes": 593,
+      "sha256": "d8cb2174842dedb5fce578e4beeb833f4981c992d0273e978ba13c5fcce739bd"
+    },
+    "nativeRegressionLog": {
+      "path": "luheng-highway-agent/luheng-highway-agent/native-regression.log",
+      "bytes": 6460,
+      "sha256": "6f71a44e17941568f683b6fa867c89e2bcbca5ab62ec9392626898508880478e"
+    },
+    "toolContractSummary": {
+      "path": "_temp/luheng-tool-contract-private/windows-tool-contracts-7f308f26f36642a5a67dacdf731d4858/summary.json",
+      "bytes": 11355,
+      "sha256": "d47922d6c2a76a9b9ca7faa0c9990b865b914dbc321735eeaa557a25220120a1"
+    },
+    "guardRegressionSummary": {
+      "path": "_temp/early-native-vitest/work/guard-selftests/windows-guard-selftest-a498124c4d4a490caee8376905ce5f1a/summary.json",
+      "bytes": 2846,
+      "sha256": "a92eab47f327e20abe0415748f5a3ee119ccc520c0b675496ded65a2ab561176"
+    }
+  },
+  "minimumScratchBytes": 34555643006,
+  "lifecycleMode": "elevated-runner-explicitly-limited",
+  "notes": "Exact functionally qualified producer bytes; installer acceptance remains pending. Unsigned, production automatic updates disabled. Native startup/window/backend and synthetic tool contracts passed; offline, provider interaction, physical IME and standard-user installation not verified.",
+  "scratchBudgetBasis": {
+    "payloadBytes": 6470724210,
+    "archiveBytes": 1638383946,
+    "formula": "3 * measured payload + 4 * measured archive + 8 GiB preparation reserve; reservation, not measured peak"
+  }
+}

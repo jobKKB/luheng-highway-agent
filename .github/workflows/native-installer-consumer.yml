@@ -1,0 +1,116 @@
+name: Luheng immutable portable to unsigned native NSIS acceptance
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: luheng-manual-nsis-artifact-consumer-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  native-nsis-consumer:
+    runs-on: windows-2025
+    timeout-minutes: 120
+    steps:
+    - name: Checkout the reviewed private consumer
+      uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      with:
+        ref: ${{ github.sha }}
+        path: consumer
+        persist-credentials: false
+    - name: Select independent admission interpreter
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+      with:
+        python-version: '3.12'
+    - name: Parse and natively selftest lifecycle ownership before large downloads
+      shell: pwsh
+      run: "$ErrorActionPreference = 'Stop'\n$consumer = Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-installer-consumer'\nforeach ($file in @('Invoke-InstallerLifecycle.ps1', 'Test-LifecycleProcessOwner.ps1', 'token-review/Run-RestrictedLifecycle.ps1')) {\n  $tokens = $null; $errors = $null\n  [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $consumer $file), [ref]$tokens, [ref]$errors) | Out-Null\n  if ($errors.Count) { $errors | Format-List; throw \"PowerShell syntax failed: $file\" }\n}\n# Test script compiles both helpers and records only actual native observations.\n& (Join-Path $consumer 'Test-LifecycleProcessOwner.ps1') -OutputDirectory \"${{ runner.temp }}/luheng-nsis-consumer/evidence\"\npython -I -S -B (Join-Path $consumer 'selftest_verifier.py')\nif ($LASTEXITCODE) { throw 'Synthetic admission regression failed' }\n"
+    - name: Require exact completed producer API identities and capacity
+      id: admit
+      shell: pwsh
+      env:
+        READ_TOKEN: ${{ github.token }}
+      run: "& ./consumer/qa/native-installer-consumer/admit_artifacts.ps1 `\n  -Contract ./consumer/qa/native-installer-consumer/contract.json `\n  -JobRoot \"${{ runner.temp }}/luheng-nsis-consumer\" `\n  -Verifier ./consumer/qa/native-installer-consumer/verify_consumer.py\n"
+    - name: Consume exact small native evidence with fatal digest checks
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      with:
+        artifact-ids: ${{ steps.admit.outputs.evidence-id }}
+        run-id: ${{ steps.admit.outputs.producer-run }}
+        repository: jobKKB/luheng-highway-agent
+        github-token: ${{ github.token }}
+        digest-mismatch: error
+        merge-multiple: true
+        path: ${{ runner.temp }}/luheng-nsis-consumer/original-evidence
+    - name: Consume exact qualified portable with fatal digest checks
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      with:
+        artifact-ids: ${{ steps.admit.outputs.portable-id }}
+        run-id: ${{ steps.admit.outputs.producer-run }}
+        repository: jobKKB/luheng-highway-agent
+        github-token: ${{ github.token }}
+        digest-mismatch: error
+        merge-multiple: true
+        path: ${{ runner.temp }}/luheng-nsis-consumer/portable
+    - name: Independently bind inner archive and original native evidence
+      shell: pwsh
+      run: "$job = Join-Path $env:RUNNER_TEMP 'luheng-nsis-consumer'\npython -I -S -B ./consumer/qa/native-installer-consumer/verify_consumer.py downloads `\n  --contract ./consumer/qa/native-installer-consumer/contract.json `\n  --portable \"$job/portable\" --evidence \"$job/original-evidence\" `\n  --output \"$job/evidence/download-admission.json\"\nif ($LASTEXITCODE) { throw 'Original byte/native custody is not qualified' }\n"
+    - name: Expand only admitted pristine portable and verify every payload file
+      shell: pwsh
+      run: "$ErrorActionPreference = 'Stop'\n$job = Join-Path $env:RUNNER_TEMP 'luheng-nsis-consumer'\n$seven = (Get-Command 7z -ErrorAction Stop).Source\n& $seven l -slt -ba \"$job/portable/Luheng-Windows-x64-verified.7z\" | Set-Content -Encoding utf8 \"$job/evidence/archive-listing.txt\"\nif ($LASTEXITCODE) { throw 'Native 7z entry listing failed' }\npython -I -S -B ./consumer/qa/native-installer-consumer/verify_consumer.py archive-listing `\n  --contract ./consumer/qa/native-installer-consumer/contract.json `\n  --evidence \"$job/original-evidence\" --listing \"$job/evidence/archive-listing.txt\" `\n  --output \"$job/evidence/archive-path-admission.json\"\nif ($LASTEXITCODE) { throw 'Archive entry paths/membership are not admitted; do not expand' }\n& $seven x \"$job/portable/Luheng-Windows-x64-verified.7z\" \"-o$job/pristine\" -y\nif ($LASTEXITCODE) { throw 'Pristine 7z expansion failed' }\npython -I -S -B ./consumer/qa/native-installer-consumer/verify_consumer.py tree `\n  --contract ./consumer/qa/native-installer-consumer/contract.json `\n  --evidence \"$job/original-evidence\" --root \"$job/pristine/Luheng-Windows-x64\" `\n  --output \"$job/evidence/pristine-tree.json\"\nif ($LASTEXITCODE) { throw 'Every-file pristine payload verification failed; do not execute it' }\n"
+    - name: Checkout original source-only controller by producer immutable head
+      uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      with:
+        ref: ${{ steps.admit.outputs.producer-head }}
+        path: controller
+        persist-credentials: false
+    - name: Checkout immutable official helper-source base
+      uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      with:
+        repository: NousResearch/hermes-agent
+        ref: 158fd638da1629c8e62caf9ade1515d162def8ab
+        path: source
+        persist-credentials: false
+    - name: Reconstruct exact pinned helper source without touching the payload
+      shell: pwsh
+      run: 'python -I -S -B ./controller/qa/hermes-native/materialize-v2-source.py controller source
+
+        if ($LASTEXITCODE) { throw ''Exact helper-source reconstruction failed'' }
+
+        $a = Get-Content source-admission.json -Raw | ConvertFrom-Json
+
+        if ($a.source_tree_sha256 -cne ''d37c08c19b1e57ce4829682c4f84ec5fc89bf1fd3c5fc56e0e2b7153f462b4cb'' -or $a.source_count -ne 17260) { throw ''Helper source pin differs'' }
+
+        '
+    - name: Prepare fresh native helpers then wrap unchanged payload using strict NSIS
+      shell: pwsh
+      run: "$job = Join-Path $env:RUNNER_TEMP 'luheng-nsis-consumer'\npython -I -S -B ./consumer/qa/native-installer-consumer/prepare_and_package.py `\n  --contract ./consumer/qa/native-installer-consumer/contract.json `\n  --source source --portable \"$job/portable\" --evidence \"$job/original-evidence\" `\n  --payload \"$job/pristine/Luheng-Windows-x64\" --work \"$job/fresh-helper-work\" `\n  --cache \"$job/fresh-helper-cache\" --output \"$job/evidence\"\nif ($LASTEXITCODE) { throw 'Fresh strict native NSIS wrapping failed' }\n"
+    - name: Install exact bytes launch native window close and normal-uninstall retaining synthetic data
+      shell: pwsh
+      run: "$job = Join-Path $env:RUNNER_TEMP 'luheng-nsis-consumer'\n& ./consumer/qa/native-installer-consumer/Invoke-InstallerLifecycle.ps1 `\n  -Contract ./consumer/qa/native-installer-consumer/contract.json `\n  -BuildReceipt \"$job/evidence/installer-build.json\" -OriginalEvidence \"$job/original-evidence\" `\n  -JobRoot $job -Verifier ./consumer/qa/native-installer-consumer/verify_consumer.py `\n  -PythonExecutable (Get-Command python -ErrorAction Stop).Source\n"
+    - name: Preserve synthetic acceptance evidence even on failure
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: luheng-native-nsis-consumer-evidence
+        path: ${{ runner.temp }}/luheng-nsis-consumer/evidence/**
+        include-hidden-files: true
+        compression-level: 6
+        retention-days: 14
+        if-no-files-found: warn
+    - name: Preserve installer only after the native acceptance step succeeds
+      if: success()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: luheng-unsigned-manual-native-nsis-test
+        path: source/apps/desktop/release/nsis-prepackaged-test/Luheng-Unsigned-Manual-Test-*-x64.exe
+        compression-level: 0
+        retention-days: 14
+        if-no-files-found: error
+'on':
+  push:
+    branches:
+    - probe/hermes-native-package-current-20261006
+    paths:
+    - .github/workflows/native-installer-consumer.yml
+    - qa/native-installer-consumer/contract.json
+    - qa/native-installer-consumer/prepare_and_package.py
+    - qa/native-installer-consumer/admit_artifacts.ps1
+  workflow_dispatch: null
