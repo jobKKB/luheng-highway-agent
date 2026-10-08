@@ -1,0 +1,30 @@
+{
+  "schema": 2,
+  "upstream_commit": "158fd638da1629c8e62caf9ade1515d162def8ab",
+  "source_count": 17256,
+  "source_tree_sha256": "e8728b0ff4c3a1433daedb8d7bc3db9c01bb8d93f3775f3049461b899d363d03",
+  "overlay_count": 363,
+  "LICENSE_sha256": "821556e6336796450ab852d375117b48a4887e71d255794fd6318d99982a5ab6",
+  "overlay_zip_sha256": "90e279adaaaea00d6d1398a69c24eb58b78b14320ac3b03a40f9178a70d44578",
+  "overlay_zip_bytes": 3395429,
+  "source_provenance": {
+    "sealed_source": {
+      "filename": "Luheng-Silver-release-candidate-source-v6-20261005.zip",
+      "version": 0,
+      "bytes": 88408567,
+      "sha256": "30da6a0beee7d38f37ebe1176ad380aa920af97a977ff119352d718a3de00f3b"
+    },
+    "strict_helper_patch": {
+      "filename": "Luheng-Silver-strict-js-helper-patch-20261005.zip",
+      "version": 0,
+      "bytes": 74325,
+      "sha256": "8c901cedc781024966a2db8977d39533b347cafd5af918da83b59a526cba84fa",
+      "diff_sha256": "80152e220cc2e0f9f8e8e3da6388c0837ac73b4734c8e6d1d5490364a03b40f2"
+    }
+  },
+  "scope": "Exact unified sealed v6 plus three-file strict-JS helper patch; official prepared Windows x64 unpacked build-only; no installer, signing, installation or update claim",
+  "artifact_contract": {
+    "desktop_executable": "LuhengOfficeAgent.exe",
+    "electron_archive": "resources/app.asar"
+  }
+}

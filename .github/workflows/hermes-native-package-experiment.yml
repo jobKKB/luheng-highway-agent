@@ -1,0 +1,78 @@
+name: Unified Luheng pinned Windows unpacked build-only
+on:
+  push:
+    branches: [probe/hermes-native-package-current-20261006]
+    paths: [.github/workflows/hermes-native-package-experiment.yml, qa/hermes-native/**]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: luheng-pinned-unpacked-build-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  windows-x64:
+    runs-on: windows-2025
+    timeout-minutes: 120
+    steps:
+      - name: Checkout approved source-only controller
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
+        with:
+          persist-credentials: false
+          path: controller
+      - name: Checkout immutable official source
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
+        with:
+          repository: NousResearch/hermes-agent
+          ref: 158fd638da1629c8e62caf9ade1515d162def8ab
+          persist-credentials: false
+          path: source
+      - name: Select host Python for official preparation
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Reconstruct and admit the exact current source-only candidate
+        shell: pwsh
+        run: |
+          python controller/qa/hermes-native/materialize-v2-source.py controller source
+          if ($LASTEXITCODE) { throw 'Exact source admission failed; no build claim is made' }
+      - name: Prepare locked native Windows inputs and build an unpacked artifact
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne 'X64') { throw 'Native Windows x64 is required' }
+          $source = Join-Path $env:GITHUB_WORKSPACE 'source'
+          $job = Join-Path $env:RUNNER_TEMP 'luheng-current-unpacked-build'
+          New-Item -ItemType Directory -Force $job | Out-Null
+          $env:HERMES_HOME = Join-Path $job 'parent-hermes-home'
+          $env:HERMES_RUNTIME_DIR = Join-Path $job 'parent-tools'
+          $env:HERMES_DESKTOP_USER_DATA_DIR = Join-Path $job 'electron-user-data'
+          $env:CSC_IDENTITY_AUTO_DISCOVERY = 'false'
+          foreach ($name in @('AZURE_SIGN_ENDPOINT', 'AZURE_CLIENT_ID', 'AZURE_SIGN_PUBLISHER', 'AZURE_TENANT_ID', 'AZURE_CLIENT_SECRET', 'CSC_LINK', 'CSC_KEY_PASSWORD', 'APPLE_ID', 'APPLE_APP_SPECIFIC_PASSWORD', 'GH_TOKEN', 'GITHUB_TOKEN')) { Remove-Item "Env:$name" -ErrorAction SilentlyContinue }
+          Get-PSDrive -PSProvider FileSystem | Select-Object Name,Free | ConvertTo-Json | Set-Content (Join-Path $env:GITHUB_WORKSPACE 'disk-before.json')
+          $sha = (Get-Content (Join-Path $env:GITHUB_WORKSPACE 'admitted-source-sha.txt')).Trim()
+          Set-Location $source
+          python -I -S scripts/bundles/desktop.py --repo $source --commit $sha --variant bundled --prepare-only --work (Join-Path $job 'work') --cache (Join-Path $job 'cache') 2>&1 | Tee-Object (Join-Path $env:GITHUB_WORKSPACE 'prepare.log')
+          if ($LASTEXITCODE) { throw 'Official native preparation failed; no artifact is claimed' }
+          python -I -S scripts/bundles/desktop.py --prepared (Join-Path $job 'work/prepared.json') -- --dir 2>&1 | Tee-Object (Join-Path $env:GITHUB_WORKSPACE 'unpacked-build.log')
+          if ($LASTEXITCODE) { throw 'Official prepared unpacked build failed' }
+      - name: Bind the unpacked structure and hashes to the source admission
+        shell: pwsh
+        run: |
+          python controller/qa/hermes-native/verify-contained-candidate.py source (Join-Path $env:RUNNER_TEMP 'luheng-current-unpacked-build/work/prepared.json')
+          if ($LASTEXITCODE) { throw 'Unpacked structure check failed; installation and startup remain unverified' }
+      - name: Preserve build-only evidence and unpacked candidate
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: luheng-current-windows-x64-unpacked-build-only
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: warn
+          path: |
+            admitted-source-sha.txt
+            source-admission.json
+            disk-before.json
+            windows-unpacked-structure.json
+            prepare.log
+            unpacked-build.log
+            source/apps/desktop/release/win-unpacked/**

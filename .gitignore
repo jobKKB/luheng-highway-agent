@@ -1,8 +1,0 @@
-node_modules/
-data/
-artifacts/
-*.log
-.env*
-desktop/dist/
-desktop/bundle/
-desktop/bundle-win32-x64/
