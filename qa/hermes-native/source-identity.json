@@ -1,12 +1,12 @@
 {
   "schema": 2,
   "upstream_commit": "158fd638da1629c8e62caf9ade1515d162def8ab",
-  "source_count": 17256,
-  "source_tree_sha256": "e8728b0ff4c3a1433daedb8d7bc3db9c01bb8d93f3775f3049461b899d363d03",
-  "overlay_count": 363,
+  "source_count": 17260,
+  "source_tree_sha256": "d6970eb089f02208462f9fc37af92a3037c4898aa194d38df7abf51216f785af",
+  "overlay_count": 371,
   "LICENSE_sha256": "821556e6336796450ab852d375117b48a4887e71d255794fd6318d99982a5ab6",
-  "overlay_zip_sha256": "90e279adaaaea00d6d1398a69c24eb58b78b14320ac3b03a40f9178a70d44578",
-  "overlay_zip_bytes": 3395429,
+  "overlay_zip_sha256": "4ea4c9d2fb5df3a015b97f6051dd739a387faa0104bb67ebfa8edfdfa51f9166",
+  "overlay_zip_bytes": 3411478,
   "source_provenance": {
     "sealed_source": {
       "filename": "Luheng-Silver-release-candidate-source-v6-20261005.zip",
@@ -20,9 +20,19 @@
       "bytes": 74325,
       "sha256": "8c901cedc781024966a2db8977d39533b347cafd5af918da83b59a526cba84fa",
       "diff_sha256": "80152e220cc2e0f9f8e8e3da6388c0837ac73b4734c8e6d1d5490364a03b40f2"
+    },
+    "sealed_windows_launcher_fix": {
+      "base_source_tree_sha256": "e8728b0ff4c3a1433daedb8d7bc3db9c01bb8d93f3775f3049461b899d363d03",
+      "patch_sha256": "e0915f7ee0d78965cbb1f8804d43200c521c39c0fdfad1f80bc789ffe4f0ec25",
+      "native_red_run": 37724555591
+    },
+    "prepared_nsis_helper": {
+      "patch_sha256": "791016290eadb0e7d328124f3b4d5ec1580960add17cbaf2e747dddb39ed86fc",
+      "source_only": true,
+      "native_verification_pending": true
     }
   },
-  "scope": "Exact unified sealed v6 plus three-file strict-JS helper patch; official prepared Windows x64 unpacked build-only; no installer, signing, installation or update claim",
+  "scope": "Pinned unified source plus genuine sealed-Windows launcher ownership fix and strict prepared NSIS packaging helper; complete native Windows build and tests; unsigned and production automatic updates disabled; no installation or release claim until native acceptance",
   "artifact_contract": {
     "desktop_executable": "LuhengOfficeAgent.exe",
     "electron_archive": "resources/app.asar"
