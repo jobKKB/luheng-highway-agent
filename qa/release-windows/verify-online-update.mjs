@@ -133,6 +133,11 @@ async function main() {
       const markerPath = path.join(runtime.project, 'retained-marker.txt');
       await writeFile(markerPath, marker);
       await evidence('fixture.json', { id, marker, markerPath, markerSha256: await digest(markerPath), project: runtime.project });
+      const sessionSidebar = page.getByRole('button', { name: /^(搜索会话|Search sessions)$/ });
+      await sessionSidebar.click();
+      await page.getByRole('button', { name: marker, exact: true }).waitFor({ state: 'visible', timeout: 120000 });
+      await evidence('fixture-ui-before.json', { marker, visible: true, location: 'session-sidebar' });
+      await sessionSidebar.click();
       const status = await page.evaluate(() => window.hermesDesktop.updates.check({ force: true }));
       assert.equal(status.supported, true);
       assert.equal(status.currentVersion, pair.from.version);

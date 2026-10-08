@@ -126,9 +126,43 @@ function Test-FixtureCandidate([int]$WindowPid,[int]$ExpectedPid,[string]$Name,[
     return $WindowPid -gt 0 -and $WindowPid -eq $ExpectedPid -and $Name -ceq $Marker -and
         $Marker -cmatch '^online-update-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -and $Enabled -and -not $Offscreen
 }
+function Save-TargetDiagnostics([int]$ExpectedPid) {
+    try {
+        Add-Type -AssemblyName System.Drawing
+        foreach ($window in (Windows-For $ExpectedPid)) {
+            @($window.FindAll([Windows.Automation.TreeScope]::Descendants,[Windows.Automation.Condition]::TrueCondition) | ForEach-Object {
+                @{name=$_.Current.Name; type=$_.Current.ControlType.ProgrammaticName; enabled=$_.Current.IsEnabled; offscreen=$_.Current.IsOffscreen;
+                  patterns=@($_.GetSupportedPatterns() | ForEach-Object { $_.ProgrammaticName })}
+            }) | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $out 'automatic-target-ui.json') -Encoding utf8NoBOM
+            $rect=$window.Current.BoundingRectangle
+            if ($rect.Width -gt 0 -and $rect.Height -gt 0) {
+                $bitmap=[Drawing.Bitmap]::new([int]$rect.Width,[int]$rect.Height)
+                $graphics=[Drawing.Graphics]::FromImage($bitmap)
+                try { $graphics.CopyFromScreen([int]$rect.Left,[int]$rect.Top,0,0,$bitmap.Size); $bitmap.Save((Join-Path $out 'automatic-target.png'),[Drawing.Imaging.ImageFormat]::Png) }
+                finally { $graphics.Dispose(); $bitmap.Dispose() }
+            }
+        }
+    } catch { $report.targetDiagnosticError=$_.Exception.Message }
+}
 function Open-RetainedFixture([int]$ExpectedPid,[string]$Marker) {
     $nameCondition=[Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty,$Marker)
     foreach ($window in (Windows-For $ExpectedPid)) {
+        # The fresh product starts with its session sidebar collapsed.
+        if (-not $report.fixtureSidebarOpened) {
+            $buttons=$window.FindAll([Windows.Automation.TreeScope]::Descendants,[Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ControlTypeProperty,[Windows.Automation.ControlType]::Button))
+            foreach ($button in $buttons) {
+                if (-not $button.Current.IsEnabled -or $button.Current.IsOffscreen -or $button.Current.Name -cnotin @('搜索会话','Search sessions')) { continue }
+                $pattern=$null
+                if ($button.TryGetCurrentPattern([Windows.Automation.TogglePattern]::Pattern,[ref]$pattern)) {
+                    if ($pattern.Current.ToggleState -eq [Windows.Automation.ToggleState]::Off) { $pattern.Toggle() }
+                } elseif ($button.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern,[ref]$pattern)) { $pattern.Invoke() }
+                else { continue }
+                $report.fixtureSidebarOpened=$true
+                $report.uiActions += @{pid=$ExpectedPid; window=$window.Current.Name; button=$button.Current.Name; action='open-session-sidebar'}
+                return $false
+            }
+            continue
+        }
         foreach ($element in $window.FindAll([Windows.Automation.TreeScope]::Descendants,$nameCondition)) {
             if (-not (Test-FixtureCandidate $window.Current.ProcessId $ExpectedPid $element.Current.Name $Marker $element.Current.IsEnabled $element.Current.IsOffscreen)) { continue }
             # Invoking the actual row drives ordinary session.resume; the launch
@@ -281,6 +315,7 @@ try {
     $report.error=$_.Exception.Message
     $report.errorLocation=$_.InvocationInfo.PositionMessage
     $report.errorStack=$_.ScriptStackTrace
+    if ($restarted) { Save-TargetDiagnostics $restarted.Id }
     $report | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $out 'online-update.json') -Encoding utf8NoBOM
 } finally {
     foreach ($process in $owned) {
