@@ -24,6 +24,63 @@ export async function waitForInstalledTarget(cdp,installRoot,{chooseTarget,allow
   throw Error('Bounded timeout: exact installed renderer target');
 }
 
+
+const HARNESS_RENDERER_ERRORS=Object.freeze({
+  'Onboarding absent':'onboarding_absent',
+  'Unexpected populated provider fields':'unexpected_populated_fields',
+  'Unexpected provider field state':'unexpected_provider_fields',
+  'Provider configuration mismatch':'provider_configuration_mismatch',
+  'Composer is not a fresh draft':'composer_not_fresh',
+  'Unexpected prompt state':'unexpected_prompt_state',
+  'Unapproved UI action':'unapproved_ui_action',
+  'Action target ambiguous or disabled':'action_target_ambiguous_or_disabled',
+  'Action target obscured':'action_target_obscured',
+});
+export function rendererEvaluationValue(r){
+  if(r?.exceptionDetails){
+    // Never return arbitrary renderer text, stacks, API errors or credential-bearing values.
+    const description=r.exceptionDetails.exception?.description;
+    const first=typeof description==='string'?description.split(/\r?\n/,1)[0]:'';
+    const match=Object.keys(HARNESS_RENDERER_ERRORS).find(text=>first==='Error: '+text);
+    const error=Error(match?'Installed renderer harness: '+match:'Installed renderer observation/action failed');
+    if(match)error.code=HARNESS_RENDERER_ERRORS[match];
+    throw error;
+  }
+  if(!r?.result||!('value' in r.result))throw Error('Installed renderer observation/action failed');
+  return r.result.value;
+}
+
+export async function clickWhenUnobscured(inspect,dispatch,action,{
+  timeoutMs=15000,intervalMs=250,now=Date.now,delay=sleep,assertHealthy=()=>{},
+}={}){
+  if(!['local','url','key','connect','composer','send'].includes(action))throw Error('Unapproved UI action');
+  const started=now(),deadline=started+timeoutMs;
+  let blocked=0;
+  for(;;){
+    if(blocked&&now()>=deadline)throw Error('Bounded timeout: unobscured '+action+' action');
+    assertHealthy();
+    let observation;
+    try{observation=await inspect(action);}
+    catch(error){
+      // Only the exact allowlisted hit-test error is transient. State/target errors fail closed.
+      if(error.code!=='action_target_obscured')throw error;
+      blocked++;
+      if(now()>=deadline)throw Error('Bounded timeout: unobscured '+action+' action');
+      await delay(Math.min(intervalMs,Math.max(0,deadline-now())));
+      continue;
+    }
+    if(now()>=deadline)throw Error('Bounded timeout: unobscured '+action+' action');
+    assertHealthy();
+    if(!observation?.click||!Number.isFinite(observation.click.x)||!Number.isFinite(observation.click.y))throw Error('Installed renderer observation/action failed');
+    // No DOM click or overlay removal. Input is dispatched once, only after the current
+    // real elementFromPoint hit test admits the actual target. Never retry input failure.
+    for(const type of ['mousePressed','mouseReleased'])await dispatch({
+      type,...observation.click,button:'left',clickCount:1,
+    });
+    return {action,blocked_hit_tests:blocked,waited_ms:Math.max(0,now()-started),unobscured_hit_test:true};
+  }
+}
+
 // Observation and hit testing only. No stores, module imports, DOM text injection or synthetic replies.
 export function inspectMockDom(action, expected) {
   const visible=e=>!!e&&e.getClientRects().length>0&&getComputedStyle(e).visibility!=='hidden'&&Number(getComputedStyle(e).opacity)>0;
@@ -95,12 +152,11 @@ export async function main(argv) {
     title_generation_disabled:false,synthetic_key_only:true,local_model_request_verified:false,
     real_read_file_roundtrip_verified:false,assistant_reply_rendered:false,
     real_provider_verified:false,llm_quality_verified:false,offline_verified:false,
-    physical_ime_verified:false,os_network_settings_changed:false,screenshots:[],snapshots:[],error:null};
+    physical_ime_verified:false,os_network_settings_changed:false,screenshots:[],snapshots:[],click_actions:[],error:null};
   const cdp=new CDP(owner.endpoint);let session,mock;
   const evaluate=async expression=>{
     const r=await cdp.call('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true},session);
-    if(r.exceptionDetails||!r.result||!('value'in r.result))throw Error('Installed renderer observation/action failed');
-    return r.result.value;
+    return rendererEvaluationValue(r);
   };
   const expected=()=>({baseUrl:mock.baseUrl,dummyKey:DUMMY_KEY,prompt:mock.prompt,finalText:mock.finalText});
   const inspect=action=>evaluate(`(${inspectMockDom.toString()})(${JSON.stringify(action??null)},${JSON.stringify(expected())})`);
@@ -109,7 +165,12 @@ export async function main(argv) {
     while(Date.now()<end){if(mock.state.failure)throw Error(`Mock rejected request: ${mock.state.failure}`);last=await inspect();stable=predicate(last)?stable+1:0;if(stable>=3)return last;await sleep(600);}
     result.last_observation=last;throw Error(`Bounded timeout: ${label}`);
   };
-  const click=async action=>{const s=await inspect(action);for(const type of ['mousePressed','mouseReleased'])await cdp.call('Input.dispatchMouseEvent',{type,...s.click,button:'left',clickCount:1},session);};
+  const click=async action=>{
+    const receipt=await clickWhenUnobscured(inspect,params=>cdp.call('Input.dispatchMouseEvent',params,session),action,{
+      assertHealthy:()=>{if(mock.state.failure)throw Error('Mock rejected request: '+mock.state.failure);},
+    });
+    result.click_actions.push(receipt);
+  };
   const capture=async(name,s)=>{
     const shot=await cdp.call('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false},session);
     const data=Buffer.from(shot.data,'base64');if(data.length<1024||data.length>32*1024*1024)throw Error('Screenshot bounds failed');
