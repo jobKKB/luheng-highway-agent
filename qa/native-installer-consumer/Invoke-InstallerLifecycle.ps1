@@ -26,6 +26,15 @@ $python = if ($PythonExecutable) { (Resolve-Path -LiteralPath $PythonExecutable)
 $verifierPath = (Resolve-Path -LiteralPath $Verifier).Path
 $contractPath = (Resolve-Path -LiteralPath $Contract).Path
 $evidenceRoot = (Resolve-Path -LiteralPath $OriginalEvidence).Path
+if ($pins.scope -eq 'same-job') {
+  if ([string]$pins.build.runId -cne $env:GITHUB_RUN_ID) { throw 'Lifecycle contract is not from this producer run' }
+  $receiptPin = $pins.evidenceFiles.installerReceipt
+  $pinnedReceipt = [IO.Path]::GetFullPath((Join-Path $evidenceRoot $receiptPin.path))
+  if ((Resolve-Path -LiteralPath $BuildReceipt).Path -ine $pinnedReceipt) { throw 'Lifecycle received a different installer receipt' }
+  # Qualify the full evidence chain before executing even the installer.
+  & $python -I -S -B $verifierPath contract --contract $contractPath --evidence $evidenceRoot --output (Join-Path $job 'contract-admission.json')
+  if ($LASTEXITCODE) { throw 'Same-job installer contract admission failed' }
+}
 $out = Join-Path $job 'evidence'
 $state = Join-Path $job 'lifecycle-state'
 $install = Join-Path $job 'isolated-install'

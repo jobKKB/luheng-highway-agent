@@ -25,7 +25,12 @@ subprocess.run([str(node), 'scripts/build/node-deps.mjs', '--source', str(source
                 '--workspace', 'apps/desktop'], cwd=source, env=env, check=True)
 subprocess.run([str(node), str(source/'node_modules/vitest/vitest.mjs'), 'run', '--project', 'electron',
                 'scripts/prepared-prepackaged.test.mjs', 'scripts/prepared-packaging.test.mjs',
-                'scripts/prepared-native-deps.test.mjs', 'scripts/run-electron-builder.test.mjs'],
+                'scripts/prepared-native-deps.test.mjs', 'scripts/run-electron-builder.test.mjs',
+                'electron/updater/nsis.test.ts', 'electron/updater/nsis-client.test.ts',
+                'electron/updater/distribution-policy.test.ts', 'electron/updater/commit-build.test.ts',
+                'scripts/commit-stamp-identity.test.mjs', 'scripts/write-build-stamp.test.mjs',
+                'scripts/preview-update-config.test.mjs',
+                'electron/product-identity.test.ts', 'electron/channel-build-version.test.ts'],
                cwd=source/'apps/desktop', env=env, check=True)
 subprocess.run([str(node), str(source/'node_modules/typescript/bin/tsc'), '--ignoreConfig', '--allowJs', '--checkJs', '--noEmit', '--skipLibCheck', '--module', 'nodenext', '--moduleResolution', 'nodenext', '--target', 'es2022', 'electron-builder.nsis-prepackaged-test.cjs'], cwd=source/'apps/desktop', env=env, check=True)
 print('Early real native Windows Vitest and NSIS config typecheck passed; no application payload built')

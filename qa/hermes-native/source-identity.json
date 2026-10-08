@@ -1,12 +1,12 @@
 {
   "schema": 2,
   "upstream_commit": "158fd638da1629c8e62caf9ade1515d162def8ab",
-  "source_count": 17260,
-  "source_tree_sha256": "d37c08c19b1e57ce4829682c4f84ec5fc89bf1fd3c5fc56e0e2b7153f462b4cb",
-  "overlay_count": 372,
+  "source_count": 17266,
+  "source_tree_sha256": "f8b6e3c71e354c88c0a6c2f668441d89dcdfc0524cec8f429c2af5c148ec8a9f",
+  "overlay_count": 382,
   "LICENSE_sha256": "821556e6336796450ab852d375117b48a4887e71d255794fd6318d99982a5ab6",
-  "overlay_zip_sha256": "3b7593842e1884f1c8da564fc84191f445709583ba0006533240ee8dcffb0da5",
-  "overlay_zip_bytes": 3413855,
+  "overlay_zip_sha256": "d919322861d58d6918d75b4c44df8817fad3382d7d5fa8f7a1fc6580a22ed6b2",
+  "overlay_zip_bytes": 3769694,
   "source_provenance": {
     "sealed_source": {
       "filename": "Luheng-Silver-release-candidate-source-v6-20261005.zip",
@@ -32,7 +32,7 @@
       "native_verification_pending": true
     }
   },
-  "scope": "Pinned unified source plus genuine sealed-Windows launcher ownership fix and strict prepared NSIS packaging helper; complete native Windows build and tests; unsigned and production automatic updates disabled; no installation or release claim until native acceptance",
+  "scope": "Pinned unified source with native Windows installer and explicit unsigned NSIS preview updates; release requires real installation and online update acceptance.",
   "artifact_contract": {
     "desktop_executable": "LuhengOfficeAgent.exe",
     "electron_archive": "resources/app.asar"

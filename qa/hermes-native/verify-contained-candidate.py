@@ -4,6 +4,35 @@ import argparse
 import hashlib
 import json
 import re
+import subprocess
+
+UPDATE_POLICY = {"schema": 1, "enabled": True, "windowsMode": "nsis-preview",
+                 "repository": "jobKKB/luheng-highway-agent",
+                 "publicBase": "https://apps.luotuai.me/updates/windows", "channel": "stable",
+                 "windowsPublisher": None, "macTeamId": None}
+
+
+def validate_update_policy(stamp):
+    if (stamp.get("desktopReleasePolicy") != UPDATE_POLICY or
+            stamp.get("desktopReleasePolicy", {}).get("enabled") is not True or
+            stamp.get("source") != "commit-build" or stamp.get("payload") != "bundled" or
+            stamp.get("distribution") != "desktop-app" or stamp.get("dirty") is not False or
+            stamp.get("updateMechanism") != "electron-updater" or stamp.get("channelBuild") is not None or
+            not re.fullmatch(r"[a-f0-9]{40}", stamp.get("commit", "")) or
+            not re.fullmatch(r"\d+\.\d+\.\d+", stamp.get("baseVersion", ""))):
+        raise ValueError("Expected the exact clean bundled Luheng Windows preview update authority")
+
+
+def validate_update_configuration(config):
+    if (not isinstance(config, dict) or
+            set(config) - {"provider", "url", "channel", "updaterCacheDirName"} or
+            config.get("provider") != "generic" or config.get("channel") != "latest" or
+            config.get("url") != UPDATE_POLICY["publicBase"] + "/"):
+        raise ValueError("Packaged update feed differs from the approved Luheng Windows authority")
+    if "updaterCacheDirName" in config:
+        value = config["updaterCacheDirName"]
+        if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", value):
+            raise ValueError("Updater cache must be a single ordinary directory name")
 
 
 def owned(root, relative, directory=False):
@@ -46,8 +75,14 @@ def inspect_candidate(source, prepared_path, identity):
     manifest = json.loads(owned(payload, "manifest.json").read_text(encoding="utf-8-sig"))
     if stamp["commit"] != commit or stamp.get("dirty") or stamp["payload"] != "bundled" or not manifest["target"].startswith("win32-x64"):
         raise ValueError("Unpacked artifact provenance or target differs")
-    if stamp.get("desktopReleasePolicy", {}).get("enabled") or stamp.get("updateMechanism") != "external":
-        raise ValueError("Build-only candidate must keep production updates disabled")
+    validate_update_policy(stamp)
+    update_path = owned(resources, "app-update.yml")
+    # Use the source's already-installed YAML parser, including duplicate-key rejection.
+    parse_update = "const r=require('node:module').createRequire(process.argv[1]);console.log(JSON.stringify(r('yaml').parse(require('node:fs').readFileSync(process.argv[2],'utf8'))))"
+    update_config = json.loads(subprocess.check_output(
+        [prepared["node"], "-e", parse_update, str(source / "apps/desktop/package.json"), str(update_path)],
+        cwd=source, text=True))
+    validate_update_configuration(update_config)
     if stamp["runtime"] != manifest["runtime"]:
         raise ValueError("Stamp and payload runtime contracts differ")
     runtime = manifest["runtime"]
@@ -84,7 +119,11 @@ def inspect_candidate(source, prepared_path, identity):
             "unpacked_only_delivered": True, "native_installation_verified": False,
             "offline_startup_verified": False, "physical_ime_verified": False,
             "standard_user_installation_verified": False, "update_verified": False,
-            "production_update_enabled": False, "files": files}
+            "production_update_enabled": True, "update_mechanism": stamp["updateMechanism"],
+            "update_stamp": {key: stamp.get(key) for key in
+                             ("source", "payload", "distribution", "dirty", "commit", "baseVersion",
+                              "channelBuild", "updateMechanism", "desktopReleasePolicy")},
+            "update_configuration": update_config, "files": files}
 
 
 def main():

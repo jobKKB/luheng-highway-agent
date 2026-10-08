@@ -1,0 +1,17 @@
+/updates/windows/*
+  Cache-Control: no-store
+
+/download-config.js
+  Cache-Control: no-cache
+
+/SHA256SUMS.txt
+  Cache-Control: no-cache
+
+/release-metadata.json
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
+
+/
+  Cache-Control: no-cache
