@@ -47,6 +47,7 @@ jobs:
           git ls-files --error-unmatch -- $env:PAIR_LOCK_PATH
           if ($LASTEXITCODE) { throw 'Pair must be committed in this checkout' }
           $qa = Join-Path $env:GITHUB_WORKSPACE 'qa/release-windows'
+          & (Join-Path $qa 'verify-online-update-cache-test.ps1')
           uv run --no-project --python 3.12 python -I -S -B (Join-Path $qa 'verify-online-update.py') self-test
           if ($LASTEXITCODE) { throw 'Evidence admission self-test failed' }
           node (Join-Path $qa 'verify-online-update.mjs') --self-test

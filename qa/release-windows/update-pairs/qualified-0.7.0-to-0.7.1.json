@@ -1,6 +1,6 @@
 {
-  "schema": "luheng-online-update/v1",
   "repository": "jobKKB/luheng-highway-agent",
+  "schema": "luheng-online-update/v1",
   "feed": "https://apps.luotuai.me/updates/windows/",
   "from": {
     "version": "0.7.0",

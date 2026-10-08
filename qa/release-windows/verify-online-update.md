@@ -50,6 +50,10 @@ directories and uses the normal `%LOCALAPPDATA%/luheng-agent` and
 action can restart through Explorer without inheriting temporary process environment
 overrides. The test never changes a user machine or overwrites an existing profile.
 
+The updater cache must be absent before baseline installation. NSIS then creates
+its normal `installer.exe` cache, which must match the admitted baseline size and
+SHA256 exactly and contain no other files or pending target download.
+
 After installing exact baseline bytes, the real renderer bridge creates a setting
 and imports an explicitly synthetic session fixture. Before creating it, Playwright
 clicks the real "I'll choose a provider later" first-run button (or its Chinese

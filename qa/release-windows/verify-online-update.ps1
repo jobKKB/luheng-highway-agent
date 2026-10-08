@@ -55,6 +55,15 @@ foreach ($name in @('ELECTRON_RUN_AS_NODE','NODE_OPTIONS','NODE_PATH','ELECTRON_
 $report = [ordered]@{ schema=1; status='failed'; pair=$pair; token=$token; automaticUpdateVerified=$false; baselineInstalled=$false; baselineTreeVerified=$false; targetTreeVerified=$false; productConsentConfirmed=$false; installerWizardCompleted=$false; targetAutomaticallyRelaunched=$false; targetFixtureOpened=$false; targetAutomaticProfileVerified=$false; targetDataVerified=$false; forcedCleanup=$false; uiActions=@(); error=$null }
 $owned = [Collections.Generic.List[Diagnostics.Process]]::new()
 function Hash([string]$File) { (Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash.ToLowerInvariant() }
+function Assert-BaselineUpdaterCache([string]$Directory,[long]$Bytes,[string]$Sha256) {
+    $root=Get-Item -LiteralPath $Directory
+    $files=@(Get-ChildItem -LiteralPath $Directory -Force)
+    if (-not $root.PSIsContainer -or ($root.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $files.Count -ne 1) { throw 'Unexpected baseline updater cache contents' }
+    $file=$files[0]
+    # NSIS intentionally caches its own installer; no target or pending download is allowed.
+    if ($file.Name -cne 'installer.exe' -or $file.PSIsContainer -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
+        $file.Length -ne $Bytes -or (Hash $file.FullName) -cne $Sha256) { throw 'Baseline updater cache does not match the admitted installer' }
+}
 function Assert-InstalledTree([string]$Side,[string]$OutputName) {
     $entry = $pair.$Side
     if ((Hash $entry.structurePath) -cne $entry.evidence.files.structure.sha256) { throw 'Installed-tree manifest pin differs' }
@@ -128,6 +137,11 @@ try {
     $baseline=(Resolve-Path -LiteralPath $pair.from.path).Path
     $item=Get-Item -LiteralPath $baseline
     if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint -or $item.Length -ne $pair.from.bytes -or (Hash $baseline) -cne $pair.from.sha256) { throw 'Baseline installer custody mismatch' }
+    $baselineStructure=Get-Content -LiteralPath $pair.from.structurePath -Raw | ConvertFrom-Json
+    $cacheName=$baselineStructure.update_configuration.updaterCacheDirName
+    if ($cacheName -cnotmatch '^[A-Za-z0-9_-]+$') { throw 'Unsafe admitted updater cache directory' }
+    $cache=Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) $cacheName
+    if (Test-Path -LiteralPath $cache) { throw 'Updater cache existed before baseline installation; refusing to reuse it' }
     $baselineProcess=Start-Owned $baseline @('/S','/currentuser',"/D=$install")
     Wait-Success $baselineProcess 900
     if ((Hash $exe) -cne $pair.from.exeSha256 -or (Hash (Join-Path $install 'resources/app.asar')) -cne $pair.from.asarSha256) { throw 'Installed baseline payload mismatch' }
@@ -135,9 +149,8 @@ try {
     $report.baselineTreeVerified=$true
     $configuration=Get-Content -LiteralPath (Join-Path $install 'resources/app-update.yml') -Raw
     $cacheMatch=[regex]::Match($configuration,'(?m)^updaterCacheDirName:\s*([A-Za-z0-9_-]+)\s*$')
-    if (-not $cacheMatch.Success) { throw 'Missing safe immutable updater cache directory' }
-    $cache=Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) $cacheMatch.Groups[1].Value
-    if (Test-Path -LiteralPath $cache) { throw 'Updater cache already exists; refusing to reuse it' }
+    if (-not $cacheMatch.Success -or $cacheMatch.Groups[1].Value -cne $cacheName) { throw 'Immutable updater cache differs from the admitted configuration' }
+    Assert-BaselineUpdaterCache $cache $pair.from.bytes $pair.from.sha256
     $report.baselineInstalled=$true
     $driver=Start-Owned $node @((Join-Path $PSScriptRoot 'verify-online-update.mjs'),'handoff',$runtimePath,$dependency)
     $deadline=[DateTime]::UtcNow.AddMinutes(35)
