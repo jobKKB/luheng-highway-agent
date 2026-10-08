@@ -27,4 +27,5 @@ subprocess.run([str(node), str(source/'node_modules/vitest/vitest.mjs'), 'run', 
                 'scripts/prepared-prepackaged.test.mjs', 'scripts/prepared-packaging.test.mjs',
                 'scripts/prepared-native-deps.test.mjs', 'scripts/run-electron-builder.test.mjs'],
                cwd=source/'apps/desktop', env=env, check=True)
-print('Early real native Windows Vitest passed; no application payload built')
+subprocess.run([str(node), str(source/'node_modules/typescript/bin/tsc'), '--ignoreConfig', '--allowJs', '--checkJs', '--noEmit', '--skipLibCheck', '--module', 'nodenext', '--moduleResolution', 'nodenext', '--target', 'es2022', 'electron-builder.nsis-prepackaged-test.cjs'], cwd=source/'apps/desktop', env=env, check=True)
+print('Early real native Windows Vitest and NSIS config typecheck passed; no application payload built')
