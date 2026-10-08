@@ -81,6 +81,13 @@ def prepare(builder: Path, destination: Path) -> dict:
     for name, content in originals.items():
         if "/" not in name and name.endswith(".nsh"):
             adapted[name] = content
+    # A per-user installer must retain its token, even when Explorer is elevated.
+    adapted["assistedInstaller.nsh"] = replace_once(originals["assistedInstaller.nsh"],
+        '        ${StdUtils.ExecShellAsUser} $0 "$launchLink" "open" "$1"',
+        '        ClearErrors\n'
+        '        Exec \'"$INSTDIR\\${APP_EXECUTABLE_FILENAME}" $1\'\n'
+        '        IfErrors 0 +2\n'
+        '        MessageBox MB_OK|MB_ICONSTOP "Unable to start the installed application."')
     extraction = originals["include/extractAppPackage.nsh"]
     start = extraction.index("!macro extractUsing7za FILE\n")
     if not extraction[start:].rstrip().endswith("!macroend"):

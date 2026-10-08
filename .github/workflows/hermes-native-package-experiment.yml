@@ -318,4 +318,5 @@ jobs:
     - '!qa/release-windows/update-pairs/**'
     - '!qa/release-windows/recovery-locks/**'
     - '!qa/release-windows/verify-online-update*'
+    - '!qa/relaunch-probe/**'
   workflow_dispatch: null
