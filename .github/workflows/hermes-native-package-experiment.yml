@@ -21,33 +21,43 @@ jobs:
         ref: 158fd638da1629c8e62caf9ade1515d162def8ab
         persist-credentials: false
         path: source
-    - name: Select host Python for official preparation
-      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+    - name: Select managed Python for official preparation
+      uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
       with:
+        enable-cache: false
         python-version: '3.12'
     - name: Check installer helpers and release scripts before preparing payload
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
         & controller/qa/native-installer-consumer/Test-LifecycleProcessOwner.ps1 -OutputDirectory (Join-Path $env:GITHUB_WORKSPACE 'helper-preflight')
-        python -B controller/qa/release-windows/selftest-package-installer.py
+        $python = (uv python find 3.12 | Out-String).Trim()
+        if ($LASTEXITCODE -or -not (Test-Path -LiteralPath $python -PathType Leaf)) { throw 'Managed Python unavailable' }
+        $helper = Join-Path $env:GITHUB_WORKSPACE 'controller/qa/native-installer-consumer'
+        $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+        icacls (Join-Path $env:GITHUB_WORKSPACE 'helper-preflight') /grant "*${sid}:(OI)(CI)F" /T | Out-Host
+        if ($LASTEXITCODE) { throw 'Restricted Python preflight permissions failed' }
+        $probeRoot = Join-Path $env:GITHUB_WORKSPACE 'helper-preflight/python-restricted'
+        $probeArguments = '-PythonExecutable "' + $python + '" -WorkRoot "' + $probeRoot + '"'
+        & (Join-Path $helper 'token-review/Run-RestrictedLifecycle.ps1') -ProbeScript (Join-Path $helper 'Test-CheckedPython.ps1') -PowerShellExecutable (Get-Command pwsh).Source -ProbeArgumentLine $probeArguments -WorkingDirectory $env:GITHUB_WORKSPACE -EvidencePath (Join-Path $env:GITHUB_WORKSPACE 'helper-preflight/python-restricted-token.json') -TimeoutSeconds 60 -ExecuteProbe
+        uv run --no-project --python 3.12 python -B controller/qa/release-windows/selftest-package-installer.py 2>&1 | Tee-Object selftest-package-installer.log
         if ($LASTEXITCODE) { throw 'Installer packaging selftest failed' }
-        python -B controller/qa/release-windows/selftest-lifecycle.py
+        uv run --no-project --python 3.12 python -B controller/qa/release-windows/selftest-lifecycle.py 2>&1 | Tee-Object selftest-lifecycle.log
         if ($LASTEXITCODE) { throw 'Installer lifecycle selftest failed' }
-        python -B controller/qa/release-windows/selftest-update-feed.py
+        uv run --no-project --python 3.12 python -B controller/qa/release-windows/selftest-update-feed.py 2>&1 | Tee-Object selftest-update-feed.log
         if ($LASTEXITCODE) { throw 'Update feed selftest failed' }
-        python -B controller/qa/release-windows/selftest-download-site.py
+        uv run --no-project --python 3.12 python -B controller/qa/release-windows/selftest-download-site.py 2>&1 | Tee-Object selftest-download-site.log
         if ($LASTEXITCODE) { throw 'Download site selftest failed' }
     - name: Reconstruct and admit the exact current source-only candidate
       shell: pwsh
       run: |
-        python controller/qa/hermes-native/materialize-v2-source.py controller source
+        uv run --no-project --python 3.12 python controller/qa/hermes-native/materialize-v2-source.py controller source 2>&1 | Tee-Object source-admission.log
         if ($LASTEXITCODE) { throw 'Exact source admission failed; no build claim is made' }
     - name: Run narrow real Windows Vitest before full payload preparation
       shell: pwsh
       run: |-
         $ErrorActionPreference = 'Stop'
-        python -I -S controller/qa/hermes-native/early-native-vitest.py (Join-Path $env:GITHUB_WORKSPACE 'source') (Join-Path $env:RUNNER_TEMP 'early-native-vitest/work') (Join-Path $env:RUNNER_TEMP 'early-native-vitest/cache') 2>&1 | Tee-Object (Join-Path $env:GITHUB_WORKSPACE 'early-native-vitest.log')
+        uv run --no-project --python 3.12 python -I -S controller/qa/hermes-native/early-native-vitest.py (Join-Path $env:GITHUB_WORKSPACE 'source') (Join-Path $env:RUNNER_TEMP 'early-native-vitest/work') (Join-Path $env:RUNNER_TEMP 'early-native-vitest/cache') 2>&1 | Tee-Object (Join-Path $env:GITHUB_WORKSPACE 'early-native-vitest.log')
         if ($LASTEXITCODE) { throw 'Early native Windows Vitest failed; full build not started' }
     - name: Prepare locked native Windows inputs
       shell: pwsh
@@ -65,7 +75,7 @@ jobs:
         Get-PSDrive -PSProvider FileSystem | Select-Object Name,Free | ConvertTo-Json | Set-Content (Join-Path $env:GITHUB_WORKSPACE 'disk-before.json')
         $sha = (Get-Content (Join-Path $env:GITHUB_WORKSPACE 'admitted-source-sha.txt')).Trim()
         Set-Location $source
-        python -I -S scripts/bundles/desktop.py --repo $source --commit $sha --variant bundled --prepare-only --work (Join-Path $job 'work') --cache (Join-Path $job 'cache') 2>&1 | Tee-Object (Join-Path $env:GITHUB_WORKSPACE 'prepare.log')
+        uv run --no-project --python 3.12 python -I -S scripts/bundles/desktop.py --repo $source --commit $sha --variant bundled --prepare-only --work (Join-Path $job 'work') --cache (Join-Path $job 'cache') 2>&1 | Tee-Object (Join-Path $env:GITHUB_WORKSPACE 'prepare.log')
         if ($LASTEXITCODE) { throw 'Official native preparation failed; no artifact is claimed' }
     - name: Run canonical native launcher regression and real packaging Vitest
       shell: pwsh
@@ -95,19 +105,19 @@ jobs:
         print('Native Windows owner regression, real Vitest and NSIS config typecheck passed')
         '@
         $code | Set-Content -Encoding utf8 (Join-Path $env:RUNNER_TEMP 'verify-fixed-source-regressions.py')
-        python -I -S (Join-Path $env:RUNNER_TEMP 'verify-fixed-source-regressions.py') (Join-Path $env:GITHUB_WORKSPACE 'source') (Join-Path $env:RUNNER_TEMP 'luheng-current-unpacked-build/work/prepared.json') 2>&1 | Tee-Object (Join-Path $env:GITHUB_WORKSPACE 'native-regression.log')
+        uv run --no-project --python 3.12 python -I -S (Join-Path $env:RUNNER_TEMP 'verify-fixed-source-regressions.py') (Join-Path $env:GITHUB_WORKSPACE 'source') (Join-Path $env:RUNNER_TEMP 'luheng-current-unpacked-build/work/prepared.json') 2>&1 | Tee-Object (Join-Path $env:GITHUB_WORKSPACE 'native-regression.log')
         if ($LASTEXITCODE) { throw 'Canonical native regressions failed' }
     - name: Build only from the admitted official prepared inputs
       shell: pwsh
       run: |-
         $ErrorActionPreference = 'Stop'
         Set-Location (Join-Path $env:GITHUB_WORKSPACE 'source')
-        python -I -S scripts/bundles/desktop.py --prepared (Join-Path $env:RUNNER_TEMP 'luheng-current-unpacked-build/work/prepared.json') -- --dir 2>&1 | Tee-Object (Join-Path $env:GITHUB_WORKSPACE 'unpacked-build.log')
+        uv run --no-project --python 3.12 python -I -S scripts/bundles/desktop.py --prepared (Join-Path $env:RUNNER_TEMP 'luheng-current-unpacked-build/work/prepared.json') -- --dir 2>&1 | Tee-Object (Join-Path $env:GITHUB_WORKSPACE 'unpacked-build.log')
         if ($LASTEXITCODE) { throw 'Official prepared unpacked build failed' }
     - name: Bind the unpacked structure and hashes to the source admission
       shell: pwsh
       run: |
-        python controller/qa/hermes-native/verify-contained-candidate.py source (Join-Path $env:RUNNER_TEMP 'luheng-current-unpacked-build/work/prepared.json')
+        uv run --no-project --python 3.12 python controller/qa/hermes-native/verify-contained-candidate.py source (Join-Path $env:RUNNER_TEMP 'luheng-current-unpacked-build/work/prepared.json') 2>&1 | Tee-Object unpacked-structure.log
         if ($LASTEXITCODE) { throw 'Unpacked structure check failed; installation and startup remain unverified' }
     - name: Compress pristine package before any launch and verify every extracted file
       shell: pwsh
@@ -145,7 +155,7 @@ jobs:
         assert result['under_2_GiB']
         '@
         $code | Set-Content -Encoding utf8 (Join-Path $env:RUNNER_TEMP 'verify-pristine-7z.py')
-        python -I -S (Join-Path $env:RUNNER_TEMP 'verify-pristine-7z.py') $source (Join-Path $env:GITHUB_WORKSPACE 'native-smoke-evidence') $expanded $archive
+        uv run --no-project --python 3.12 python -I -S (Join-Path $env:RUNNER_TEMP 'verify-pristine-7z.py') $source (Join-Path $env:GITHUB_WORKSPACE 'native-smoke-evidence') $expanded $archive 2>&1 | Tee-Object portable-roundtrip.log
         if ($LASTEXITCODE) { throw 'Exact portable roundtrip failed' }
       id: portable
     - name: Preserve pristine portable before functional acceptance
@@ -231,7 +241,7 @@ jobs:
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
-        python -I -S -B controller/qa/release-windows/package-installer.py --source source --prepared (Join-Path $env:RUNNER_TEMP 'luheng-current-unpacked-build/work/prepared.json') --structure windows-unpacked-structure.json --health native-smoke-evidence/native-startup.json --archive portable-product/Luheng-Windows-x64-verified.7z --run-id $env:GITHUB_RUN_ID --output installer-product 2>&1 | Tee-Object installer-package.log
+        uv run --no-project --python 3.12 python -I -S -B controller/qa/release-windows/package-installer.py --source source --prepared (Join-Path $env:RUNNER_TEMP 'luheng-current-unpacked-build/work/prepared.json') --structure windows-unpacked-structure.json --health native-smoke-evidence/native-startup.json --archive portable-product/Luheng-Windows-x64-verified.7z --run-id $env:GITHUB_RUN_ID --output installer-product 2>&1 | Tee-Object installer-package.log
         if ($LASTEXITCODE) { throw 'NSIS installer packaging failed' }
     - name: Preserve installer bytes before installation acceptance
       if: ${{ always() && steps.installer.outcome == 'success' }}
@@ -247,8 +257,12 @@ jobs:
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
-        python -I -S -B controller/qa/release-windows/prepare-lifecycle-contract.py --evidence $env:GITHUB_WORKSPACE --build-receipt installer-product/installer-build.json --output lifecycle-contract.json
-        if ($LASTEXITCODE) { throw 'Same-run lifecycle contract failed' }
+        $python = (uv python find 3.12 | Out-String).Trim()
+        if ($LASTEXITCODE -or -not (Test-Path -LiteralPath $python -PathType Leaf)) { throw 'Managed Python unavailable' }
+        . controller/qa/native-installer-consumer/Invoke-CheckedPython.ps1
+        $contractPath = Join-Path $env:GITHUB_WORKSPACE 'lifecycle-contract.json'
+        $contract = Invoke-CheckedPython -PythonExecutable $python -ArgumentList @('-I','-S','-B','controller/qa/release-windows/prepare-lifecycle-contract.py','--evidence',$env:GITHUB_WORKSPACE,'--build-receipt','installer-product/installer-build.json','--output',$contractPath) -OutputPath $contractPath -ExpectedFields @{schema=1;scope='same-job';qualified=$true;repository='jobKKB/luheng-highway-agent';lifecycleMode='restricted-token-same-user'} -DiagnosticPrefix (Join-Path $env:GITHUB_WORKSPACE 'helper-preflight/prepare-contract') -TimeoutSeconds 900
+        if ($contract.build.runId -ne [int64]$env:GITHUB_RUN_ID) { throw 'Prepared contract belongs to a different producer' }
         $job = Join-Path $env:RUNNER_TEMP 'luheng-installer-acceptance'
         New-Item -ItemType Directory -Force (Join-Path $job 'evidence') | Out-Null
         $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
@@ -256,8 +270,8 @@ jobs:
         if ($LASTEXITCODE) { throw 'Restricted acceptance directory permissions failed' }
         $consumer = Join-Path $env:GITHUB_WORKSPACE 'controller/qa/native-installer-consumer'
         $release = Join-Path $env:GITHUB_WORKSPACE 'controller/qa/release-windows'
-        $arguments = '-Contract "' + (Join-Path $env:GITHUB_WORKSPACE 'lifecycle-contract.json') + '" -BuildReceipt "' + (Join-Path $env:GITHUB_WORKSPACE 'installer-product/installer-build.json') + '" -OriginalEvidence "' + $env:GITHUB_WORKSPACE + '" -JobRoot "' + $job + '" -Verifier "' + (Join-Path $release 'verify-installed-tree.py') + '" -PythonExecutable "' + (Get-Command python).Source + '"'
-        & (Join-Path $consumer 'token-review/Run-RestrictedLifecycle.ps1') -ProbeScript (Join-Path $consumer 'Invoke-InstallerLifecycle.ps1') -PowerShellExecutable (Get-Command pwsh).Source -ProbeArgumentLine $arguments -WorkingDirectory $job -EvidencePath (Join-Path $job 'evidence/restricted-token.json') -TimeoutSeconds 1200 -ExtraEnvironment @{ RUNNER_TEMP=$env:RUNNER_TEMP; GITHUB_ACTIONS='true'; GITHUB_RUN_ID=$env:GITHUB_RUN_ID; GITHUB_SHA=$env:GITHUB_SHA; GITHUB_RUN_ATTEMPT=$env:GITHUB_RUN_ATTEMPT } -ExecuteProbe
+        $arguments = '-Contract "' + (Join-Path $env:GITHUB_WORKSPACE 'lifecycle-contract.json') + '" -BuildReceipt "' + (Join-Path $env:GITHUB_WORKSPACE 'installer-product/installer-build.json') + '" -OriginalEvidence "' + $env:GITHUB_WORKSPACE + '" -JobRoot "' + $job + '" -Verifier "' + (Join-Path $release 'verify-installed-tree.py') + '" -PythonExecutable "' + $python + '"'
+        & (Join-Path $consumer 'token-review/Run-RestrictedLifecycle.ps1') -ProbeScript (Join-Path $consumer 'Invoke-InstallerLifecycle.ps1') -PowerShellExecutable (Get-Command pwsh).Source -ProbeArgumentLine $arguments -WorkingDirectory $job -EvidencePath (Join-Path $job 'evidence/restricted-token.json') -TimeoutSeconds 3600 -ExtraEnvironment @{ RUNNER_TEMP=$env:RUNNER_TEMP; GITHUB_ACTIONS='true'; GITHUB_RUN_ID=$env:GITHUB_RUN_ID; GITHUB_SHA=$env:GITHUB_SHA; GITHUB_RUN_ATTEMPT=$env:GITHUB_RUN_ATTEMPT } -ExecuteProbe
     - name: Preserve source build regression tool and native startup diagnostics
       if: always()
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

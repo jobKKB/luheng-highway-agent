@@ -7,9 +7,12 @@ import json
 import os
 from pathlib import Path
 import re
+import runpy
 import shutil
 import subprocess
 import sys
+
+prepare_long_path_templates = runpy.run_path(str(Path(__file__).with_name("nsis_long_paths.py")))["prepare"]
 
 
 def read_json(path: Path) -> dict:
@@ -95,6 +98,13 @@ def package(args: argparse.Namespace) -> dict:
     run("prepare-packaging-tools.mjs", "--source", source, "--out", tools,
         "--cache", prepared.request.cache / "packager", "--target", "win32-x64", "--format", "nsis")
     packaging = tools / "prepared.json"
+    builder = Path(subprocess.check_output([node, "--input-type=module", "-e",
+        "const {pinnedPackageRoot}=await import(process.argv[1]); "
+        "process.stdout.write(pinnedPackageRoot(process.argv[2], 'app-builder-lib'));",
+        (scripts / "prepare-packaging-tools.mjs").as_uri(), str(source)],
+        cwd=source, env=env, text=True).strip())
+    wrapper = prepare_long_path_templates(builder,
+        source / "apps/desktop/build/prepared-packaging-tools/luheng-long-path")
     run("prepared-prepackaged.mjs", "--source", source, "--prepared", packaging,
         "--prepackaged", payload, "--payload-manifest", args.structure,
         "--payload-manifest-sha256", sha256(args.structure), "--native-health", args.health,
@@ -124,7 +134,7 @@ def package(args: argparse.Namespace) -> dict:
               "sha256": digest, "signed": False, "payload": custody["payload"],
               "custody": custody["custody"], "installation_verified": False,
               "published": False, "prepared_desktop": str(args.prepared),
-              "prepared_nsis": str(packaging)}
+              "prepared_nsis": str(packaging), "nsis_wrapper": wrapper}
     (output / "SHA256SUMS").write_text(f"{digest}  {destination.name}\n", encoding="utf-8")
     (output / "installer-build.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     return result

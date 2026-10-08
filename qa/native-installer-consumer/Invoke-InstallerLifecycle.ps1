@@ -25,6 +25,7 @@ function Write-LifecycleCheckpoint([string]$Stage,$Details) {
   Write-Output ('Lifecycle checkpoint: '+$Stage+' elapsed_ms='+$lifecycleClock.ElapsedMilliseconds) | Out-Host
 }
 Write-LifecycleCheckpoint 'admission-start' $null
+. (Join-Path $PSScriptRoot 'Invoke-CheckedPython.ps1')
 $pins = Get-Content -LiteralPath $Contract -Raw | ConvertFrom-Json
 if ($pins.qualified -ne $true -or $pins.lifecycleMode -notin @('elevated-runner-explicitly-limited','restricted-token-same-user')) { throw 'Lifecycle mode or qualification is not reviewed' }
 $build = Get-Content -LiteralPath $BuildReceipt -Raw | ConvertFrom-Json
@@ -45,8 +46,8 @@ if ($pins.scope -in @('same-job','artifact-recovery')) {
   $pinnedReceipt = [IO.Path]::GetFullPath((Join-Path $evidenceRoot $receiptPin.path))
   if ((Resolve-Path -LiteralPath $BuildReceipt).Path -ine $pinnedReceipt) { throw 'Lifecycle received a different installer receipt' }
   # Qualify the full evidence chain before executing even the installer.
-  & $python -I -S -B $verifierPath contract --contract $contractPath --evidence $evidenceRoot --output (Join-Path $job 'contract-admission.json')
-  if ($LASTEXITCODE) { throw 'Same-job installer contract admission failed' }
+  $admissionPath=Join-Path $job 'contract-admission.json'
+  Invoke-CheckedPython -PythonExecutable $python -ArgumentList @('-I','-S','-B',$verifierPath,'contract','--contract',$contractPath,'--evidence',$evidenceRoot,'--output',$admissionPath) -OutputPath $admissionPath -ExpectedFields @{scope=$pins.scope;build_run_id=$pins.build.runId;acceptance_run_id=[int64]$env:GITHUB_RUN_ID} -TimeoutSeconds 900 -DiagnosticPrefix (Join-Path $out 'contract-python') | Out-Null
 }
 Write-LifecycleCheckpoint 'contract-admitted' $null
 $out = Join-Path $job 'evidence'
@@ -220,7 +221,9 @@ try {
   # /D= must be last and unquoted in NSIS's raw argument string. Ordinary
   # /currentuser /S install keeps runAfterFinish false and requests no elevation.
   $installProc=Start-OwnedProcess $installer "/currentuser /S /D=$install" $state 'installer'
-  if (-not (Wait-OwnedProcess $installProc 240)) { throw 'Ordinary NSIS install failed or timed out' }
+  # The measured 118k-file package was still copying normally at 240 seconds;
+  # retain progress evidence and a finite budget for its extraction plus copy.
+  if (-not (Wait-OwnedProcess $installProc 900)) { throw 'Ordinary NSIS install failed or timed out' }
   $result.installed=$true
   Write-LifecycleCheckpoint 'installation-finished' $null
   $manifestFile=Join-Path $evidenceRoot $pins.evidenceFiles.structure.path
@@ -230,16 +233,26 @@ try {
   # Only the exact NSIS package marker and root uninstaller may be extra; every payload file and
   # exact membership are still checked independently against frozen evidence.
   Write-LifecycleCheckpoint 'installed-membership-start' $null
+  $actualPayloadNames=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
   $extra=@(Get-ChildItem -LiteralPath $install -Recurse -Force -File | Where-Object {
     $relative=[IO.Path]::GetRelativePath($install,$_.FullName).Replace('\','/')
+    [void]$actualPayloadNames.Add($relative)
     # NSIS creates this exact marker; the shared tree verifier admits its bytes.
     -not $expected.Contains($relative) -and $relative -cne 'resources/package-type'
   })
+  $missingPayload=@($expected | Where-Object {-not $actualPayloadNames.Contains($_)})
+  Write-LifecycleCheckpoint 'installed-membership-inventory' @{
+    expected_files=$expected.Count;actual_files=$actualPayloadNames.Count;missing_files=$missingPayload.Count
+    missing_first_20=@($missingPayload|Select-Object -First 20|ForEach-Object {@{path=$_;full_path_length=(Join-Path $install $_).Length}})
+    extra_first_20=@($extra|Select-Object -First 20|ForEach-Object {[IO.Path]::GetRelativePath($install,$_.FullName).Replace('\','/')})
+  }
+  if($missingPayload.Count){throw ('Installed payload membership is missing '+$missingPayload.Count+' files; see bounded missing-path checkpoint')}
   if ($extra.Count -ne 1 -or $extra[0].DirectoryName -ine $install -or $extra[0].Name -notmatch '^Uninstall [^\\/]+\.exe$') { throw 'Unreviewed installed-file additions; do not execute an unknown uninstaller' }
   $uninstaller=$extra[0].FullName
   Write-LifecycleCheckpoint 'installed-tree-before-launch-start' $null
-  & $python -I -S -B $verifierPath tree --contract $contractPath --evidence $evidenceRoot --root $install --uninstaller $extra[0].Name --output (Join-Path $out 'installed-payload-before-launch.json')
-  if ($LASTEXITCODE) { throw 'Installed payload bytes/membership differ' }
+  $beforeTreePath=Join-Path $out 'installed-payload-before-launch.json'
+  $treeFields=@{scope=$pins.scope;build_run_id=$pins.build.runId;acceptance_run_id=[int64]$env:GITHUB_RUN_ID;exact_membership=$true;every_payload_file_sha256_verified=$true;source_commit=$pins.source.commit;source_tree_sha256=$pins.source.treeSha256}
+  Invoke-CheckedPython -PythonExecutable $python -ArgumentList @('-I','-S','-B',$verifierPath,'tree','--contract',$contractPath,'--evidence',$evidenceRoot,'--root',$install,'--uninstaller',$extra[0].Name,'--output',$beforeTreePath) -OutputPath $beforeTreePath -ExpectedFields $treeFields -TimeoutSeconds 900 -DiagnosticPrefix (Join-Path $out 'tree-before-python') | Out-Null
   $bytesAdmitted=$true; $result.every_installed_payload_file_verified=$true
   Write-LifecycleCheckpoint 'installed-tree-before-launch-finished' $null
   $exe=Join-Path $install 'LuhengOfficeAgent.exe'
@@ -282,8 +295,9 @@ try {
   if (-not $owners[$app.Id].WaitForEmpty(30000)) { throw 'Contained process remained after normal exit' }
   $result.contained_processes_stopped=$true
   Write-LifecycleCheckpoint 'installed-tree-after-exit-start' $null
-  & $python -I -S -B $verifierPath tree --contract $contractPath --evidence $evidenceRoot --root $install --uninstaller ([IO.Path]::GetFileName($uninstaller)) --output (Join-Path $out 'installed-payload-after-exit.json')
-  if ($LASTEXITCODE) { throw 'Installed payload changed during launch/exit' }
+  $afterTreePath=Join-Path $out 'installed-payload-after-exit.json'
+  Invoke-CheckedPython -PythonExecutable $python -ArgumentList @('-I','-S','-B',$verifierPath,'tree','--contract',$contractPath,'--evidence',$evidenceRoot,'--root',$install,'--uninstaller',([IO.Path]::GetFileName($uninstaller)),'--output',$afterTreePath) -OutputPath $afterTreePath -ExpectedFields $treeFields -TimeoutSeconds 900 -DiagnosticPrefix (Join-Path $out 'tree-after-python') | Out-Null
+  Write-LifecycleCheckpoint 'installed-tree-after-exit-finished' $null
 } catch { $result.error=$_.Exception.Message;Write-LifecycleCheckpoint 'lifecycle-failed-before-cleanup' @{error=$result.error} } finally {
   # Do not confuse forced cleanup with graceful success. Jobs contain only
   # children launched by this probe; no executable-name or reused-PID cleanup.

@@ -21,6 +21,7 @@ if (-not $job.StartsWith($runner, [StringComparison]::OrdinalIgnoreCase) -or (Te
 $node = (Resolve-Path -LiteralPath $NodeExecutable).Path
 $dependency = (Resolve-Path -LiteralPath $DependencyPackage).Path
 $python = (Resolve-Path -LiteralPath $PythonExecutable).Path
+. (Join-Path $PSScriptRoot '../native-installer-consumer/Invoke-CheckedPython.ps1')
 $pair = Get-Content -LiteralPath $PairLock -Raw | ConvertFrom-Json
 Add-Type -Path (Join-Path $PSScriptRoot '../native-installer-consumer/token-review/RestrictedTokenLauncher.cs')
 $token = [RestrictedTokenLauncher]::InspectProcessToken($PID)
@@ -54,6 +55,13 @@ foreach ($name in @('ELECTRON_RUN_AS_NODE','NODE_OPTIONS','NODE_PATH','ELECTRON_
 $report = [ordered]@{ schema=1; status='failed'; pair=$pair; token=$token; automaticUpdateVerified=$false; baselineInstalled=$false; baselineTreeVerified=$false; targetTreeVerified=$false; productConsentConfirmed=$false; installerWizardCompleted=$false; targetAutomaticallyRelaunched=$false; targetFixtureOpened=$false; targetAutomaticProfileVerified=$false; targetDataVerified=$false; forcedCleanup=$false; uiActions=@(); error=$null }
 $owned = [Collections.Generic.List[Diagnostics.Process]]::new()
 function Hash([string]$File) { (Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash.ToLowerInvariant() }
+function Assert-InstalledTree([string]$Side,[string]$OutputName) {
+    $entry = $pair.$Side
+    if ((Hash $entry.structurePath) -cne $entry.evidence.files.structure.sha256) { throw 'Installed-tree manifest pin differs' }
+    $structure = Get-Content -LiteralPath $entry.structurePath -Raw | ConvertFrom-Json
+    $outputPath = Join-Path $out ($OutputName + '.json')
+    Invoke-CheckedPython -PythonExecutable $python -ArgumentList @('-I','-S','-B',(Join-Path $PSScriptRoot 'verify-online-update.py'),'tree','--pair',$PairLock,'--side',$Side,'--root',$install,'--output',$outputPath) -OutputPath $outputPath -ExpectedFields @{exact_membership=$true;every_payload_file_sha256_verified=$true;source_commit=$structure.source_commit;source_tree_sha256=$structure.source_tree_sha256;rebuilt=$false} -TimeoutSeconds 900 -DiagnosticPrefix (Join-Path $out ($OutputName + '-python')) | Out-Null
+}
 function Start-Owned([string]$File,[string[]]$Arguments) {
     $start = [Diagnostics.ProcessStartInfo]::new()
     $start.FileName=$File; $start.UseShellExecute=$false; $start.WorkingDirectory=$job
@@ -121,10 +129,9 @@ try {
     $item=Get-Item -LiteralPath $baseline
     if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint -or $item.Length -ne $pair.from.bytes -or (Hash $baseline) -cne $pair.from.sha256) { throw 'Baseline installer custody mismatch' }
     $baselineProcess=Start-Owned $baseline @('/S','/currentuser',"/D=$install")
-    Wait-Success $baselineProcess 600
+    Wait-Success $baselineProcess 900
     if ((Hash $exe) -cne $pair.from.exeSha256 -or (Hash (Join-Path $install 'resources/app.asar')) -cne $pair.from.asarSha256) { throw 'Installed baseline payload mismatch' }
-    & $python -I -S -B (Join-Path $PSScriptRoot 'verify-online-update.py') tree --pair $PairLock --side from --root $install --output (Join-Path $out 'baseline-tree.json')
-    if ($LASTEXITCODE) { throw 'Baseline installed tree differs from qualified inventory' }
+    Assert-InstalledTree 'from' 'baseline-tree'
     $report.baselineTreeVerified=$true
     $configuration=Get-Content -LiteralPath (Join-Path $install 'resources/app-update.yml') -Raw
     $cacheMatch=[regex]::Match($configuration,'(?m)^updaterCacheDirName:\s*([A-Za-z0-9_-]+)\s*$')
@@ -225,8 +232,7 @@ try {
     Wait-Success $verify 180
     $verified=Get-Content -LiteralPath (Join-Path $out 'renderer-verify.json') -Raw | ConvertFrom-Json
     if ($verified.status -cne 'target-and-data-verified' -or $verified.settingsSessionAndFileRetained -ne $true) { throw 'Target data verification incomplete' }
-    & $python -I -S -B (Join-Path $PSScriptRoot 'verify-online-update.py') tree --pair $PairLock --side to --root $install --output (Join-Path $out 'target-tree.json')
-    if ($LASTEXITCODE) { throw 'Target installed tree differs from qualified inventory' }
+    Assert-InstalledTree 'to' 'target-tree'
     $report.targetTreeVerified=$true
     $report.targetDataVerified=$true; $report.automaticUpdateVerified=$true; $report.status='online-update-verified'
 } catch {

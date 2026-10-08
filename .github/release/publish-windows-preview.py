@@ -12,15 +12,29 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[2]
 REPOSITORY = "jobKKB/luheng-highway-agent"
 PRODUCERS = {
-    "from": {"runId": 37750546324, "headSha": "88283312b213d95f330964d1d8e4302052f2be8c", "version": "0.7.0", "tag": "v0.7.0-beta.1"},
-    "to": {"runId": 37751086133, "headSha": "0b886722f2861ec551bb6c8c7aae24f0d260e6c1", "version": "0.7.1", "tag": "v0.7.1-beta.1"},
+    "from": {"runId": None, "headSha": None, "version": "0.7.0", "tag": "v0.7.0-beta.1"},
+    "to": {"runId": None, "headSha": None, "version": "0.7.1", "tag": "v0.7.1-beta.1"},
 }
+# New native producer runs must replace these unset pins after the long-path fix.
+# Previous failed installers are diagnostic inputs, never publication candidates.
+WORKFLOW = ".github/workflows/hermes-native-package-experiment.yml"
+REQUIRED = (
+    "Checkout approved source-only controller", "Checkout immutable official source",
+    "Select managed Python for official preparation", "Check installer helpers and release scripts before preparing payload",
+    "Reconstruct and admit the exact current source-only candidate", "Run narrow real Windows Vitest before full payload preparation",
+    "Prepare locked native Windows inputs", "Run canonical native launcher regression and real packaging Vitest",
+    "Build only from the admitted official prepared inputs", "Bind the unpacked structure and hashes to the source admission",
+    "Compress pristine package before any launch and verify every extracted file", "Preserve pristine portable before functional acceptance",
+    "Exercise shipped CLI terminal files and disabled scheduler without package writes",
+    "Exercise a plain native window and contained backend health", "Package the unchanged admitted payload as a Windows installer",
+    "Preserve installer bytes before installation acceptance", "Install launch and uninstall using a restricted Windows token",
+    "Preserve source build regression tool and native startup diagnostics", "Require all native acceptance stages before release",
+)
 QUALIFIER = runpy.run_path(str(ROOT / "qa/release-windows/verify-online-update.py"))
-RECOVERY = runpy.run_path(str(ROOT / "qa/release-windows/artifact-recovery.py"))
 CREATE_FEED = runpy.run_path(str(ROOT / "qa/release-windows/create-update-feed.py"))["create_feed"]
 require, read, sha, owned = (QUALIFIER[key] for key in ("require", "read", "sha", "owned"))
 EVIDENCE_NAMES = {"sourceAdmission": "source-admission.json", "structure": "windows-unpacked-structure.json",
-                  "health": "native-startup.json", "installerReceipt": "installer-build.json"}
+                  "health": "native-startup.json", "installerReceipt": "installer-build.json", "lifecycle": "installer-lifecycle.json"}
 
 
 def gh(*args):
@@ -36,20 +50,39 @@ def api(path, optional=False):
 
 
 def validate_lock(lock):
-    require(set(lock) == {"schema", "repository", "publish", "producers", "recoveries"} and
-            lock["schema"] == "luheng-preview-release/v1" and lock["repository"] == REPOSITORY and
-            lock["publish"] is True and lock["producers"] == PRODUCERS and set(lock["recoveries"]) == set(PRODUCERS),
-            "Release lock differs from the reviewed producer/recovery pair")
-    for side, pin in lock["recoveries"].items():
-        require(set(pin) == {"runId", "headSha", "artifactId"} and
-                type(pin["runId"]) is int and pin["runId"] > 0 and type(pin["artifactId"]) is int and pin["artifactId"] > 0 and
-                re.fullmatch(r"[a-f0-9]{40}", pin["headSha"]) and pin["runId"] != PRODUCERS[side]["runId"],
-                "Recovery must identify a separate reviewed run and artifact")
+    for pin in PRODUCERS.values():
+        require(type(pin["runId"]) is int and pin["runId"] > 0 and isinstance(pin["headSha"], str) and
+                re.fullmatch(r"[a-f0-9]{40}", pin["headSha"]), "New successful native producer identities are not pinned")
+    require(PRODUCERS["from"]["runId"] != PRODUCERS["to"]["runId"], "Separate real version producers required")
+    require(set(lock) == {"schema", "repository", "publish", "producers"} and
+            lock["schema"] == "luheng-preview-release/v2" and lock["repository"] == REPOSITORY and
+            lock["publish"] is True and lock["producers"] == PRODUCERS,
+            "Release lock differs from the reviewed complete native producer pair")
 
 
-def validate_run(bundle, pin, recovery):
-    RECOVERY["validate_producer"](bundle["producer"], bundle["producerJobs"], pin)
-    RECOVERY["validate_acceptance"](bundle["acceptance"], recovery)
+def validate_run(bundle, pin):
+    run, jobs = bundle["producer"], bundle["producerJobs"]
+    require(run["id"] == pin["runId"] and run["head_sha"] == pin["headSha"] and
+            run["status"] == "completed" and run["conclusion"] == "success" and
+            run["repository"]["full_name"] == REPOSITORY and run["path"] == WORKFLOW and
+            type(run["run_attempt"]) is int and run["run_attempt"] > 0, "Complete successful native producer required")
+    require(jobs.get("total_count") == 1 and len(jobs["jobs"]) == 1, "Unexpected native producer jobs")
+    job = jobs["jobs"][0]
+    require(job["name"] == "windows-x64" and job["run_id"] == run["id"] and job["status"] == "completed" and
+            job["conclusion"] == "success", "Native producer job failed or differs")
+    steps = {row["name"]: row for row in job["steps"]}
+    require(len(steps) == len(job["steps"]), "Duplicate native producer steps")
+    for name in REQUIRED:
+        require(steps.get(name, {}).get("conclusion") == "success", "Native producer prerequisite failed: " + name)
+    require(all(row["conclusion"] in ("success", "skipped") for row in steps.values()), "Native producer has an unsuccessful step")
+
+
+def validate_artifacts(rows, run):
+    for name, row in rows.items():
+        require(row["name"] == name and type(row["id"]) is int and row["id"] > 0 and row["expired"] is False and
+                row["workflow_run"]["id"] == run["id"] and row["workflow_run"]["head_sha"] == run["head_sha"] and
+                type(row["size_in_bytes"]) is int and row["size_in_bytes"] > 0 and
+                re.fullmatch(r"sha256:[a-f0-9]{64}", row["digest"]), "Artifact does not belong to the admitted native producer")
 
 
 def artifacts(run_id, names=("luheng-windows-installer-unreleased", "luheng-windows-release-evidence")):
@@ -71,14 +104,12 @@ def unique_file(root, basename):
     return path
 
 
-def admit(root, pin, run, recovery):
-    provenance = unique_file(root / "evidence", "provenance.json")
-    require(provenance.parent.name == "acceptance", "Unexpected recovery provenance layout")
-    evidence = provenance.parent.parent
+def admit(root, pin, run):
+    evidence = root / "evidence"
     paths = {key: unique_file(evidence, name) for key, name in EVIDENCE_NAMES.items()}
     build, structure = read(paths["installerReceipt"]), read(paths["structure"])
     require(sha(unique_file(root / "installer", "installer-build.json")) == sha(paths["installerReceipt"]),
-            "Original installer and recovered evidence receipts differ")
+            "Installer and same-run evidence receipts differ")
     installer = unique_file(root / "installer", PureWindowsPath(build["installer"]).name)
     feed, sums = CREATE_FEED(installer, pin["version"], pin["tag"])
     file = feed["files"][0]
@@ -89,11 +120,7 @@ def admit(root, pin, run, recovery):
              "evidence": {"runId": pin["runId"], "headSha": pin["headSha"], "artifact": "luheng-windows-release-evidence",
                           "files": {key: {"path": path.relative_to(evidence).as_posix(), "bytes": path.stat().st_size,
                                           "sha256": sha(path)} for key, path in paths.items()}}}
-    recovered_paths = {"lifecycle": owned(evidence, "acceptance/installer-lifecycle.json"), "provenance": provenance}
-    entry["evidence"]["recovery"] = {**recovery, "artifact": "luheng-windows-recovery-evidence-" + pin["version"],
-        "files": {key: {"path": path.relative_to(evidence).as_posix(), "bytes": path.stat().st_size, "sha256": sha(path)}
-                  for key, path in recovered_paths.items()}}
-    QUALIFIER["qualify"](entry, evidence, run)
+    QUALIFIER["qualify"](entry, evidence, run["producer"])
     checksum = root / "SHA256SUMS.txt"
     checksum.write_text(sums, encoding="utf-8")
     return entry, feed, [installer, checksum]
@@ -183,39 +210,28 @@ def main():
     require(not args.output.exists(), "Publisher output must be fresh")
     args.output.mkdir(parents=True)
     runs = {side: {"producer": api(f"actions/runs/{pin['runId']}"),
-                   "producerJobs": api(f"actions/runs/{pin['runId']}/jobs?per_page=100"),
-                   "acceptance": api(f"actions/runs/{lock['recoveries'][side]['runId']}")} for side, pin in PRODUCERS.items()}
+                   "producerJobs": api(f"actions/runs/{pin['runId']}/jobs?per_page=100")} for side, pin in PRODUCERS.items()}
     for side, pin in PRODUCERS.items():
-        validate_run(runs[side], pin, lock["recoveries"][side])
+        validate_run(runs[side], pin)
     pair = {"schema": "luheng-online-update/v1", "repository": REPOSITORY, "feed": QUALIFIER["FEED"]}
     plans, receipt = [], {}
     for side, pin in PRODUCERS.items():
         root = args.output / side
         root.mkdir()
         before = artifacts(pin["runId"])
-        recovery = lock["recoveries"][side]
-        recovery_name = "luheng-windows-recovery-evidence-" + pin["version"]
-        recovered = artifacts(recovery["runId"], [recovery_name])
-        RECOVERY["validate_artifact"](recovered[recovery_name], runs[side]["acceptance"], recovery["artifactId"], recovery_name)
+        validate_artifacts(before, runs[side]["producer"])
         gh("run", "download", pin["runId"], "--repo", REPOSITORY, "--name", "luheng-windows-installer-unreleased", "--dir", root / "installer")
-        gh("run", "download", recovery["runId"], "--repo", REPOSITORY, "--name", recovery_name, "--dir", root / "evidence")
+        gh("run", "download", pin["runId"], "--repo", REPOSITORY, "--name", "luheng-windows-release-evidence", "--dir", root / "evidence")
         require(before == artifacts(pin["runId"]), "Artifact identity changed during download")
-        require(recovered == artifacts(recovery["runId"], [recovery_name]), "Recovery artifact changed during download")
         current = {"producer": api(f"actions/runs/{pin['runId']}"),
-                   "producerJobs": api(f"actions/runs/{pin['runId']}/jobs?per_page=100"),
-                   "acceptance": api(f"actions/runs/{recovery['runId']}")}
-        validate_run(current, pin, recovery)
-        require(all(current[kind]["run_attempt"] == runs[side][kind]["run_attempt"] for kind in ("producer", "acceptance")),
-                "Producer or acceptance was rerun during download")
-        current["producerArtifacts"] = {"installer": before["luheng-windows-installer-unreleased"],
-                                        "evidence": before["luheng-windows-release-evidence"]}
-        current["acceptanceArtifact"] = recovered[recovery_name]
-        pair[side], feed, files = admit(root, pin, current, recovery)
-        receipt[side] = {"run": pin, "producerConclusion": current["producer"]["conclusion"], "artifacts": before,
-                         "recovery": recovery, "recoveryArtifact": recovered[recovery_name]}
+                   "producerJobs": api(f"actions/runs/{pin['runId']}/jobs?per_page=100")}
+        validate_run(current, pin)
+        require(current["producer"]["run_attempt"] == runs[side]["producer"]["run_attempt"], "Producer was rerun during download")
+        pair[side], feed, files = admit(root, pin, current)
+        receipt[side] = {"run": pin, "producerConclusion": current["producer"]["conclusion"], "artifacts": before}
         notes = root / "release-notes.md"
         notes.write_text(Path(__file__).with_name(f"notes-{pin['version']}.md").read_text(encoding="utf-8") +
-                         f"\nOriginal producer conclusion: {current['producer']['conclusion']}. Independent native installation acceptance: https://github.com/{REPOSITORY}/actions/runs/{recovery['runId']}.\n", encoding="utf-8")
+                         f"\nComplete successful native build and installation acceptance: https://github.com/{REPOSITORY}/actions/runs/{pin['runId']}.\n", encoding="utf-8")
         plans.append({"pin": pin, "files": files, "notes": notes})
         if side == "to":
             (args.output / "latest.yml").write_text(json.dumps(feed, indent=2) + "\n", encoding="utf-8")

@@ -6,27 +6,27 @@ All GitHub operations use `gh`.
 
 The workflow only runs when `.github/release/windows-preview-release-lock.json`
 changes on `codex/windows-release-completion`. Adding that file is the explicit
-publication action. Do not add it until both separate recovery acceptance runs finish successfully.
-The expected JSON is exactly `schema: luheng-preview-release/v1`,
+publication action. Do not add it until both new native producer runs finish successfully.
+The expected JSON is exactly `schema: luheng-preview-release/v2`,
 `repository: jobKKB/luheng-highway-agent`, `publish: true`, and `producers` equal
-to the `PRODUCERS` constant in `publish-windows-preview.py`. The additional
-`recoveries` object must contain `from` and `to`, each with the reviewed `runId`,
-40-character `headSha`, and exact evidence `artifactId`.
+to the `PRODUCERS` constant in `publish-windows-preview.py`. Its run IDs and
+commit hashes remain unset until the actual replacement producers are reviewed.
+Unset pins reject all publication locks. A recovery object is not accepted.
 
 The publisher checks both producer run IDs, commits, workflow paths and every
-required job step. An original failed run is accepted only when its exact failure
-set is the native lifecycle step and final acceptance gate; all required earlier
-build, archive, tool-contract, startup and NSIS steps must have passed. Its failed
-status is preserved. Each separate recovery run must be successful, use the pinned
-commit and recovery workflow, and supply the exact pinned evidence artifact.
+required job step, including actual installation, normal exit, uninstall and the
+final acceptance gate in that same run. Failed, partial and lifecycle-only
+recovery runs cannot qualify. The replacement producers rebuild versions 0.7.0
+and 0.7.1 with the corrected NSIS long-path handling and synchronous verification.
 It selects the unique exact-name installer and evidence artifacts and checks
 their IDs, size and digest metadata again after `gh run download`. It locates each
 required evidence basename exactly once, pins its actual relative path and bytes,
-then reuses the online-update consumer's complete `qualify` verification. Recovered
-evidence contains the unchanged original four producer files plus new lifecycle
-and provenance files. The original build run IDs and hashes stay intact; the new
-consumer run ID remains distinct. Producer artifact IDs, digests and sizes in the
-recovery provenance must also match the live GitHub API.
+then reuses the online-update consumer's complete `qualify` verification. Source
+admission, full payload manifest, native health, installer receipt and lifecycle
+report all belong to the same successful producer. Installer and evidence
+artifacts must carry that producer's run ID and commit in the live GitHub API.
+Historical recovery scripts remain diagnostic tools; they are not part of this
+publication path and do not authorize the earlier failed installer bytes.
 Installer contents are only read for MZ, size, SHA-256 and SHA-512 checks.
 
 Both existing release states are checked before changes. The publisher refuses
