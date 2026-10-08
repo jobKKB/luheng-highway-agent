@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "qualified": false,
+  "repository": "jobKKB/luheng-highway-agent",
+  "build": {
+    "runId": "FILL_SUCCESSFUL_NEW_PRODUCER_RUN",
+    "head": "4128ff53a793e1f9155bb7ed0411b008cd30bfad",
+    "runAttempt": 1,
+    "workflowPath": ".github/workflows/hermes-native-package-experiment.yml"
+  },
+  "source": {
+    "commit": "FILL_ORIGINAL_PAYLOAD_SOURCE_COMMIT_AFTER_QUALIFICATION",
+    "treeSha256": "d37c08c19b1e57ce4829682c4f84ec5fc89bf1fd3c5fc56e0e2b7153f462b4cb",
+    "count": 17260,
+    "baseVersion": "0.0.0"
+  },
+  "portableArtifact": {
+    "id": "FILL_QUALIFIED_PORTABLE_ARTIFACT_ID",
+    "name": "luheng-fixed-qualified-windows-portable",
+    "bytes": "FILL_ACTIONS_ARCHIVE_SIZE",
+    "digest": "sha256:FILL_ACTIONS_ARCHIVE_DIGEST"
+  },
+  "evidenceArtifact": {
+    "id": "FILL_SMALL_NATIVE_EVIDENCE_ARTIFACT_ID",
+    "name": "luheng-fixed-windows-native-evidence",
+    "bytes": "FILL_ACTIONS_ARCHIVE_SIZE",
+    "digest": "sha256:FILL_ACTIONS_ARCHIVE_DIGEST"
+  },
+  "archive": {
+    "path": "Luheng-Windows-x64-verified.7z",
+    "bytes": "FILL_INNER_7Z_SIZE",
+    "sha256": "FILL_INNER_7Z_SHA256"
+  },
+  "evidenceFiles": {
+    "sourceAdmission": {
+      "path": "source-admission.json",
+      "bytes": "FILL_BYTES",
+      "sha256": "FILL_SHA256"
+    },
+    "structure": {
+      "path": "windows-unpacked-structure.json",
+      "bytes": "FILL_BYTES",
+      "sha256": "FILL_SHA256"
+    },
+    "health": {
+      "path": "native-smoke-evidence/native-startup.json",
+      "bytes": "FILL_BYTES",
+      "sha256": "FILL_SHA256"
+    },
+    "portableReceipt": {
+      "path": "native-smoke-evidence/verified-portable-archive.json",
+      "bytes": "FILL_BYTES",
+      "sha256": "FILL_SHA256"
+    },
+    "nativeRegressionLog": {
+      "path": "native-regression.log",
+      "bytes": "FILL_BYTES_AFTER_REVIEWING_REAL_VITEST_AND_NATIVE_LAUNCHER_PASS",
+      "sha256": "FILL_SHA256"
+    }
+  },
+  "minimumScratchBytes": "FILL_REVIEWED_PEAK_BUDGET_AT_LEAST_20_GIB",
+  "lifecycleMode": "elevated-runner-explicitly-limited",
+  "notes": "Unqualified integration draft; new producer head exists but branch publication cancelled pending explicit user clarification. No actual installer, artifact or native acceptance claim."
+}
