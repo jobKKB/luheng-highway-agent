@@ -12,6 +12,10 @@ publisher = runpy.run_path(str(Path(__file__).with_name("publish-windows-preview
 
 
 class PublisherTests(unittest.TestCase):
+    def test_each_pinned_release_has_publishable_notes(self):
+        for pin in publisher["PRODUCERS"].values():
+            self.assertTrue(Path(__file__).with_name(f"notes-{pin['version']}.md").read_text(encoding="utf-8").strip())
+
     def test_required_steps_match_current_native_workflow(self):
         workflow = publisher["ROOT"] / publisher["WORKFLOW"]
         names = set(re.findall(r"^\s+- name: (.+)$", workflow.read_text(encoding="utf-8"), re.M))
