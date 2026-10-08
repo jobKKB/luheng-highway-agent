@@ -87,10 +87,30 @@ function Windows-For([int]$ProcessId) {
     $condition=[Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ProcessIdProperty,$ProcessId)
     return [Windows.Automation.AutomationElement]::RootElement.FindAll([Windows.Automation.TreeScope]::Children,$condition)
 }
+function Save-RestartDiagnostics {
+    $rows=@(Get-Process -Name 'LuhengOfficeAgent','explorer' -ErrorAction SilentlyContinue | ForEach-Object {
+        @{pid=$_.Id; name=$_.ProcessName; image=$_.Path; session=$_.SessionId; window=$_.MainWindowTitle; handle=$_.MainWindowHandle.ToInt64(); token=$([RestrictedTokenLauncher]::InspectProcessToken($_.Id))}
+    })
+    $report.restartDiagnostics=@{processes=$rows; expectedImage=$exe; expectedImageSha256=$(if (Test-Path -LiteralPath $exe) { Hash $exe }); observedUtc=[DateTime]::UtcNow.ToString('o')}
+    $report | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $out 'online-update.json') -Encoding utf8NoBOM
+}
 function Click-Button($Window,[string[]]$Names) {
     $buttons=$Window.FindAll([Windows.Automation.TreeScope]::Descendants,[Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ControlTypeProperty,[Windows.Automation.ControlType]::Button))
     foreach ($button in $buttons) {
         if ($button.Current.IsEnabled -and -not $button.Current.IsOffscreen -and $button.Current.Name -cin $Names) {
+            if ($button.Current.Name -in @('Finish','&Finish','完成','完成(&F)')) {
+                $report.finishPage=@($Window.FindAll([Windows.Automation.TreeScope]::Descendants,[Windows.Automation.Condition]::TrueCondition) | ForEach-Object {
+                    $toggle=$null
+                    $toggleState=if ($_.TryGetCurrentPattern([Windows.Automation.TogglePattern]::Pattern,[ref]$toggle)) { $toggle.Current.ToggleState.ToString() } else { $null }
+                    @{name=$_.Current.Name; type=$_.Current.ControlType.ProgrammaticName; enabled=$_.Current.IsEnabled; toggle=$toggleState}
+                })
+                $shell=New-Object -ComObject WScript.Shell
+                $report.shortcuts=@(Get-ChildItem -LiteralPath ([Environment]::GetFolderPath('Programs')) -Filter '*.lnk' -Recurse | ForEach-Object {
+                    $link=$shell.CreateShortcut($_.FullName)
+                    if ($link.TargetPath -like '*Luheng*') { @{path=$_.FullName; target=$link.TargetPath; arguments=$link.Arguments; workingDirectory=$link.WorkingDirectory} }
+                })
+                Save-RestartDiagnostics
+            }
             $invoke=$button.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern)
             $report.uiActions += @{pid=$Window.Current.ProcessId; window=$Window.Current.Name; button=$button.Current.Name}
             $invoke.Invoke(); return $true
@@ -154,7 +174,7 @@ try {
     $report.baselineInstalled=$true
     $driver=Start-Owned $node @((Join-Path $PSScriptRoot 'verify-online-update.mjs'),'handoff',$runtimePath,$dependency)
     $deadline=[DateTime]::UtcNow.AddMinutes(35)
-    $ready=$null; $installerPids=@{}; $checkedFiles=@{}; $restarted=$null
+    $ready=$null; $installerPids=@{}; $checkedFiles=@{}; $restarted=$null; $finishAt=$null
     while ([DateTime]::UtcNow -lt $deadline) {
         if (-not $ready -and (Test-Path -LiteralPath (Join-Path $out 'baseline-ready.json'))) {
             $ready=Get-Content -LiteralPath (Join-Path $out 'baseline-ready.json') -Raw | ConvertFrom-Json
@@ -183,7 +203,7 @@ try {
                     if ($installerToken.UserSid -cne $token.UserSid -or $installerToken.IsElevated -ne 0 -or $installerToken.IntegritySid -cne 'S-1-16-8192') { throw 'Installer changed user or elevated' }
                     $installerPids[[int]$process.ProcessId]=$file
                     foreach ($window in (Windows-For ([int]$process.ProcessId))) {
-                        if (Click-Button $window @('Finish','&Finish','完成','完成(&F)')) { $report.installerWizardCompleted=$true }
+                        if (Click-Button $window @('Finish','&Finish','完成','完成(&F)')) { $report.installerWizardCompleted=$true; $finishAt=[DateTime]::UtcNow }
                         else { [void](Click-Button $window @('Next >','&Next >','Install','&Install','下一步(&N) >','安装(&I)','下一步 >','安装')) }
                     }
                 }
@@ -204,6 +224,10 @@ try {
         $driver.Refresh()
         if ($driver.HasExited -and $driver.ExitCode -ne 0) { throw 'Renderer handoff consumer failed; inspect its receipt' }
         if ($restarted) { break }
+        if ($finishAt -and ([DateTime]::UtcNow-$finishAt).TotalSeconds -gt 180) {
+            Save-RestartDiagnostics
+            throw 'No expected client window appeared within 180 seconds after Finish; inspect restart diagnostics'
+        }
         Start-Sleep -Milliseconds 400
     }
     if (-not $restarted) { throw 'Target was not automatically relaunched after the real NSIS wizard' }
