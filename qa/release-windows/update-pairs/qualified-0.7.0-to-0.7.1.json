@@ -1,0 +1,85 @@
+{
+  "schema": "luheng-online-update/v1",
+  "repository": "jobKKB/luheng-highway-agent",
+  "feed": "https://apps.luotuai.me/updates/windows/",
+  "from": {
+    "version": "0.7.0",
+    "url": "https://github.com/jobKKB/luheng-highway-agent/releases/download/v0.7.0-beta.1/Luheng-Office-Agent-0.7.0-windows-x64.exe",
+    "bytes": 1593661588,
+    "sha256": "62a8c2b6adfa23d32101a5ddee333be4733dce36488ea5fcef13ad4a6cc8ab10",
+    "exeSha256": "f47a9d96fe879e2d66a69f2a93f29713dc21fe7bc20b91bf15f4152135531b91",
+    "asarSha256": "e2efcb06d581221504d706157275e7b39f1aec84f784a3f94b8ec68626de99de",
+    "evidence": {
+      "runId": 37773571320,
+      "headSha": "2f0c95a02b408ab871986ab7e1d6b16e7946ca3c",
+      "artifact": "luheng-windows-release-evidence",
+      "files": {
+        "sourceAdmission": {
+          "path": "luheng-highway-agent/luheng-highway-agent/source-admission.json",
+          "bytes": 468,
+          "sha256": "782458cbe9909bb7bff61315c3ce78c5f2405515ba3045db145d584474c64aa3"
+        },
+        "structure": {
+          "path": "luheng-highway-agent/luheng-highway-agent/windows-unpacked-structure.json",
+          "bytes": 28476068,
+          "sha256": "4a1394f2260959227e3f5338f1407a40fc0ea8f90c7d7d7bd77bfe264a1cf32b"
+        },
+        "health": {
+          "path": "luheng-highway-agent/luheng-highway-agent/native-smoke-evidence/native-startup.json",
+          "bytes": 430,
+          "sha256": "a476e87b89b97ace7f3651df0ffe48ee5c091bc8e4eee1fe6138e37719a7c952"
+        },
+        "installerReceipt": {
+          "path": "luheng-highway-agent/luheng-highway-agent/installer-product/installer-build.json",
+          "bytes": 3395,
+          "sha256": "ee37d236621d4f9efb25770c4481872504d052689c61127f39329693c0c6fcba"
+        },
+        "lifecycle": {
+          "path": "_temp/luheng-installer-acceptance/evidence/installer-lifecycle.json",
+          "bytes": 10225,
+          "sha256": "ca7ebc4a9995ffb6453ce0972aaa5d1ed0828aed7acfe514ab9f85b85bd3c04b"
+        }
+      }
+    }
+  },
+  "to": {
+    "version": "0.7.1",
+    "url": "https://github.com/jobKKB/luheng-highway-agent/releases/download/v0.7.1-beta.1/Luheng-Office-Agent-0.7.1-windows-x64.exe",
+    "bytes": 1593299205,
+    "sha256": "e510b8d17bd8145f1fcbfe5ab3e57070988b1b62f6d9c6e1f169233de1dd080f",
+    "exeSha256": "25836d42c1b97983dd88093d1c475da54aba896e7466a720d3111e6a3fbf4599",
+    "asarSha256": "77eb8388efa9951b755ea4ad1e4f47dc581f9282cfc296090d9fd2428271f880",
+    "evidence": {
+      "runId": 37773394370,
+      "headSha": "441086c414182d204e438df598ad8f967cd23761",
+      "artifact": "luheng-windows-release-evidence",
+      "files": {
+        "sourceAdmission": {
+          "path": "luheng-highway-agent/luheng-highway-agent/source-admission.json",
+          "bytes": 468,
+          "sha256": "83662a1e265d66961db1dcd6c5898b7c6aba5e4a2d86f92b5c3e837089d62d1f"
+        },
+        "structure": {
+          "path": "luheng-highway-agent/luheng-highway-agent/windows-unpacked-structure.json",
+          "bytes": 28476068,
+          "sha256": "402375d298166512a02ee07b7ecaa671610b55dd1551251582ce2c354b2d0e5f"
+        },
+        "health": {
+          "path": "luheng-highway-agent/luheng-highway-agent/native-smoke-evidence/native-startup.json",
+          "bytes": 430,
+          "sha256": "7e230ef087e0bc392a043cf45dde7e769f3db5a6d52d111df6d91315f7634233"
+        },
+        "installerReceipt": {
+          "path": "luheng-highway-agent/luheng-highway-agent/installer-product/installer-build.json",
+          "bytes": 3395,
+          "sha256": "d379aeed84f0904c524accaeb2dc587875015899ae104c532f1c821a2b2b4523"
+        },
+        "lifecycle": {
+          "path": "_temp/luheng-installer-acceptance/evidence/installer-lifecycle.json",
+          "bytes": 10225,
+          "sha256": "e5fc3c4096fba2d2d8184d1c287cf0d75180926455bcb199be1f368e3777b778"
+        }
+      }
+    }
+  }
+}
