@@ -19,3 +19,7 @@ Reject { Assert-BaselineUpdaterCache $root $bytes ('0'*64) }
 [IO.File]::WriteAllText((Join-Path $root 'pending.exe'),'unexpected target')
 Reject { Assert-BaselineUpdaterCache $root $bytes $digest }
 'Baseline cache positive, size, digest and extra-file checks passed'
+Add-Type -Path (Join-Path $PSScriptRoot '../native-installer-consumer/token-review/RestrictedTokenLauncher.cs')
+if ([RestrictedTokenLauncher]::InspectProcessImage($PID) -ine [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName) { throw 'Limited-query process image differs' }
+Reject { [RestrictedTokenLauncher]::InspectProcessImage(0) }
+'Limited-query process image positive and invalid-PID checks passed'
