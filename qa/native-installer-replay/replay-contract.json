@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "repository": "jobKKB/luheng-highway-agent",
+  "installerAcceptancePending": true,
+  "consumerContract": {
+    "path": "contract.json",
+    "bytes": 3412,
+    "sha256": "52ef79f56470515ffd94d7be3e29348edc58715b7fe59fd74a6b17076ed3a43a"
+  },
+  "builder": {
+    "runId": 37762139178,
+    "head": "7c08f2ebbd407be0fdfd5c8dcfdcae176fb94cc6",
+    "runAttempt": 1,
+    "workflowPath": ".github/workflows/native-installer-consumer.yml",
+    "conclusion": "failure",
+    "jobId": 113260887632,
+    "jobName": "native-nsis-consumer",
+    "requiredSuccessfulSteps": [
+      {
+        "number": 4,
+        "name": "Parse and natively selftest lifecycle ownership before large downloads"
+      },
+      {
+        "number": 5,
+        "name": "Require exact completed producer API identities and capacity"
+      },
+      {
+        "number": 8,
+        "name": "Independently bind inner archive and original native evidence"
+      },
+      {
+        "number": 9,
+        "name": "Expand only admitted pristine portable and verify every payload file"
+      },
+      {
+        "number": 12,
+        "name": "Reconstruct exact pinned helper source without touching the payload"
+      },
+      {
+        "number": 13,
+        "name": "Prepare fresh native helpers then wrap unchanged payload using strict NSIS"
+      },
+      {
+        "number": 14,
+        "name": "Retain exact built installer candidate before lifecycle; not acceptance"
+      },
+      {
+        "number": 16,
+        "name": "Preserve synthetic acceptance evidence even on failure"
+      }
+    ],
+    "failedLifecycleStep": {
+      "number": 15,
+      "name": "Install exact bytes launch native window close and normal-uninstall retaining synthetic data"
+    }
+  },
+  "candidateArtifact": {
+    "id": 11545571539,
+    "name": "luheng-nsis-built-candidate-unqualified",
+    "bytes": 1593483015,
+    "digest": "sha256:326e6789917506c6c3829c9988485917c24da508fd8e24f23120da46065038a5"
+  },
+  "builderEvidenceArtifact": {
+    "id": 11546617116,
+    "name": "luheng-native-nsis-consumer-evidence",
+    "bytes": 3071950,
+    "digest": "sha256:0256e905fe25201ffc66c79955398c4f83919358c15e00142c5cdfcb65befb04"
+  },
+  "installer": {
+    "path": "Luheng-Unsigned-Manual-Test-0.0.0-x64.exe",
+    "bytes": 1593482819,
+    "sha256": "917bddd767a8627aea4308f2d481f1983bd0c4515861ecd01934ae9c8f3e61d8"
+  },
+  "builderEvidenceFiles": {
+    "installer-build.json": {
+      "path": "installer-build.json",
+      "bytes": 1321,
+      "sha256": "560a251e55b039f9c39b3f9b6baafb8ea5da4d1bd41f6f475bc1e9f076f63139"
+    },
+    "prepackaged.prepared.json": {
+      "path": "prepackaged.prepared.json",
+      "bytes": 1348,
+      "sha256": "da1224f506a217b5c5b2c2f9fe0094ca296f6cb9de33819f1d42a694f27433b1"
+    },
+    "fresh-native.prepared.json": {
+      "path": "fresh-native.prepared.json",
+      "bytes": 343,
+      "sha256": "7999859022c116436732c34a3d607eb93a9a8cf65c557415f3b2bd474f31e65f"
+    },
+    "payload-before.json": {
+      "path": "payload-before.json",
+      "bytes": 355,
+      "sha256": "7bfd3e603fc09b9f5dfeeb320158bbcde0a79159a1e539f92c2ca8333828f60b"
+    },
+    "payload-after.json": {
+      "path": "payload-after.json",
+      "bytes": 355,
+      "sha256": "7bfd3e603fc09b9f5dfeeb320158bbcde0a79159a1e539f92c2ca8333828f60b"
+    },
+    "pristine-tree.json": {
+      "path": "pristine-tree.json",
+      "bytes": 355,
+      "sha256": "7bfd3e603fc09b9f5dfeeb320158bbcde0a79159a1e539f92c2ca8333828f60b"
+    },
+    "download-admission.json": {
+      "path": "download-admission.json",
+      "bytes": 623,
+      "sha256": "a95247886a4c94dd2aca777ed97df183f61f2fbb838b597c7f70da7bff85acb9"
+    },
+    "installer-lifecycle.json": {
+      "path": "installer-lifecycle.json",
+      "bytes": 10392,
+      "sha256": "9728861a326b9d74a13008f7661e0e40d004b9c6b5eb1973667085476fe063e3"
+    },
+    "installer-wait.json": {
+      "path": "installer-wait.json",
+      "bytes": 1738,
+      "sha256": "505dfb0fd7e25dde183266939d615a8c24612ff293966a55d2c1f6763236c0c5"
+    }
+  },
+  "scratchBudgetBasis": {
+    "payloadBytes": 6470724210,
+    "expandedCopies": 2,
+    "installerBytes": 1593482819,
+    "artifactStagingBytes": 1593483015,
+    "reserveBytes": 4294967296,
+    "formula": "2 * measured expanded payload + exact EXE + exact artifact ZIP staging + 4 GiB reserve; reservation, not measured peak"
+  },
+  "minimumScratchBytes": 20423381550,
+  "notes": "Replays exact retained unsigned candidate. Prior wrapping and retention succeeded; prior overall consumer and lifecycle failed. No portable download, rebuild, source reconstruction, packaging or NSIS wrapping permitted."
+}

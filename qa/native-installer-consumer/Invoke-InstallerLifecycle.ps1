@@ -147,6 +147,9 @@ try {
   $result['installer_wait']=$installWait
   if (-not $installWait.completed) { throw ('Ordinary NSIS install incomplete: '+$installWait.reason) }
   $result.installed=$true
+  # Diagnostics never grant admission or execute installer-generated additions.
+  & $python -I -S -B (Join-Path $PSScriptRoot 'inventory_installed.py') --contract $contractPath --evidence $evidenceRoot --root $install --output $out
+  if ($LASTEXITCODE) { throw 'Read-only installed inventory diagnostics failed' }
   $manifestFile=Join-Path $evidenceRoot $pins.evidenceFiles.structure.path
   $structure=Get-Content -LiteralPath $manifestFile -Raw | ConvertFrom-Json
   $expected=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
