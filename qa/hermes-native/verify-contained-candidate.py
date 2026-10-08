@@ -73,12 +73,15 @@ def inspect_candidate(source, prepared_path, identity):
             with path.open("rb") as handle:
                 digest = hashlib.file_digest(handle, "sha256").hexdigest()
             files.append({"path": relative, "bytes": path.stat().st_size, "sha256": digest})
+    extra_packages = sorted(path.name for path in root.parent.iterdir()
+                            if path.is_file() and path.suffix.lower() in {".msix", ".msixbundle", ".msi", ".exe"})
     return {"schema": 2, "artifact_kind": "official-prepared-unpacked-Windows-x64-build-only",
             "structural_only": True, "source_commit": commit,
             "source_tree_sha256": identity["source_tree_sha256"], "source_count": identity["source_count"],
             "target": manifest["target"], "base_version": stamp["baseVersion"],
             "desktop_and_embedded_cli_stamp_match": True, "contained_commands": sorted(commands),
-            "installer_produced": False, "native_installation_verified": False,
+            "installer_produced": bool(extra_packages), "native_packages_not_delivered": extra_packages,
+            "unpacked_only_delivered": True, "native_installation_verified": False,
             "offline_startup_verified": False, "physical_ime_verified": False,
             "standard_user_installation_verified": False, "update_verified": False,
             "production_update_enabled": False, "files": files}
