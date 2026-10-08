@@ -9,6 +9,8 @@ if (Test-Path -LiteralPath $WorkRoot) { throw 'Fresh diagnostic scratch required
 New-Item -ItemType Directory -Path $WorkRoot | Out-Null
 Add-Type -Path (Join-Path $PSScriptRoot 'LifecycleProcessOwner.cs')
 Add-Type -Path (Join-Path $PSScriptRoot 'token-review/RestrictedTokenLauncher.cs')
+$tokenObjectDiagnostics = [RestrictedTokenLauncher]::ProbeCurrentObjectAccess()
+$tokenObjectDiagnostics | ConvertTo-Json -Depth 18 | Set-Content -LiteralPath (Join-Path $WorkRoot 'token-object-diagnostics.json') -Encoding utf8NoBOM
 $probe = Join-Path $WorkRoot 'launch-probe.py'
 @'
 import json, os, pathlib, sys, time
@@ -80,7 +82,7 @@ foreach ($choice in $choices) {
             if (Test-Path -LiteralPath $marker) { $row.marker=Get-Content -LiteralPath $marker -Raw|ConvertFrom-Json }
             $row.elapsedMs=$timer.ElapsedMilliseconds
             $rows += $row
-            @{schema=1;diagnosticOnly=$true;token=[RestrictedTokenLauncher]::InspectProcessToken($PID);results=$rows} | ConvertTo-Json -Depth 18 | Set-Content -LiteralPath (Join-Path $WorkRoot 'launch-diagnostics.json') -Encoding utf8NoBOM
+            @{schema=1;diagnosticOnly=$true;token=[RestrictedTokenLauncher]::InspectProcessToken($PID);tokenObjectDiagnostics=$tokenObjectDiagnostics;results=$rows} | ConvertTo-Json -Depth 18 | Set-Content -LiteralPath (Join-Path $WorkRoot 'launch-diagnostics.json') -Encoding utf8NoBOM
         }
     }
 }

@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
+using System.Security.AccessControl;
 using System.Text;
 using System.Threading;
 
@@ -18,7 +19,7 @@ public static class RestrictedTokenLauncher
     const uint CREATE_SUSPENDED = 4, CREATE_UNICODE_ENVIRONMENT = 0x400;
     const uint WAIT_OBJECT_0 = 0, WAIT_TIMEOUT = 258, WAIT_FAILED = 0xffffffff;
     const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000;
-    const int TokenUser = 1, TokenGroups = 2, TokenPrivileges = 3;
+    const int TokenUser = 1, TokenGroups = 2, TokenPrivileges = 3, TokenOwner = 4, TokenDefaultDacl = 6;
     const int TokenElevationType = 18, TokenElevation = 20, TokenHasRestrictions = 21;
     const int TokenIntegrityLevel = 25, TokenUIAccess = 26;
 
@@ -50,6 +51,7 @@ public static class RestrictedTokenLauncher
     }
 
     [DllImport("kernel32.dll")] static extern IntPtr GetCurrentProcess();
+    [DllImport("kernel32.dll")] static extern uint GetCurrentProcessId();
     [DllImport("kernel32.dll", SetLastError = true)] static extern IntPtr OpenProcess(uint access, bool inheritHandle, uint processId);
     [DllImport("kernel32.dll", SetLastError = true)] static extern bool CloseHandle(IntPtr h);
     [DllImport("advapi32.dll", SetLastError = true)] static extern bool OpenProcessToken(IntPtr p, uint access, out IntPtr t);
@@ -70,6 +72,17 @@ public static class RestrictedTokenLauncher
     [DllImport("kernel32.dll", SetLastError = true)] static extern bool SetInformationJobObject(IntPtr job, int kind, ref EXTENDED_LIMIT limits, uint size);
     [DllImport("kernel32.dll", SetLastError = true)] static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
     [DllImport("kernel32.dll", SetLastError = true)] static extern bool QueryInformationJobObject(IntPtr job, int kind, out JOB_ACCOUNTING info, uint size, IntPtr returned);
+    [StructLayout(LayoutKind.Sequential)] struct SECURITY_ATTRIBUTES
+    { public uint length; public IntPtr descriptor; [MarshalAs(UnmanagedType.Bool)] public bool inherit; }
+    [DllImport("kernel32.dll", SetLastError = true)] static extern bool CreatePipe(out IntPtr read, out IntPtr write, IntPtr attributes, uint size);
+    [DllImport("kernel32.dll", SetLastError = true, EntryPoint = "CreatePipe")] static extern bool CreatePipeWithAttributes(out IntPtr read, out IntPtr write, ref SECURITY_ATTRIBUTES attributes, uint size);
+    [DllImport("kernel32.dll", SetLastError = true)] static extern bool WriteFile(IntPtr file, byte[] data, uint size, out uint written, IntPtr overlapped);
+    [DllImport("kernel32.dll", SetLastError = true)] static extern bool ReadFile(IntPtr file, byte[] data, uint size, out uint read, IntPtr overlapped);
+    [DllImport("kernel32.dll", SetLastError = true)] static extern bool DuplicateHandle(IntPtr sourceProcess, IntPtr source, IntPtr targetProcess, out IntPtr target, uint access, bool inherit, uint options);
+    [DllImport("kernel32.dll")] static extern IntPtr LocalFree(IntPtr memory);
+    [DllImport("advapi32.dll", SetLastError = true)] static extern uint GetSecurityInfo(IntPtr handle, int objectType, uint information, out IntPtr owner, out IntPtr group, out IntPtr dacl, out IntPtr sacl, out IntPtr descriptor);
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern bool ConvertSecurityDescriptorToStringSecurityDescriptor(IntPtr descriptor, uint revision, uint information, out IntPtr text, out uint length);
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern bool ConvertStringSecurityDescriptorToSecurityDescriptor(string text, uint revision, out IntPtr descriptor, out uint size);
     [DllImport("kernel32.dll", SetLastError = true, EntryPoint = "QueryInformationJobObject")]
     static extern bool QueryProcessIds(IntPtr job, int kind, IntPtr info, uint size, IntPtr returned);
     [DllImport("kernel32.dll", SetLastError = true)] static extern bool TerminateJobObject(IntPtr job, uint code);
@@ -94,6 +107,8 @@ public static class RestrictedTokenLauncher
     public class TokenEvidence
     {
         public string UserSid, IntegritySid;
+        public string OwnerSid, DefaultDaclSddl;
+        public bool DefaultDaclIsNull;
         public uint IsElevated, ElevationType, HasRestrictions, UIAccess;
         public GroupEvidence[] Groups;
         public PrivilegeEvidence[] Privileges;
@@ -112,6 +127,93 @@ public static class RestrictedTokenLauncher
     public class ProcessEvidence { public int Pid, ParentPid; public string Path, QueryError; public string[] Windows; }
     // Single-invocation helper: lets the PowerShell consumer preserve evidence on failure.
     public static LaunchEvidence LastEvidence;
+
+    public class PipeEvidence
+    {
+        public bool Created, RoundTrip;
+        public bool DuplicateReadCreated, DuplicateWriteCreated;
+        public int Win32Error;
+        public int DuplicateReadError, DuplicateWriteError;
+        public int? SecurityQueryWin32Error;
+        public string SecuritySddl, Error;
+    }
+    public class ObjectAccessEvidence
+    {
+        public TokenEvidence Token;
+        public string SelfProcessSddl, SelfProcessSecurityError;
+        public int SelfProcessAllAccessReopenError;
+        public PipeEvidence PipeDefaultNullAttributes, PipeDefaultInheritable, PipeExplicitUserSystem;
+    }
+    static string SecuritySddl(IntPtr handle, int objectType)
+    {
+        IntPtr owner, group, dacl, sacl, descriptor;
+        uint error = GetSecurityInfo(handle, objectType, 5, out owner, out group, out dacl, out sacl, out descriptor);
+        if (error != 0) throw new Win32Exception((int)error, "GetSecurityInfo owner/DACL (Win32 " + error + "): " + new Win32Exception((int)error).Message);
+        IntPtr text = IntPtr.Zero;
+        try
+        {
+            uint length;
+            Win32(ConvertSecurityDescriptorToStringSecurityDescriptor(descriptor, 1, 5, out text, out length), "Convert object owner/DACL to SDDL");
+            return Marshal.PtrToStringUni(text);
+        }
+        finally { if (text != IntPtr.Zero) LocalFree(text); if (descriptor != IntPtr.Zero) LocalFree(descriptor); }
+    }
+    static PipeEvidence ProbePipe(bool useAttributes, string explicitSddl)
+    {
+        var evidence = new PipeEvidence(); IntPtr descriptor = IntPtr.Zero, read = IntPtr.Zero, write = IntPtr.Zero;
+        IntPtr duplicateRead = IntPtr.Zero, duplicateWrite = IntPtr.Zero;
+        bool created = false;
+        try
+        {
+            if (explicitSddl != null)
+            {
+                uint size;
+                Win32(ConvertStringSecurityDescriptorToSecurityDescriptor(explicitSddl, 1, out descriptor, out size), "Convert isolated pipe descriptor");
+            }
+            SECURITY_ATTRIBUTES attributes = new SECURITY_ATTRIBUTES { length = (uint)Marshal.SizeOf(typeof(SECURITY_ATTRIBUTES)), descriptor = descriptor, inherit = true };
+            created = useAttributes ? CreatePipeWithAttributes(out read, out write, ref attributes, 0) : CreatePipe(out read, out write, IntPtr.Zero, 0);
+            evidence.Win32Error = created ? 0 : Marshal.GetLastWin32Error(); evidence.Created = created;
+            if (!created) return evidence;
+            // .NET makes the parent end non-inheritable with DuplicateHandle;
+            // record both directions so CreatePipe and duplication failures differ.
+            evidence.DuplicateReadCreated = DuplicateHandle(GetCurrentProcess(), read, GetCurrentProcess(), out duplicateRead, 0, false, 2);
+            evidence.DuplicateReadError = evidence.DuplicateReadCreated ? 0 : Marshal.GetLastWin32Error();
+            evidence.DuplicateWriteCreated = DuplicateHandle(GetCurrentProcess(), write, GetCurrentProcess(), out duplicateWrite, 0, false, 2);
+            evidence.DuplicateWriteError = evidence.DuplicateWriteCreated ? 0 : Marshal.GetLastWin32Error();
+            uint written, received; byte[] sent = { 0x5a }, data = new byte[1];
+            Win32(WriteFile(write, sent, 1, out written, IntPtr.Zero), "Write isolated anonymous pipe");
+            if (written != 1) throw new InvalidOperationException("Isolated pipe short write");
+            Win32(ReadFile(read, data, 1, out received, IntPtr.Zero), "Read isolated anonymous pipe");
+            evidence.RoundTrip = received == 1 && data[0] == sent[0];
+            try { evidence.SecuritySddl = SecuritySddl(read, 1); }
+            catch (Win32Exception error) { evidence.SecurityQueryWin32Error = error.NativeErrorCode; evidence.Error = error.Message; }
+        }
+        catch (Exception error) { evidence.Error = error.Message; }
+        finally
+        {
+            // Failed CreatePipe output handles are indeterminate and must not be closed.
+            if (created) { CloseHandle(read); CloseHandle(write); }
+            if (evidence.DuplicateReadCreated) CloseHandle(duplicateRead);
+            if (evidence.DuplicateWriteCreated) CloseHandle(duplicateWrite);
+            if (descriptor != IntPtr.Zero) LocalFree(descriptor);
+        }
+        return evidence;
+    }
+    public static ObjectAccessEvidence ProbeCurrentObjectAccess()
+    {
+        // Read-only token/process diagnostics plus disposable anonymous objects.
+        // The comparison descriptor never changes a token, account or existing ACL.
+        var evidence = new ObjectAccessEvidence { Token = InspectProcessToken((int)GetCurrentProcessId()) };
+        try { evidence.SelfProcessSddl = SecuritySddl(GetCurrentProcess(), 6); }
+        catch (Exception error) { evidence.SelfProcessSecurityError = error.Message; }
+        IntPtr reopened = OpenProcess(0x001fffff, false, GetCurrentProcessId());
+        evidence.SelfProcessAllAccessReopenError = reopened == IntPtr.Zero ? Marshal.GetLastWin32Error() : 0;
+        if (reopened != IntPtr.Zero) CloseHandle(reopened);
+        evidence.PipeDefaultNullAttributes = ProbePipe(false, null);
+        evidence.PipeDefaultInheritable = ProbePipe(true, null);
+        evidence.PipeExplicitUserSystem = ProbePipe(true, "D:(A;;GA;;;SY)(A;;GA;;;" + evidence.Token.UserSid + ")");
+        return evidence;
+    }
 
     static int[] OwnedIds(IntPtr job)
     {
@@ -269,10 +371,27 @@ public static class RestrictedTokenLauncher
         List<PrivilegeEvidence> privileges = new List<PrivilegeEvidence>();
         foreach (LUID_AND_ATTRIBUTES entry in PrivilegeEntries(token))
             privileges.Add(new PrivilegeEvidence { Name = PrivilegeName(entry.Luid), Attributes = entry.Attributes });
-        return new TokenEvidence { UserSid = TokenSid(token, TokenUser), IntegritySid = TokenSid(token, TokenIntegrityLevel),
+        var evidence = new TokenEvidence { UserSid = TokenSid(token, TokenUser), IntegritySid = TokenSid(token, TokenIntegrityLevel),
+            OwnerSid = TokenSid(token, TokenOwner),
             IsElevated = Dword(token, TokenElevation), ElevationType = Dword(token, TokenElevationType),
             HasRestrictions = Dword(token, TokenHasRestrictions), UIAccess = Dword(token, TokenUIAccess),
             Groups = Groups(token), Privileges = privileges.ToArray() };
+        IntPtr buffer = Read(token, TokenDefaultDacl);
+        try
+        {
+            IntPtr acl = Marshal.ReadIntPtr(buffer); evidence.DefaultDaclIsNull = acl == IntPtr.Zero;
+            if (acl != IntPtr.Zero)
+            {
+                int size = (ushort)Marshal.ReadInt16(acl, 2);
+                if (size < 8) throw new InvalidOperationException("Invalid token default ACL size");
+                byte[] data = new byte[size]; Marshal.Copy(acl, data, 0, size);
+                var descriptor = new RawSecurityDescriptor(ControlFlags.DiscretionaryAclPresent,
+                    new SecurityIdentifier(evidence.OwnerSid), null, null, new RawAcl(data, 0));
+                evidence.DefaultDaclSddl = descriptor.GetSddlForm(AccessControlSections.Owner | AccessControlSections.Access);
+            }
+        }
+        finally { Marshal.FreeHGlobal(buffer); }
+        return evidence;
     }
     // Read-only evidence for tracked lifecycle-created processes only. A short-lived
     // process may exit first; that is missing evidence, never a fabricated snapshot.
