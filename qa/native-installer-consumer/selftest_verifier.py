@@ -49,10 +49,22 @@ class AdmissionTests(unittest.TestCase):
 
     def test_generated_uninstaller_is_separate(self):
         (self.root / "Uninstall Synthetic.exe").write_bytes(b"MZsynthetic")
+        (self.root / "resources/package-type").write_bytes(b"nsis")
         result = verify_tree(self.root, self.manifest, "Uninstall Synthetic.exe")
         self.assertEqual(result["payload_files"], 2)
-        self.assertEqual(len(result["generated_installer_files"]), 1)
+        self.assertEqual(len(result["generated_installer_files"]), 2)
         self.assertFalse(result["rebuilt"])
+
+    def test_generated_marker_missing_wrong_or_unscoped_rejected(self):
+        (self.root / "Uninstall Synthetic.exe").write_bytes(b"MZsynthetic")
+        with self.assertRaises(ValueError): verify_tree(self.root, self.manifest, "Uninstall Synthetic.exe")
+        marker = self.root / "resources/package-type"
+        marker.write_bytes(b"msix")
+        with self.assertRaises(ValueError): verify_tree(self.root, self.manifest, "Uninstall Synthetic.exe")
+        marker.write_bytes(b"nsis")
+        with self.assertRaises(ValueError): verify_tree(self.root, self.manifest)
+        (self.root / "resources/app.asar").write_bytes(b"modified")
+        with self.assertRaises(ValueError): verify_tree(self.root, self.manifest, "Uninstall Synthetic.exe")
 
     def test_links_are_rejected(self):
         (self.root / "linked").symlink_to(self.root / "resources/app.asar")

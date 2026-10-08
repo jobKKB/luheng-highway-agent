@@ -1,0 +1,111 @@
+name: Native NSIS long-path installer-only fixture
+'on':
+  push:
+    branches:
+    - probe/hermes-native-package-current-20261006
+    paths:
+    - .github/workflows/native-installer-longpath-fixture.yml
+    - qa/native-installer-longpaths/**
+  workflow_dispatch: null
+permissions:
+  contents: read
+concurrency:
+  group: luheng-native-longpath-fixture-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  native-fixture:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+    - name: Checkout reviewed helper control
+      uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      with:
+        persist-credentials: false
+        path: consumer
+    - name: Checkout exact qualified source-only controller
+      uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      with:
+        ref: 90424705b9ca9f8537ffee15635b914ce52d0183
+        persist-credentials: false
+        path: controller
+    - name: Checkout immutable original upstream source
+      uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      with:
+        repository: NousResearch/hermes-agent
+        ref: 158fd638da1629c8e62caf9ade1515d162def8ab
+        persist-credentials: false
+        path: source
+    - name: Select independent source-admission interpreter
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+      with:
+        python-version: '3.12'
+    - name: Admit unchanged baseline then separately commit only installer helper overlay
+      shell: pwsh
+      run: '$ErrorActionPreference = ''Stop''
+
+        python -I -S -B controller/qa/hermes-native/materialize-v2-source.py controller source
+
+        if ($LASTEXITCODE) { throw ''Original source admission failed'' }
+
+        python -I -S -B consumer/qa/native-installer-longpaths/apply_helper_overlay.py --controller controller --source source --overlay consumer/qa/native-installer-longpaths/helper-source-overlay.json --output helper-source-admission.json
+
+        if ($LASTEXITCODE) { throw ''Installer helper overlay admission failed'' }
+
+        $consumer = Join-Path $env:GITHUB_WORKSPACE ''consumer/qa/native-installer-consumer''
+
+        python -I -S -B (Join-Path $consumer ''selftest_verifier.py'')
+
+        if ($LASTEXITCODE) { throw ''Admission regression failed'' }
+
+        $tokens = $null; $errors = $null
+
+        [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $env:GITHUB_WORKSPACE ''consumer/qa/native-installer-longpaths/fixture/Test-NativeFixture.ps1''),[ref]$tokens,[ref]$errors) | Out-Null
+
+        if ($errors.Count) { $errors | Format-List; throw ''Native fixture syntax failed'' }
+
+        '
+    - name: Prepare minimal locked tools and prove actual long-path install hash junction-refusal uninstall
+      shell: pwsh
+      run: '$ErrorActionPreference = ''Stop''
+
+        $job = Join-Path $env:RUNNER_TEMP ''luheng-nsis-longpath-fixture''
+
+        $script = Join-Path $env:GITHUB_WORKSPACE ''consumer/qa/native-installer-longpaths/run_native_fixture.py''
+
+        $source = Join-Path $env:GITHUB_WORKSPACE ''source''
+
+        $fixture = Join-Path $env:GITHUB_WORKSPACE ''consumer/qa/native-installer-longpaths/fixture''
+
+        $consumer = Join-Path $env:GITHUB_WORKSPACE ''consumer/qa/native-installer-consumer''
+
+        $pwsh = (Get-Process -Id $PID).Path
+
+        python -I -S -B $script $source (Join-Path $job ''work'') (Join-Path $job ''cache'') $fixture $consumer $pwsh 2>&1 | Tee-Object (Join-Path $env:GITHUB_WORKSPACE ''native-longpath-fixture.log'')
+
+        if ($LASTEXITCODE) { throw ''Tiny native NSIS long-path fixture failed; do not wrap application payload'' }
+
+        '
+    - name: Preserve source and actual native fixture evidence
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: luheng-native-nsis-longpath-fixture-evidence
+        path: '${{ github.workspace }}/source-admission.json
+
+          ${{ github.workspace }}/helper-source-admission.json
+
+          ${{ github.workspace }}/native-longpath-fixture.log
+
+          ${{ runner.temp }}/luheng-nsis-longpath-fixture/work/fixture-run/fixture-build.log
+
+          ${{ runner.temp }}/luheng-nsis-longpath-fixture/work/fixture-run/fixture-build.json
+
+          ${{ runner.temp }}/luheng-nsis-longpath-fixture/work/fixture-run/fixture-result.json
+
+          ${{ runner.temp }}/luheng-nsis-longpath-fixture/work/fixture-run/notices/**
+
+          '
+        include-hidden-files: true
+        compression-level: 6
+        retention-days: 14
+        if-no-files-found: warn

@@ -156,7 +156,9 @@ def verify_tree(root, manifest, uninstaller=None):
             require(relative.casefold() not in actual_folded, "Case-conflicting payload files")
             actual.add(relative)
             actual_folded.add(relative.casefold())
-    allowed = {uninstaller} if uninstaller else set()
+    # The pinned NSIS engine adds exactly its uninstaller and a fixed format marker.
+    marker_name = "resources/package-type"
+    allowed = {uninstaller, marker_name} if uninstaller else set()
     require(actual == set(expected) | allowed, "Exact payload membership differs")
     for row in expected.values():
         verify_file(root, row)
@@ -166,7 +168,10 @@ def verify_tree(root, manifest, uninstaller=None):
         require(path.is_file(), "Generated uninstaller missing")
         with path.open("rb") as stream:
             require(stream.read(2) == b"MZ", "Generated uninstaller is not a Windows executable")
-        generated = [{"path": uninstaller, "bytes": path.stat().st_size, "sha256": sha(path)}]
+        marker = owned(root, marker_name)
+        require(marker.is_file() and marker.read_bytes() == b"nsis", "Generated NSIS package-type marker differs")
+        generated = [{"path": uninstaller, "bytes": path.stat().st_size, "sha256": sha(path)},
+                     {"path": marker_name, "bytes": 4, "sha256": sha(marker)}]
     return {"every_payload_file_sha256_verified": True, "exact_membership": True,
             "payload_files": len(expected), "payload_bytes": sum(row["bytes"] for row in expected.values()),
             "generated_installer_files": generated, "source_commit": manifest["source_commit"],

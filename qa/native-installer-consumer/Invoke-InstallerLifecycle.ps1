@@ -159,9 +159,13 @@ try {
   $extra=@(Get-ChildItem -LiteralPath $install -Recurse -Force -File | Where-Object {
     -not $expected.Contains([IO.Path]::GetRelativePath($install,$_.FullName).Replace('\','/'))
   })
-  if ($extra.Count -ne 1 -or $extra[0].DirectoryName -ine $install -or $extra[0].Name -notmatch '^Uninstall [^\\/]+\.exe$') { throw 'Unreviewed installed-file additions; do not execute an unknown uninstaller' }
-  $uninstaller=$extra[0].FullName
-  & $python -I -S -B $verifierPath tree --contract $contractPath --evidence $evidenceRoot --root $install --uninstaller $extra[0].Name --output (Join-Path $out 'installed-payload-before-launch.json')
+  $uninstallerExtra=@($extra | Where-Object { $_.DirectoryName -ieq $install -and $_.Name -match '^Uninstall [^\\/]+\.exe$' })
+  $markerPath=Join-Path $install 'resources/package-type'
+  $markerExtra=@($extra | Where-Object { $_.FullName -ieq $markerPath })
+  if ($extra.Count -ne 2 -or $uninstallerExtra.Count -ne 1 -or $markerExtra.Count -ne 1) { throw 'Unreviewed installed-file additions; do not execute an unknown uninstaller' }
+  if ($markerExtra[0].Length -ne 4 -or [IO.File]::ReadAllText($markerPath,[Text.Encoding]::ASCII) -cne 'nsis') { throw 'Pinned NSIS package-type marker differs' }
+  $uninstaller=$uninstallerExtra[0].FullName
+  & $python -I -S -B $verifierPath tree --contract $contractPath --evidence $evidenceRoot --root $install --uninstaller ([IO.Path]::GetFileName($uninstaller)) --output (Join-Path $out 'installed-payload-before-launch.json')
   if ($LASTEXITCODE) { throw 'Installed payload bytes/membership differ' }
   $bytesAdmitted=$true; $result.every_installed_payload_file_verified=$true
   $exe=Join-Path $install 'LuhengOfficeAgent.exe'
