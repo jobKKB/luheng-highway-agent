@@ -63,7 +63,6 @@ const config = {
   appId: `com.luheng.nsis-long-path-fixture.${nonce}`, productName: 'Nsis Long Path Fixture',
   executableName: 'Nsis Long Path Fixture', electronVersion: manual.electronVersion,
   artifactName: 'fixture-setup.exe', publish: null, forceCodeSigning: false,
-  npmRebuild: false, nodeGypRebuild: false,
   directories: { buildResources: resources, output }, toolsets,
   win: { target: ['nsis'], executableName: 'Nsis Long Path Fixture', sign: false, requestedExecutionLevel: 'asInvoker' },
   nsis: { ...manual.nsis, include: path.join(resources, 'nsis-longpaths.nsh'), createStartMenuShortcut: false, createDesktopShortcut: false },
