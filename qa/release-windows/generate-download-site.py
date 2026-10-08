@@ -21,6 +21,7 @@ LIFECYCLE_STAGES = (
 UPGRADE_STAGES = (
     "automaticUpdateVerified", "baselineInstalled", "productConsentConfirmed", "installerWizardCompleted",
     "targetAutomaticallyRelaunched", "targetDataVerified", "targetAutomaticProfileVerified",
+    "baselineTreeVerified", "targetTreeVerified", "targetFixtureOpened",
 )
 
 

@@ -105,12 +105,23 @@ async function main() {
     assert.equal(health.version, expected.version);
     report.backendVersion = health.version;
     if (phase === 'handoff') {
+      // Fresh profiles legitimately defer provider setup; use the actual product
+      // action so the normal persisted preference must survive the update too.
+      const chooseLater = page.getByRole('button', { name: /^(稍后再选择提供方|I'll choose a provider later)$/ });
+      await chooseLater.waitFor({ state: 'visible', timeout: 120000 });
+      const label = await chooseLater.innerText();
+      await chooseLater.click();
+      await chooseLater.waitFor({ state: 'hidden', timeout: 15000 });
+      await evidence('provider-setup.json', { action: 'choose-provider-later', label, clicked: true, stateWrittenByProduct: true });
+      report.onboardingDeferredViaUI = true;
       const marker = 'online-update-' + randomUUID();
       const id = 'update_' + randomUUID().replaceAll('-', '');
       await page.evaluate(project => window.hermesDesktop.settings.setDefaultProjectDir(project), runtime.project);
       const imported = await api({ path: '/api/sessions/import', method: 'POST', body: { sessions: [{
         id, source: 'cli', title: marker, pinned: true, started_at: Date.now() / 1000,
-        ended_at: Date.now() / 1000, messages: [{ role: 'user', content: marker }]
+        // A completed synthetic exchange avoids resuming an unfinished model turn.
+        ended_at: Date.now() / 1000, messages: [{ role: 'user', content: marker },
+          { role: 'assistant', content: 'Synthetic fixture acknowledgement: ' + marker }]
       }] } });
       assert.equal(imported.ok, true);
       assert.equal(imported.imported, 1);

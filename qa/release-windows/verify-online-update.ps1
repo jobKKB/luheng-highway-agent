@@ -51,7 +51,7 @@ $env:PYTHONDONTWRITEBYTECODE = '1'
 foreach ($name in @('ELECTRON_RUN_AS_NODE','NODE_OPTIONS','NODE_PATH','ELECTRON_DISABLE_SANDBOX')) { Remove-Item "Env:$name" -ErrorAction SilentlyContinue }
 @{ lsp=@{enabled=$false}; plugins=@{enabled=@()}; updates=@{check=$false}; security=@{allow_lazy_installs=$false}; telemetry=@{shared_metrics=@{enabled=$false;send_enabled=$false}} } |
     ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $runtime.home 'config.yaml') -Encoding utf8NoBOM
-$report = [ordered]@{ schema=1; status='failed'; pair=$pair; token=$token; automaticUpdateVerified=$false; baselineInstalled=$false; baselineTreeVerified=$false; targetTreeVerified=$false; productConsentConfirmed=$false; installerWizardCompleted=$false; targetAutomaticallyRelaunched=$false; targetAutomaticProfileVerified=$false; targetDataVerified=$false; forcedCleanup=$false; uiActions=@(); error=$null }
+$report = [ordered]@{ schema=1; status='failed'; pair=$pair; token=$token; automaticUpdateVerified=$false; baselineInstalled=$false; baselineTreeVerified=$false; targetTreeVerified=$false; productConsentConfirmed=$false; installerWizardCompleted=$false; targetAutomaticallyRelaunched=$false; targetFixtureOpened=$false; targetAutomaticProfileVerified=$false; targetDataVerified=$false; forcedCleanup=$false; uiActions=@(); error=$null }
 $owned = [Collections.Generic.List[Diagnostics.Process]]::new()
 function Hash([string]$File) { (Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash.ToLowerInvariant() }
 function Start-Owned([string]$File,[string[]]$Arguments) {
@@ -81,7 +81,37 @@ function Click-Button($Window,[string[]]$Names) {
     }
     return $false
 }
+function Test-FixtureCandidate([int]$WindowPid,[int]$ExpectedPid,[string]$Name,[string]$Marker,[bool]$Enabled,[bool]$Offscreen) {
+    return $WindowPid -gt 0 -and $WindowPid -eq $ExpectedPid -and $Name -ceq $Marker -and
+        $Marker -cmatch '^online-update-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -and $Enabled -and -not $Offscreen
+}
+function Open-RetainedFixture([int]$ExpectedPid,[string]$Marker) {
+    $nameCondition=[Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty,$Marker)
+    foreach ($window in (Windows-For $ExpectedPid)) {
+        foreach ($element in $window.FindAll([Windows.Automation.TreeScope]::Descendants,$nameCondition)) {
+            if (-not (Test-FixtureCandidate $window.Current.ProcessId $ExpectedPid $element.Current.Name $Marker $element.Current.IsEnabled $element.Current.IsOffscreen)) { continue }
+            # Invoking the actual row drives ordinary session.resume; the launch
+            # profile then keeps its real shared SessionDB open for ownership proof.
+            $pattern=$null
+            if ($element.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern,[ref]$pattern)) {
+                $pattern.Invoke(); $method='Invoke'
+            } elseif ($element.TryGetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern,[ref]$pattern)) {
+                $pattern.Select(); $method='Select'
+            } else { continue }
+            $report.uiActions += @{pid=$ExpectedPid; window=$window.Current.Name; fixture=$Marker; pattern=$method}
+            return $true
+        }
+    }
+    return $false
+}
 try {
+    $testMarker='online-update-12345678-1234-1234-1234-123456789abc'
+    if (-not (Test-FixtureCandidate 123 123 $testMarker $testMarker $true $false)) { throw 'Fixture selector positive self-test failed' }
+    if ((Test-FixtureCandidate 124 123 $testMarker $testMarker $true $false) -or
+        (Test-FixtureCandidate 123 123 ($testMarker+'suffix') $testMarker $true $false) -or
+        (Test-FixtureCandidate 123 123 $testMarker $testMarker $false $false) -or
+        (Test-FixtureCandidate 123 123 $testMarker $testMarker $true $true) -or
+        (Test-FixtureCandidate 123 123 'arbitrary' 'arbitrary' $true $false)) { throw 'Fixture selector boundary self-test failed' }
     & $node (Join-Path $PSScriptRoot 'verify-online-update.mjs') --self-test
     if ($LASTEXITCODE) { throw 'Consumer invariant self-test failed' }
     & $node (Join-Path $PSScriptRoot 'verify-online-update.mjs') --validate-pair $PairLock
@@ -161,6 +191,13 @@ try {
         $process=Get-Process -Id $processId -ErrorAction SilentlyContinue
         if ($process -and -not $process.WaitForExit(60000)) { throw 'Owned updater installer remained running' }
     }
+    $fixture=Get-Content -LiteralPath (Join-Path $out 'fixture.json') -Raw | ConvertFrom-Json
+    $fixtureDeadline=[DateTime]::UtcNow.AddSeconds(120)
+    do {
+        if (Open-RetainedFixture $restarted.Id $fixture.marker) { $report.targetFixtureOpened=$true; break }
+        Start-Sleep -Milliseconds 500
+    } while ([DateTime]::UtcNow -lt $fixtureDeadline)
+    if (-not $report.targetFixtureOpened) { throw 'Automatic target did not expose the exact retained session as an enabled actionable UI element' }
     # The product's ordinary ownership record identifies the automatic restart, while
     # Windows file ownership proves that backend opened the original HOME database.
     $profileDeadline=[DateTime]::UtcNow.AddSeconds(120)

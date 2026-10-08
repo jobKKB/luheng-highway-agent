@@ -31,11 +31,11 @@ jobs:
         with:
           node-version: '24.12.0'
       - name: Select uv for source-only evidence admission
-        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
         with:
           enable-cache: false
           python-version: '3.12'
-      - name: Validate committed pair and successful producer runs
+      - name: Validate committed pair and producer plus acceptance provenance
         id: pair
         shell: pwsh
         env:
@@ -53,31 +53,8 @@ jobs:
           if ($LASTEXITCODE) { throw 'Renderer consumer self-test failed' }
           uv run --no-project --python 3.12 python -I -S -B (Join-Path $qa 'verify-online-update.py') lock --pair $env:PAIR_LOCK_PATH
           if ($LASTEXITCODE) { throw 'Pair lock is invalid' }
-          $pair = Get-Content -LiteralPath $env:PAIR_LOCK_PATH -Raw | ConvertFrom-Json
-          $runs = Join-Path $env:RUNNER_TEMP 'update-runs'
-          New-Item -ItemType Directory -Path $runs | Out-Null
-          foreach ($side in @('from','to')) {
-            $run = gh api "repos/jobKKB/luheng-highway-agent/actions/runs/$($pair.$side.evidence.runId)" | ConvertFrom-Json
-            if ($LASTEXITCODE -or $run.conclusion -cne 'success' -or $run.status -cne 'completed' -or $run.head_sha -cne $pair.$side.evidence.headSha -or $run.repository.full_name -cne $pair.repository) { throw 'Producer run is not the admitted successful build' }
-            $run | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath (Join-Path $runs "$side.json") -Encoding utf8NoBOM
-            "$($side)_run=$($pair.$side.evidence.runId)" >> $env:GITHUB_OUTPUT
-          }
-      - name: Obtain baseline qualification evidence
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: luheng-windows-release-evidence
-          repository: jobKKB/luheng-highway-agent
-          run-id: ${{ steps.pair.outputs.from_run }}
-          github-token: ${{ github.token }}
-          path: ${{ runner.temp }}/update-evidence/from
-      - name: Obtain target qualification evidence without downloading its installer
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: luheng-windows-release-evidence
-          repository: jobKKB/luheng-highway-agent
-          run-id: ${{ steps.pair.outputs.to_run }}
-          github-token: ${{ github.token }}
-          path: ${{ runner.temp }}/update-evidence/to
+          uv run --no-project --python 3.12 python -I -S -B qa/release-windows/verify-online-update.py fetch --pair $env:PAIR_LOCK_PATH --evidence (Join-Path $env:RUNNER_TEMP 'update-evidence') --runs (Join-Path $env:RUNNER_TEMP 'update-runs')
+          if ($LASTEXITCODE) { throw 'Producer and acceptance evidence did not qualify' }
       - name: Download only the real baseline and admit both producer evidence chains
         shell: pwsh
         env:

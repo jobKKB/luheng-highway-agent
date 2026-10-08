@@ -51,7 +51,11 @@ action can restart through Explorer without inheriting temporary process environ
 overrides. The test never changes a user machine or overwrites an existing profile.
 
 After installing exact baseline bytes, the real renderer bridge creates a setting
-and imports an explicitly synthetic session fixture. An external project file is
+and imports an explicitly synthetic session fixture. Before creating it, Playwright
+clicks the real "I'll choose a provider later" first-run button (or its Chinese
+translation). No onboarding state is written directly. This ordinary preference
+must survive so the automatically restarted target exposes its session sidebar.
+An external project file is
 also retained. The product checks the real HTTPS feed; native UI Automation confirms
 the preview consent dialog. Only a running installer with the exact qualified target
 SHA256 and size may receive Next, Install, or Finish clicks. No target installer is
@@ -59,6 +63,11 @@ launched by the consumer.
 
 The automatically restarted target must have its exact executable and ASAR, a normal
 visible window, the same user and medium token, and a new process ID. Its existing
+window must expose the exact unique fixture title; UI Automation invokes or selects
+that real row only through a supported pattern inside that process's window. This
+ordinary `session.resume` action opens the shared launch-profile database; merely
+starting the HTTP backend only opens a short-lived read handle and is insufficient.
+Its existing
 `backend-ownership.json` must associate that process with a backend that Windows
 Restart Manager reports as holding the original `state.db`. Only then is that target
 closed normally and reopened for renderer-based checks of the actual setting,
@@ -71,7 +80,7 @@ UI actions, automatic-profile evidence, tokens, and an error. Success requires
 `status: online-update-verified`, `error: null`, `forcedCleanup: false`, and all of
 `baselineInstalled`, `baselineTreeVerified`, `productConsentConfirmed`,
 `installerWizardCompleted`, `targetAutomaticallyRelaunched`,
-`targetAutomaticProfileVerified`, `targetTreeVerified`, `targetDataVerified`, and
+`targetFixtureOpened`, `targetAutomaticProfileVerified`, `targetTreeVerified`, `targetDataVerified`, and
 `automaticUpdateVerified` to be true. Separate renderer and tree receipts, progress
 events, and screenshots are uploaded with the restricted-token wrapper receipt.
 

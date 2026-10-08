@@ -1,0 +1,46 @@
+name: Publish qualified Windows previews
+
+on:
+  push:
+    branches: [codex/windows-release-completion]
+    paths: [.github/release/windows-preview-release-lock.json]
+
+permissions: {}
+
+concurrency:
+  group: luheng-windows-preview-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'jobKKB/luheng-highway-agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
+        with:
+          enable-cache: false
+      - name: Check admission and publication guards
+        run: uv run --no-project --python 3.12 python -I -S -B .github/release/selftest-publisher.py
+      - name: Admit exact producer artifacts and publish immutable prereleases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uv run --no-project --python 3.12 python -I -S -B .github/release/publish-windows-preview.py --lock .github/release/windows-preview-release-lock.json --output "${{ runner.temp }}/qualified-releases" --publish
+      - name: Preserve actual pair and public feed metadata
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: luheng-preview-publication-metadata
+          path: |
+            ${{ runner.temp }}/qualified-releases/pair-lock.json
+            ${{ runner.temp }}/qualified-releases/publication-receipt.json
+            ${{ runner.temp }}/qualified-releases/latest.yml
+            ${{ runner.temp }}/qualified-releases/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14

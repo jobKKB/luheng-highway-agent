@@ -23,7 +23,9 @@ def main():
         return
     consumer["require"](args.contract and args.evidence and args.output, "Contract, evidence and output required")
     pins = contract["validate_contract"](args.contract, args.evidence)
-    result = {"same_job_custody_verified": True, "build_run_id": pins["build"]["runId"]}
+    result = {"same_job_custody_verified": pins["scope"] == "same-job", "scope": pins["scope"],
+              "artifact_recovery_custody_verified": pins["scope"] == "artifact-recovery",
+              "build_run_id": pins["build"]["runId"], "acceptance_run_id": pins.get("acceptance", {}).get("runId", pins["build"]["runId"])}
     if args.mode == "tree":
         consumer["require"](args.root, "Installed root required")
         if args.uninstaller:

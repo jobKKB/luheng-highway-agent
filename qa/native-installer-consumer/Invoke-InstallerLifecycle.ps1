@@ -19,15 +19,17 @@ $pins = Get-Content -LiteralPath $Contract -Raw | ConvertFrom-Json
 if ($pins.qualified -ne $true -or $pins.lifecycleMode -notin @('elevated-runner-explicitly-limited','restricted-token-same-user')) { throw 'Lifecycle mode or qualification is not reviewed' }
 $build = Get-Content -LiteralPath $BuildReceipt -Raw | ConvertFrom-Json
 if ($build.payload.rebuilt -ne $false -or $build.signed -ne $false -or $build.custody.runId -ne [string]$pins.build.runId -or $build.payload.sourceCommit -cne $pins.source.commit -or $build.payload.sourceTreeSha256 -cne $pins.source.treeSha256) { throw 'Installer receipt is not this immutable unsigned payload' }
-$installer = [IO.Path]::GetFullPath($build.installer)
+$installer = if ($pins.scope -eq 'artifact-recovery') { [IO.Path]::GetFullPath((Join-Path $OriginalEvidence $pins.installer.path)) } else { [IO.Path]::GetFullPath($build.installer) }
 if ((Get-Item -LiteralPath $installer).Length -ne $build.bytes -or (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant() -cne $build.sha256) { throw 'Built installer hash/size differs' }
 if ((Get-AuthenticodeSignature -LiteralPath $installer).Status -ne 'NotSigned') { throw 'This lane is required to be explicitly unsigned' }
 $python = if ($PythonExecutable) { (Resolve-Path -LiteralPath $PythonExecutable).Path } else { (Get-Command python -ErrorAction Stop).Source }
 $verifierPath = (Resolve-Path -LiteralPath $Verifier).Path
 $contractPath = (Resolve-Path -LiteralPath $Contract).Path
 $evidenceRoot = (Resolve-Path -LiteralPath $OriginalEvidence).Path
-if ($pins.scope -eq 'same-job') {
-  if ([string]$pins.build.runId -cne $env:GITHUB_RUN_ID) { throw 'Lifecycle contract is not from this producer run' }
+if ($pins.scope -notin @('same-job','artifact-recovery')) { throw 'Unknown lifecycle custody scope' }
+if ($pins.scope -eq 'artifact-recovery' -and ([string]$pins.acceptance.runId -cne $env:GITHUB_RUN_ID -or $pins.acceptance.headSha -cne $env:GITHUB_SHA)) { throw 'Recovery contract is not from this acceptance execution' }
+if ($pins.scope -in @('same-job','artifact-recovery')) {
+  if ($pins.scope -eq 'same-job' -and [string]$pins.build.runId -cne $env:GITHUB_RUN_ID) { throw 'Lifecycle contract is not from this producer run' }
   $receiptPin = $pins.evidenceFiles.installerReceipt
   $pinnedReceipt = [IO.Path]::GetFullPath((Join-Path $evidenceRoot $receiptPin.path))
   if ((Resolve-Path -LiteralPath $BuildReceipt).Path -ine $pinnedReceipt) { throw 'Lifecycle received a different installer receipt' }
@@ -94,7 +96,7 @@ $markers = @((Join-Path $state 'home/synthetic-retain.txt'),(Join-Path $state 'e
 foreach ($marker in $markers) { [IO.File]::WriteAllText($marker,$markerText,[Text.UTF8Encoding]::new($false)) }
 $markerHash = (Get-FileHash -LiteralPath $markers[0] -Algorithm SHA256).Hash
 $result = [ordered]@{
-  schema=1; build_run_id=$pins.build.runId; consumer_run_id=$env:GITHUB_RUN_ID
+  schema=1; scope=$pins.scope; build_run_id=$pins.build.runId; consumer_run_id=$env:GITHUB_RUN_ID; acceptance_run_id=$env:GITHUB_RUN_ID
   coverage=$pins.lifecycleMode; runner_token=$rootToken; native_windows=$true; architecture='X64'
   unsigned_installer=$true; installed=$false; every_installed_payload_file_verified=$false
   native_window=$false; contained_backend_health=$false; normal_window_close=$false
@@ -109,7 +111,8 @@ $owners = [Collections.Generic.Dictionary[int,object]]::new()
 $result['process_tracking']='owned-native-jobs; ordinary same-token launch'
 function Start-OwnedProcess([string]$Exe,[string]$ArgumentLine,[string]$Cwd,[string]$Label) {
   $pairs=@($envMap.Keys | ForEach-Object { $_ + '=' + [string]$envMap[$_] })
-  $owner=[LifecycleProcessOwner]::StartSuspended($Exe,$ArgumentLine,$Cwd,[string[]]$pairs)
+  try { $owner=[LifecycleProcessOwner]::StartSuspended($Exe,$ArgumentLine,$Cwd,[string[]]$pairs) }
+  catch { $result['last_start_evidence']=[LifecycleProcessOwner]::LastStartEvidence; throw }
   $proc=$owner.Process
   $owners.Add($proc.Id,$owner)
   # The child cannot exit or spawn before its actual token is observed.

@@ -1,4 +1,4 @@
-"""Qualify same-job installer custody without inventing uploaded artifact IDs."""
+"""Qualify same-job or explicitly admitted cross-run installer custody."""
 from __future__ import annotations
 
 import argparse
@@ -20,16 +20,24 @@ def pin(evidence, path):
     return {"path": relative, "bytes": path.stat().st_size, "sha256": sha(path)}
 
 
-def prepare(evidence, receipt, lifecycle_mode="restricted-token-same-user"):
+def prepare(evidence, receipt, lifecycle_mode="restricted-token-same-user", recovery=None):
     evidence = Path(evidence).absolute()
-    files = {
+    files = {} if recovery else {
         "sourceAdmission": pin(evidence, evidence / "source-admission.json"),
         "structure": pin(evidence, evidence / "windows-unpacked-structure.json"),
         "health": pin(evidence, evidence / "native-smoke-evidence/native-startup.json"),
         "installerReceipt": pin(evidence, receipt),
     }
+    context = None
+    if recovery:
+        recovery_api = runpy.run_path(str(Path(__file__).with_name("artifact-recovery.py")))
+        context = recovery_api["validate_context"](read_json(recovery), current=True)
+        files = dict(context["producerFiles"])
+        require(pin(evidence, receipt) == files["installerReceipt"], "Different original installer receipt")
+        for row in files.values():
+            consumer["verify_file"](evidence, row)
     admission, structure, health, build = (read_json(owned(evidence, files[key]["path"]))
-                                         for key in files)
+                                         for key in ("sourceAdmission", "structure", "health", "installerReceipt"))
     require(lifecycle_mode in ("restricted-token-same-user", "elevated-runner-explicitly-limited"),
             "Unknown lifecycle coverage")
     require(admission["source_only"] is True and admission["license_preserved"] is True,
@@ -63,7 +71,9 @@ def prepare(evidence, receipt, lifecycle_mode="restricted-token-same-user"):
     require("resources/app-update.yml" in names, "Immutable updater configuration missing")
     run_id = build["custody"]["runId"]
     require(re.fullmatch(r"[1-9][0-9]*", str(run_id)), "Missing producer run ID")
-    if os.environ.get("GITHUB_RUN_ID"):
+    if context:
+        require(str(run_id) == str(context["producerRun"]["id"]), "Original producer custody changed")
+    elif os.environ.get("GITHUB_RUN_ID"):
         require(str(run_id) == os.environ["GITHUB_RUN_ID"], "Contract is not from this producer run")
     require(health["native_windows"] is True and health["architecture"] == "X64" and
             health["plain_launch"] is True and health["contained_backend_health"] is True and
@@ -80,7 +90,7 @@ def prepare(evidence, receipt, lifecycle_mode="restricted-token-same-user"):
     require(build["custody"]["manifestSha256"] == files["structure"]["sha256"] and
             build["custody"]["nativeHealthSha256"] == files["health"]["sha256"],
             "Installer custody points to different structure/native evidence")
-    installer = Path(build["installer"])
+    installer = owned(evidence, context["installer"]["path"]) if context else Path(build["installer"])
     require(installer.is_absolute(), "Installer path must be absolute")
     installer_pin = pin(evidence, installer)
     require(type(build["bytes"]) is int and build["bytes"] > 0 and
@@ -88,19 +98,25 @@ def prepare(evidence, receipt, lifecycle_mode="restricted-token-same-user"):
             "Installer bytes differ from the build receipt")
     with installer.open("rb") as stream:
         require(stream.read(2) == b"MZ", "Installer is not a Windows executable")
-    return {"schema": 1, "scope": "same-job", "qualified": True,
+    result = {"schema": 1, "scope": "artifact-recovery" if context else "same-job", "qualified": True,
             "repository": "jobKKB/luheng-highway-agent", "build": {"runId": int(run_id)},
             "source": {"commit": admission["source_commit"], "treeSha256": admission["source_tree_sha256"],
                        "count": admission["source_count"], "baseVersion": structure["base_version"]},
             "evidenceFiles": files, "installer": installer_pin, "lifecycleMode": lifecycle_mode}
+    if context:
+        require(installer_pin == context["installer"], "Recovered installer path or bytes changed")
+        result["acceptance"] = context["acceptance"]
+        result["recoveryAdmission"] = pin(evidence, recovery)
+    return result
 
 
 def validate_contract(path, evidence):
     pins = read_json(path)
-    require(pins["scope"] == "same-job" and pins["qualified"] is True,
-            "Expected a qualified same-job contract")
+    require(pins["scope"] in ("same-job", "artifact-recovery") and pins["qualified"] is True,
+            "Expected a qualified installer custody contract")
     actual = prepare(evidence, owned(evidence, pins["evidenceFiles"]["installerReceipt"]["path"]),
-                     pins["lifecycleMode"])
+                     pins["lifecycleMode"],
+                     consumer["verify_file"](evidence, pins["recoveryAdmission"]) if pins["scope"] == "artifact-recovery" else None)
     require(pins == actual, "Contract differs from its original qualified evidence")
     return pins
 
@@ -110,10 +126,11 @@ def main():
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--build-receipt", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--recovery-admission", type=Path)
     parser.add_argument("--lifecycle-mode", default="restricted-token-same-user",
                         choices=["restricted-token-same-user", "elevated-runner-explicitly-limited"])
     args = parser.parse_args()
-    result = prepare(args.evidence, args.build_receipt, args.lifecycle_mode)
+    result = prepare(args.evidence, args.build_receipt, args.lifecycle_mode, args.recovery_admission)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(result))

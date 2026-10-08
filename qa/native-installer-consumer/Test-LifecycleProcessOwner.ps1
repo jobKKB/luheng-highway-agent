@@ -53,7 +53,7 @@ foreach ($name in @('HOME','USERPROFILE','LOCALAPPDATA','APPDATA','TEMP','TMP'))
 $envMap['PROBE_STATE']=$state; $envMap['PROBE_PWSH']=$pwsh; $envMap['PROBE_CHILD']=$childScript
 foreach ($name in @('STARTED','READY','RELEASE','FINISHED')) { $envMap['PROBE_'+$name]=Join-Path $state ($name.ToLowerInvariant()+'.txt') }
 $pairs=@($envMap.Keys | ForEach-Object { $_+'='+[string]$envMap[$_] })
-$result=[ordered]@{schema=1; native_windows=$true; helper_test_only=$true; suspended_gate=$false; same_token=$false; descendant_after_parent_exit=$false; graceful_tree_exit=$false; forced_cleanup=$false; error=$null}
+$result=[ordered]@{schema=1; native_windows=$true; helper_test_only=$true; suspended_gate=$false; same_token=$false; native_creator_handle_observation=$false; descendant_after_parent_exit=$false; graceful_tree_exit=$false; failed_start_cleanup=$false; failed_api_diagnostic=$false; forced_cleanup=$false; error=$null}
 $owner=$null
 try {
   $sourceToken=[RestrictedTokenLauncher]::InspectProcessToken($PID)
@@ -65,11 +65,34 @@ try {
   $result.suspended_gate=$true
   $owner.Resume()
   if (-not $owner.Process.WaitForExit(30000) -or $owner.Process.ExitCode -ne 0) { throw 'Synthetic parent failed to exit normally' }
+  if (-not $owner.Process.HasExited) { throw 'Native retained-handle exit observation disagrees' }
+  $result.native_creator_handle_observation=$true
   if ($owner.ActiveProcessCount -lt 1 -or $owner.WaitForEmpty(100) -or -not (Test-Path -LiteralPath $envMap.PROBE_READY)) { throw 'Live descendant was lost when its parent exited' }
   $result.descendant_after_parent_exit=$true
   [IO.File]::WriteAllText($envMap.PROBE_RELEASE,'release')
   if (-not $owner.WaitForEmpty(15000) -or -not (Test-Path -LiteralPath $envMap.PROBE_FINISHED)) { throw 'Synthetic descendant failed normal completion' }
   $result.graceful_tree_exit=$true
+  $neverStarted=Join-Path $state 'failed-start-must-not-execute.txt'
+  $failureScript=Join-Path $state 'failed-start.ps1'
+  '[IO.File]::WriteAllText((Join-Path $PSScriptRoot ''failed-start-must-not-execute.txt''),''unexpected execution'')' | Set-Content -LiteralPath $failureScript -Encoding utf8
+  $injectedFailure=$false
+  try { [LifecycleProcessOwner]::FailAfterAssignmentForSelfTest($pwsh,('-NoLogo -NoProfile -NonInteractive -File "'+$failureScript+'"'),$state,[string[]]$pairs) }
+  catch { $injectedFailure=$true }
+  $failure=[LifecycleProcessOwner]::LastStartEvidence
+  if (-not $injectedFailure -or $failure.Stage -cne 'retain-creator-process-handle' -or -not $failure.Assigned -or
+      -not $failure.FailedStartChildExited -or -not $failure.FailedStartJobEmpty -or $failure.CleanupError -or
+      (Test-Path -LiteralPath $neverStarted)) { throw 'Failed-start suspended child or job cleanup did not pass' }
+  $result.failed_start_cleanup=$true; $result.failed_start=$failure
+  $invalidExe=Join-Path $state 'invalid-synthetic-image.exe'
+  [IO.File]::WriteAllText($invalidExe,'MZ synthetic non-executable self-test')
+  $invalidFailed=$false
+  try { [LifecycleProcessOwner]::StartSuspended($invalidExe,'',$state,[string[]]$pairs) | Out-Null }
+  catch { $invalidFailed=$true }
+  $apiFailure=[LifecycleProcessOwner]::LastStartEvidence
+  if (-not $invalidFailed -or $apiFailure.Stage -cne 'CreateProcessW' -or $null -eq $apiFailure.Win32Error -or $apiFailure.Win32Error -eq 0 -or
+      $apiFailure.ProcessId -ne 0 -or $apiFailure.Assigned -or -not $apiFailure.FailedStartChildExited -or
+      -not $apiFailure.FailedStartJobEmpty -or $apiFailure.CleanupError) { throw 'CreateProcessW failure lost its native diagnostic or cleanup proof' }
+  $result.failed_api_diagnostic=$true; $result.failed_api=$apiFailure
 } catch { $result.error=$_.Exception.Message } finally {
   if ($owner) {
     try {
@@ -77,7 +100,7 @@ try {
     } catch { $result.cleanup_error=$_.Exception.Message; if (-not $result.error) { $result.error=$_.Exception.Message } }
     $owner.Dispose()
   }
-  $result.accepted=$result.suspended_gate -and $result.same_token -and $result.descendant_after_parent_exit -and $result.graceful_tree_exit -and -not $result.forced_cleanup -and -not $result.error
+  $result.accepted=$result.suspended_gate -and $result.same_token -and $result.native_creator_handle_observation -and $result.descendant_after_parent_exit -and $result.graceful_tree_exit -and $result.failed_start_cleanup -and $result.failed_api_diagnostic -and -not $result.forced_cleanup -and -not $result.error
   $result | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $out 'lifecycle-process-owner-selftest.json') -Encoding utf8
   $result | ConvertTo-Json -Depth 20 | Write-Output
 }

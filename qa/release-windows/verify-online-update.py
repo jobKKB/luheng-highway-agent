@@ -6,12 +6,14 @@ import json
 from pathlib import Path
 import re
 import runpy
+import shutil
 
 ROOT = Path(__file__).resolve().parents[2]
 consumer = runpy.run_path(str(ROOT / "qa/native-installer-consumer/verify_consumer.py"))
 policy = runpy.run_path(str(ROOT / "qa/hermes-native/verify-contained-candidate.py"))
 require, read, sha, owned = (consumer[key] for key in ("require", "read_json", "sha", "owned"))
 FEED = "https://apps.luotuai.me/updates/windows/"
+RECOVERY = runpy.run_path(str(Path(__file__).with_name("artifact-recovery.py")))
 
 
 def validate(pair):
@@ -30,9 +32,17 @@ def validate(pair):
         require(type(evidence["runId"]) is int and evidence["runId"] > 0 and
                 re.fullmatch(r"[a-f0-9]{40}", evidence["headSha"]), "Invalid producer identity")
         require(evidence["artifact"] == "luheng-windows-release-evidence", "Unexpected producer artifact")
-        require(set(evidence["files"]) == {"sourceAdmission", "structure", "health", "installerReceipt", "lifecycle"},
-                "Missing qualification evidence")
-        for row in evidence["files"].values():
+        expected = {"sourceAdmission", "structure", "health", "installerReceipt"}
+        recovery = evidence.get("recovery")
+        if recovery:
+            require(type(recovery["runId"]) is int and recovery["runId"] > 0 and
+                    re.fullmatch(r"[a-f0-9]{40}", recovery["headSha"]) and type(recovery["artifactId"]) is int and
+                    recovery["artifactId"] > 0 and recovery["artifact"] == "luheng-windows-recovery-evidence-" + version and
+                    set(recovery["files"]) == {"lifecycle", "provenance"}, "Invalid recovery acceptance identity")
+        else:
+            expected.add("lifecycle")
+        require(set(evidence["files"]) == expected, "Missing qualification evidence")
+        for row in [*evidence["files"].values(), *(recovery["files"].values() if recovery else [])]:
             consumer["safe_name"](row["path"])
             require(type(row["bytes"]) is int and row["bytes"] > 0 and re.fullmatch(r"[a-f0-9]{64}", row["sha256"]),
                     "Invalid evidence pin")
@@ -41,13 +51,31 @@ def validate(pair):
 
 def qualify(entry, evidence_root, run):
     identity = entry["evidence"]
-    require(run["id"] == identity["runId"] and run["head_sha"] == identity["headSha"] and
-            run["status"] == "completed" and run["conclusion"] == "success" and
-            run["repository"]["full_name"] == "jobKKB/luheng-highway-agent" and
-            run["path"] == ".github/workflows/hermes-native-package-experiment.yml", "Producer run did not qualify")
-    paths = {name: consumer["verify_file"](evidence_root, row) for name, row in identity["files"].items()}
+    recovered = identity.get("recovery")
+    if recovered:
+        producer = run["producer"]
+        RECOVERY["validate_producer"](producer, run["producerJobs"], identity)
+        RECOVERY["validate_acceptance"](run["acceptance"], recovered)
+        paths = {name: consumer["verify_file"](evidence_root, row) for name, row in identity["files"].items()}
+        paths.update({name: consumer["verify_file"](evidence_root, row) for name, row in recovered["files"].items()})
+        context = RECOVERY["validate_provenance"](read(paths["provenance"]), entry)
+        for kind in ("installer", "evidence"):
+            original = context["artifacts"][kind]
+            actual = run["producerArtifacts"][kind]
+            RECOVERY["validate_artifact"](actual, producer, original["id"], original["name"])
+            require(actual["digest"] == original["digest"] and actual["size_in_bytes"] == original["size_in_bytes"],
+                    "Original artifact metadata changed since recovery")
+        RECOVERY["validate_artifact"](run["acceptanceArtifact"], run["acceptance"], recovered["artifactId"], recovered["artifact"])
+    else:
+        require(run["id"] == identity["runId"] and run["head_sha"] == identity["headSha"] and
+                run["status"] == "completed" and run["conclusion"] == "success" and
+                run["repository"]["full_name"] == "jobKKB/luheng-highway-agent" and
+                run["path"] == ".github/workflows/hermes-native-package-experiment.yml", "Producer run did not qualify")
+        paths = {name: consumer["verify_file"](evidence_root, row) for name, row in identity["files"].items()}
     admission, structure, health, build, lifecycle = (read(paths[name]) for name in
                                                     ("sourceAdmission", "structure", "health", "installerReceipt", "lifecycle"))
+    if recovered:
+        RECOVERY["validate_lifecycle"](lifecycle, identity["runId"], recovered["runId"], build)
     require(admission["source_only"] is True and admission["license_preserved"] is True, "Source admission failed")
     require(re.fullmatch(r"[a-f0-9]{40}", admission["source_commit"]) and
             re.fullmatch(r"[a-f0-9]{64}", admission["source_tree_sha256"]) and
@@ -98,6 +126,42 @@ def qualify(entry, evidence_root, run):
             lifecycle["coverage"] == "restricted-token-same-user" and lifecycle["architecture"] == "X64" and
             lifecycle["immutable_payload_rebuilt"] is False, "Installer lifecycle custody or cleanup failed")
     return str(paths["structure"].absolute())
+
+
+
+def fetch_evidence(pair, evidence, runs):
+    """Download small evidence archives only; never execute downloaded helpers."""
+    for side in ("from", "to"):
+        entry = pair[side]
+        identity = entry["evidence"]
+        producer = RECOVERY["api"](f"actions/runs/{identity['runId']}")
+        recovered = identity.get("recovery")
+        if recovered:
+            acceptance = RECOVERY["api"](f"actions/runs/{recovered['runId']}")
+            RECOVERY["validate_acceptance"](acceptance, recovered)
+            artifact = RECOVERY["api"](f"actions/artifacts/{recovered['artifactId']}")
+            RECOVERY["validate_artifact"](artifact, acceptance, recovered["artifactId"], recovered["artifact"])
+            raw = evidence / (side + "-download")
+            RECOVERY["download"]({"artifacts": {"evidence": artifact}}, "evidence", raw)
+            canonical = RECOVERY["unique"](raw, "provenance.json").parent.parent
+            shutil.copytree(canonical, evidence / side)
+            prov = read(consumer["verify_file"](evidence / side, recovered["files"]["provenance"]))
+            context = RECOVERY["validate_provenance"](prov, entry)
+            bundle = {"producer": producer, "producerJobs": RECOVERY["api"](f"actions/runs/{identity['runId']}/jobs?per_page=100"),
+                      "acceptance": acceptance, "acceptanceArtifact": artifact,
+                      "producerArtifacts": {kind: RECOVERY["api"](f"actions/artifacts/{context['artifacts'][kind]['id']}")
+                                            for kind in ("installer", "evidence")}}
+        else:
+            require(producer["status"] == "completed" and producer["conclusion"] == "success", "Producer did not succeed")
+            listing = RECOVERY["api"](f"actions/runs/{identity['runId']}/artifacts?per_page=100")
+            matches = [row for row in listing["artifacts"] if row["name"] == identity["artifact"]]
+            require(len(matches) == 1, "Producer evidence is not unique")
+            artifact = matches[0]
+            RECOVERY["validate_artifact"](artifact, producer, artifact["id"], identity["artifact"])
+            RECOVERY["download"]({"artifacts": {"evidence": artifact}}, "evidence", evidence / side)
+            bundle = producer
+        qualify(entry, evidence / side, bundle)
+        RECOVERY["save"](runs / (side + ".json"), bundle)
 
 
 def self_test():
@@ -207,7 +271,7 @@ def qualification_self_test(pair):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("lock", "evidence", "tree", "self-test"))
+    parser.add_argument("mode", choices=("lock", "fetch", "evidence", "tree", "self-test"))
     for name in ("pair", "evidence", "runs", "baseline", "output", "root"):
         parser.add_argument("--" + name, type=Path)
     parser.add_argument("--side", choices=("from", "to"))
@@ -218,6 +282,8 @@ def main():
     pair = validate(read(args.pair))
     if args.mode == "lock":
         print(json.dumps({side: pair[side]["evidence"] for side in ("from", "to")}))
+    elif args.mode == "fetch":
+        fetch_evidence(pair, args.evidence, args.runs)
     elif args.mode == "evidence":
         for side in ("from", "to"):
             pair[side]["structurePath"] = qualify(pair[side], args.evidence / side, read(args.runs / (side + ".json")))
