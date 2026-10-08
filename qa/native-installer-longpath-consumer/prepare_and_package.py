@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import platform
 import subprocess
 import sys
@@ -14,6 +14,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from verify_consumer import COMMIT, contract, owned, read_json, require, sha, verify_downloads, verify_tree
 
 
+def windows_system_drive(system_root, inherited=None):
+    # Windows expands registry paths containing %SystemDrive%; omitting it can
+    # create a literal relative directory under the installer's working tree.
+    path = PureWindowsPath(system_root)
+    drive = path.drive
+    require(path.is_absolute() and len(drive) == 2 and drive[0] in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+            and drive[1] == ":" and "%" not in str(system_root), "SystemRoot must be an absolute local Windows drive path")
+    require(inherited is None or inherited.casefold() == drive.casefold(), "SystemDrive differs from SystemRoot drive")
+    return drive.upper()
+
+
 def child_env(work, cache):
     inherited = {key: value for key, value in os.environ.items() if key.upper() in {
         "SYSTEMROOT", "WINDIR", "COMSPEC", "PROGRAMFILES", "PROGRAMFILES(X86)", "PROGRAMW6432",
@@ -21,7 +32,9 @@ def child_env(work, cache):
         "WINDOWSSDKVERSION", "VCTOOLSVERSION", "INCLUDE", "LIB", "LIBPATH",
         "GITHUB_ACTIONS", "RUNNER_TEMP"}}
     system = Path(next(value for key, value in inherited.items() if key.upper() == "SYSTEMROOT"))
-    env = {**inherited, "PATH": os.pathsep.join(str(p) for p in [system / "System32", system,
+    system_drive = windows_system_drive(str(system), next(
+        (value for key, value in os.environ.items() if key.upper() == "SYSTEMDRIVE"), None))
+    env = {**inherited, "SystemDrive": system_drive, "PATH": os.pathsep.join(str(p) for p in [system / "System32", system,
                 system / "System32/Wbem"]), "CI": "1", "HOME": str(work / "home"),
            "USERPROFILE": str(work / "home"), "LOCALAPPDATA": str(work / "home/AppData/Local"),
            "APPDATA": str(work / "home/AppData/Roaming"), "HERMES_HOME": str(work / "hermes-home"),

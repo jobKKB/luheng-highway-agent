@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from prepare_and_package import (FIXTURE_CHECKS, HELPER_COUNT, HELPER_PATHS, HELPER_TREE, child_env,
-                                 preserve_supplier_notices, verify_fixture_result, verify_helper_admissions)
+                                 preserve_supplier_notices, verify_fixture_result, verify_helper_admissions, windows_system_drive)
 
 ROOT = Path(__file__).resolve().parent
 BASE_TREE = 'd37c08c19b1e57ce4829682c4f84ec5fc89bf1fd3c5fc56e0e2b7153f462b4cb'
@@ -71,9 +71,10 @@ class IntegrationTests(unittest.TestCase):
     def test_child_environment_keeps_runner_guards_without_secrets(self):
         work, cache = self.root/'work', self.root/'cache'
         work.mkdir(); cache.mkdir()
-        original = dict(SystemRoot=str(self.root/'Windows'), GITHUB_ACTIONS='true', RUNNER_TEMP=str(self.root),
+        original = dict(SystemRoot=r'C:\Windows', GITHUB_ACTIONS='true', RUNNER_TEMP=str(self.root),
                         GITHUB_TOKEN='must-not-propagate', HOME='foreign', PATH='foreign', NPM_CONFIG_USERCONFIG='foreign')
         with patch.dict(os.environ, original, clear=True): result = child_env(work, cache)
+        self.assertEqual(result['SystemDrive'], 'C:')
         self.assertEqual(result['GITHUB_ACTIONS'], 'true')
         self.assertEqual(result['RUNNER_TEMP'], str(self.root))
         self.assertNotIn('GITHUB_TOKEN', result)
@@ -82,6 +83,14 @@ class IntegrationTests(unittest.TestCase):
         self.assertNotEqual(result['npm_config_userconfig'], result['npm_config_globalconfig'])
         self.assertEqual(Path(result['npm_config_userconfig']).read_bytes(), b'')
         self.assertEqual(Path(result['npm_config_globalconfig']).read_bytes(), b'')
+
+    def test_system_drive_is_derived_from_system_root_not_work_or_home(self):
+        self.assertEqual(windows_system_drive(r'C:\Windows'), 'C:')
+        self.assertEqual(windows_system_drive(r'd:\Windows', 'D:'), 'D:')
+        self.assertEqual(windows_system_drive('C:/Windows', 'c:'), 'C:')
+        with self.assertRaises(ValueError): windows_system_drive(r'C:\Windows', 'D:')
+        for root in ('Windows', r'C:Windows', r'\\server\Windows', r'%SystemDrive%\Windows', r'C:\%windir%'):
+            with self.subTest(root=root), self.assertRaises(ValueError): windows_system_drive(root)
 
     def fixture(self):
         build = dict(schema=1, fixture_only=True, acceptance_claim=False, payload_unchanged=True,

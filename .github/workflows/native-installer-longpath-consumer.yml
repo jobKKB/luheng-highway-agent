@@ -178,6 +178,7 @@ jobs:
           ${{ runner.temp }}/luheng-nsis-longpath/fresh-helper-work/fixture/fixture-build.log
           ${{ runner.temp }}/luheng-nsis-longpath/fresh-helper-work/fixture/fixture-build.json
           ${{ runner.temp }}/luheng-nsis-longpath/fresh-helper-work/fixture/fixture-result.json
+          ${{ runner.temp }}/luheng-nsis-longpath/fresh-helper-work/fixture/fixture-inventory.json
         include-hidden-files: true
         compression-level: 6
         retention-days: 14

@@ -45,11 +45,19 @@ public static class LuhengWindowRect {
 '@
 $rootToken = [RestrictedTokenLauncher]::InspectProcessToken($PID)
 if ($pins.lifecycleMode -eq 'restricted-token-same-user' -and ($rootToken.IsElevated -ne 0 -or $rootToken.IntegritySid -ne 'S-1-16-8192')) { throw 'Restricted lifecycle did not receive a recorded medium non-elevated child token' }
+function Resolve-InstallerSystemDrive([string]$SystemRoot,[object]$InheritedSystemDrive=$null) {
+  $rootMatch=[regex]::Match($SystemRoot,'^([A-Za-z]:)[\\/]')
+  if (-not $rootMatch.Success -or $SystemRoot.Contains('%')) { throw 'SystemRoot must be an absolute local Windows drive path' }
+  $drive=$rootMatch.Groups[1].Value.ToUpperInvariant()
+  if ($null -ne $InheritedSystemDrive -and [string]$InheritedSystemDrive -ine $drive) { throw 'SystemDrive differs from SystemRoot drive' }
+  return $drive
+}
 $envMap = @{}
 foreach ($name in @('SystemRoot','WINDIR','COMSPEC','ProgramFiles','ProgramFiles(x86)','ProgramW6432','NUMBER_OF_PROCESSORS','OS','PATHEXT')) {
   $value = [Environment]::GetEnvironmentVariable($name,'Process')
   if ($null -ne $value) { $envMap[$name]=$value }
 }
+$envMap['SystemDrive'] = Resolve-InstallerSystemDrive $envMap['SystemRoot'] ([Environment]::GetEnvironmentVariable('SystemDrive','Process'))
 $envMap['PATH'] = @((Join-Path $env:SystemRoot 'System32'),$env:SystemRoot,(Join-Path $env:SystemRoot 'System32/Wbem')) -join ';'
 $envMap['HOME'] = Join-Path $state 'user'
 $envMap['USERPROFILE'] = Join-Path $state 'user'

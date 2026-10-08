@@ -71,6 +71,25 @@ try {
     $relative = $file.Substring($extended.Length + 1).Replace('\','/')
     $actual[$relative] = @{bytes=([IO.FileInfo]::new($file)).Length;sha256=(Hash $file)}
   }
+  # Record the full read-only diagnostic before any membership/hash assertion.
+  # This never grants admission: the original exact count/content checks remain.
+  $result.installed_inventory=$actual
+  $missing=@($expected.Keys | Sort-Object | Where-Object { -not $actual.ContainsKey($_) } | ForEach-Object { $expected[$_] })
+  $added=@($actual.Keys | Sort-Object | Where-Object { -not $expected.ContainsKey($_) } | ForEach-Object {
+    @{ path=$_; bytes=$actual[$_].bytes; sha256=$actual[$_].sha256 }
+  })
+  $changed=@($expected.Keys | Sort-Object | Where-Object { $actual.ContainsKey($_) } | ForEach-Object {
+    if ($actual[$_].bytes -ne $expected[$_].bytes -or $actual[$_].sha256 -cne $expected[$_].sha256) {
+      @{ path=$_; expected=$expected[$_]; actual=$actual[$_] }
+    }
+  })
+  $unexpected=@($added | Where-Object { $_.path -cnotin $receipt.expected_additions })
+  $diagnostic=[ordered]@{ schema=1; diagnostic_only=$true; acceptance_claim=$false
+    expected_files=$expected.Count; actual_files=$actual.Count
+    expected_additions=$receipt.expected_additions; missing=$missing; added=$added
+    changed=$changed; unexpected_additions=$unexpected; installed_inventory=$actual }
+  $result.inventory_diagnostic=$diagnostic
+  $diagnostic | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $workPath 'fixture-inventory.json') -Encoding utf8
   if ($actual.Count -ne $expected.Count + 2) { throw "Unexpected inventory count $($actual.Count)" }
   foreach ($relative in $expected.Keys) {
     if (-not $actual.ContainsKey($relative) -or $actual[$relative].bytes -ne $expected[$relative].bytes -or
