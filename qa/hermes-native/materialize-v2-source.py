@@ -8,7 +8,6 @@ import json
 import os
 import stat
 import subprocess
-import tarfile
 import zipfile
 
 
@@ -138,6 +137,38 @@ def verify_source(source, manifest):
     return {"source_count": len(expected), "source_tree_sha256": tree_digest(expected), "license_preserved": True}
 
 
+def restore_raw_git_blobs(source, head):
+    entries = []
+    inventory = subprocess.check_output(["git", "-C", str(source), "ls-tree", "-rz", "--full-tree", head])
+    for record in inventory.split(b"\0"):
+        if not record:
+            continue
+        metadata, raw_name = record.split(b"\t", 1)
+        mode, kind, oid = metadata.decode("ascii").split()
+        name = raw_name.decode("utf-8")
+        source_path(name)
+        if kind != "blob" or mode not in {"100644", "100755"}:
+            raise ValueError("Upstream contains an unsupported link or special file")
+        entries.append((name, mode, oid))
+    requests = "".join(oid + "\n" for _, _, oid in entries).encode("ascii")
+    raw = subprocess.check_output(["git", "-C", str(source), "cat-file", "--batch"], input=requests)
+    stream = io.BytesIO(raw)
+    for name, mode, oid in entries:
+        returned_oid, kind, size = stream.readline().decode("ascii").strip().split()
+        if returned_oid != oid or kind != "blob":
+            raise ValueError("Raw upstream Git object identity differs")
+        data = stream.read(int(size))
+        if len(data) != int(size) or stream.read(1) != b"\n":
+            raise ValueError("Truncated raw upstream Git object")
+        destination = owned_path(source, name)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(data)
+        if os.name != "nt":
+            destination.chmod(0o755 if mode == "100755" else 0o644)
+    if stream.read(1):
+        raise ValueError("Unexpected extra raw upstream Git data")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("controller", type=Path)
@@ -150,14 +181,8 @@ def main():
         raise SystemExit("Checkout is not the pinned immutable upstream")
     if subprocess.check_output(["git", "-C", str(source), "status", "--porcelain"], text=True):
         raise SystemExit("Upstream checkout must be clean before materialization")
-    raw = subprocess.check_output(["git", "-C", str(source), "archive", head])
-    # Raw Git blobs preserve exact bytes when Windows checkout uses CRLF.
-    with tarfile.open(fileobj=io.BytesIO(raw)) as archive:
-        for member in archive.getmembers():
-            source_path(member.name.rstrip("/"))
-            if not (member.isfile() or member.isdir()):
-                raise SystemExit("Upstream archive contains an unsupported link or special file")
-        archive.extractall(source, filter="data")
+    # Git archive applies checkout filters too. cat-file returns exact raw blobs.
+    restore_raw_git_blobs(source, head)
     apply_overlay(source, manifest, content)
     result = verify_source(source, manifest)
     paths = source.parent / "overlay-paths.bin"
