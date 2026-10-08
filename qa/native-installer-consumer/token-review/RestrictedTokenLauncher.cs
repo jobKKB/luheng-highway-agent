@@ -114,6 +114,9 @@ public static class RestrictedTokenLauncher
             bool ok = GetTokenInformation(token, kind, p, sizeof(uint), out needed);
             int error = Marshal.GetLastWin32Error();
             if (!ok) throw new Win32Exception(error, "GetTokenInformation DWORD " + kind + " (Win32 " + error + ")");
+            // TokenHasRestrictions is returned as a BOOLEAN byte by this
+            // native API, unlike the DWORD-valued elevation/UIAccess classes.
+            if (kind == TokenHasRestrictions && needed == 1) return Marshal.ReadByte(p);
             if (needed != sizeof(uint)) throw new InvalidOperationException("Unexpected token DWORD size " + kind + ": " + needed);
             return unchecked((uint)Marshal.ReadInt32(p));
         }
