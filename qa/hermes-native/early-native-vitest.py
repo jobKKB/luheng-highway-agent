@@ -21,6 +21,9 @@ if '--worker' not in sys.argv:
     sys.exit(result.returncode)
 assert os.name == 'nt'
 python, node, env = prepare_tools(source, work, cache, os.environ)
+guard_state = work/'guard-selftests'
+guard_state.mkdir(parents=True, exist_ok=True)
+subprocess.run([str(python), '-I', '-S', '-B', str(Path(__file__).parent/'harness/wtc_guard_selftest.py'), '--state-parent', str(guard_state)], cwd=source, env=env, check=True)
 subprocess.run([str(node), 'scripts/build/node-deps.mjs', '--source', str(source),
                 '--workspace', 'apps/desktop'], cwd=source, env=env, check=True)
 subprocess.run([str(node), str(source/'node_modules/vitest/vitest.mjs'), 'run', '--project', 'electron',
