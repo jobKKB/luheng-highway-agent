@@ -16,6 +16,7 @@ ALLOWED={
  'apps/desktop/scripts/run-electron-builder.mjs',
  'apps/desktop/scripts/prepared-packaging.mjs',
  'apps/desktop/build/nsis-longpaths.nsh',
+ 'apps/desktop/scripts/prepared-prepackaged.test.mjs',
 }
 def main():
  p=argparse.ArgumentParser(description=__doc__)

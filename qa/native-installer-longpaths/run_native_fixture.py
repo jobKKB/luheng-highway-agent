@@ -23,6 +23,10 @@ def run(args,cwd=source):subprocess.run([str(v) for v in args],cwd=cwd,env=env,s
 run([node,source/'scripts/build/node-deps.mjs','--source',source,'--workspace','apps/desktop'])
 packager=work/'packager'
 run([node,source/'apps/desktop/scripts/prepare-packaging-tools.mjs','--source',source,'--out',packager,'--cache',cache/'packager','--target','win32-x64','--format','nsis'])
+# Exercise the real packaging regression suite before building even the tiny fixture.
+run([node,source/'node_modules/vitest/vitest.mjs','run','--project','electron',
+ 'scripts/prepared-prepackaged.test.mjs','scripts/prepared-packaging.test.mjs',
+ 'scripts/prepared-native-deps.test.mjs','scripts/run-electron-builder.test.mjs'],cwd=source/'apps/desktop')
 run([pwsh,'-NoLogo','-NoProfile','-NonInteractive','-File',fixture/'Test-NativeFixture.ps1','-Node',node,'-Source',source,'-Prepared',packager/'prepared.json','-Work',work/'fixture-run','-LifecycleConsumer',consumer])
 result=json.loads((work/'fixture-run/fixture-result.json').read_text(encoding='utf-8-sig'))
 assert not result['error'] and not result['forced_cleanup']
