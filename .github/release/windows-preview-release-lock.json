@@ -1,6 +1,6 @@
 {
-  "schema": "luheng-preview-release/v2",
   "repository": "jobKKB/luheng-highway-agent",
+  "schema": "luheng-preview-release/v2",
   "publish": true,
   "producers": {
     "from": {

@@ -165,6 +165,12 @@ def inspect_release(pin, files):
     tagged = tag_matches(pin["tag"], pin["headSha"])
     release = api("releases/tags/" + pin["tag"], optional=True)
     if release is None:
+        # Drafts have no published tag endpoint; the authenticated list includes them.
+        pages = json.loads(gh("api", f"repos/{REPOSITORY}/releases?per_page=100", "--paginate", "--slurp"))
+        matches = [row for page in pages for row in page if row["tag_name"] == pin["tag"]]
+        require(len(matches) <= 1, "Duplicate release tag candidates")
+        release = matches[0] if matches else None
+    if release is None:
         return None, files
     require(release["prerelease"] is True and (tagged or (release["draft"] and release["target_commitish"] == pin["headSha"])),
             "Existing release has different target or release status")

@@ -100,6 +100,24 @@ class PublisherTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     publisher["verify_assets"]({"assets": [{**asset, field: value}]}, [path])
 
+    def test_draft_tag_lookup_uses_paginated_release_list(self):
+        pin = self.pins()["from"]
+        draft = {"tag_name": pin["tag"], "draft": True, "prerelease": True,
+                 "target_commitish": pin["headSha"], "assets": []}
+        gh = mock.Mock(return_value=json.dumps([[], [draft]]))
+        with mock.patch.dict(publisher["inspect_release"].__globals__,
+                             {"tag_matches": lambda *_: False, "api": lambda *a, **kw: None, "gh": gh}):
+            self.assertEqual(publisher["inspect_release"](pin, []), (draft, []))
+            gh.assert_called_with("api", f"repos/{publisher['REPOSITORY']}/releases?per_page=100", "--paginate", "--slurp")
+            gh.return_value = json.dumps([[draft], [draft]])
+            with self.assertRaises(ValueError):
+                publisher["inspect_release"](pin, [])
+            gh.return_value = json.dumps([[{**draft, "target_commitish": "a" * 40}]])
+            with self.assertRaises(ValueError):
+                publisher["inspect_release"](pin, [])
+            gh.return_value = "[[]]"
+            self.assertEqual(publisher["inspect_release"](pin, []), (None, []))
+
     def test_same_run_evidence_layout_and_installer_bytes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
