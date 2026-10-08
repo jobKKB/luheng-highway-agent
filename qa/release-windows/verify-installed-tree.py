@@ -110,8 +110,14 @@ def self_test():
             rejected(lambda: policy["validate_update_configuration"](config))
         uninstaller = installed / "Uninstall Luheng.exe"
         uninstaller.write_bytes(b"MZ synthetic self-test uninstaller")
+        marker = installed / "resources/package-type"
+        rejected(lambda: consumer["verify_tree"](installed, structure, uninstaller.name))
+        marker.write_bytes(b"nsis")
         assert consumer["verify_tree"](installed, structure, uninstaller.name)["exact_membership"]
         rejected(lambda: consumer["verify_tree"](installed, structure))
+        marker.write_bytes(b"NSIS")
+        rejected(lambda: consumer["verify_tree"](installed, structure, uninstaller.name))
+        marker.unlink()
         uninstaller.unlink()
         executable.write_bytes(b"tampered")
         rejected(lambda: consumer["verify_tree"](installed, structure))

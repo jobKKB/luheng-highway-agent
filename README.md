@@ -18,6 +18,8 @@ The command verifies every admitted file before creating the local source commit
 
 Unreleased artifacts are saved before functional acceptance so a failed verification does not discard the build. A saved artifact alone is not release approval. The final acceptance gate requires all functional stages to pass.
 
+The retained-artifact recovery workflow can separately qualify the fixed 0.7.0/0.7.1 installers when the original run failed only in its lifecycle helper and final gate. It verifies the original artifact digests, preserves original receipts and run conclusions, and repeats the complete installation lifecycle with corrected helpers. Publication requires this independent acceptance to succeed; it never relabels the original run or rebuilds its installer.
+
 The separate online-update consumer in `qa/release-windows/verify-online-update.ps1` exercises two genuine installed versions through the application's own update bridge. The target installer is downloaded by the application from the fixed HTTPS feed. The consumer verifies confirmation, installation, automatic restart and retention of isolated settings, session data and a project file.
 
 ## Distribution

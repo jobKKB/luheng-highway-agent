@@ -70,6 +70,24 @@ public static class RestrictedTokenLauncher
     [DllImport("kernel32.dll", SetLastError = true)] static extern bool SetInformationJobObject(IntPtr job, int kind, ref EXTENDED_LIMIT limits, uint size);
     [DllImport("kernel32.dll", SetLastError = true)] static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
     [DllImport("kernel32.dll", SetLastError = true)] static extern bool QueryInformationJobObject(IntPtr job, int kind, out JOB_ACCOUNTING info, uint size, IntPtr returned);
+    [DllImport("kernel32.dll", SetLastError = true, EntryPoint = "QueryInformationJobObject")]
+    static extern bool QueryProcessIds(IntPtr job, int kind, IntPtr info, uint size, IntPtr returned);
+    [DllImport("kernel32.dll", SetLastError = true)] static extern bool TerminateJobObject(IntPtr job, uint code);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    static extern bool QueryFullProcessImageName(IntPtr process, uint flags, StringBuilder path, ref uint size);
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] struct PROCESS_ENTRY
+    {
+        public uint size, usage, processId; public UIntPtr defaultHeap;
+        public uint moduleId, threads, parentId; public int priority; public uint flags;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public string name;
+    }
+    [DllImport("kernel32.dll", SetLastError = true)] static extern IntPtr CreateToolhelp32Snapshot(uint flags, uint processId);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern bool Process32First(IntPtr snapshot, ref PROCESS_ENTRY entry);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern bool Process32Next(IntPtr snapshot, ref PROCESS_ENTRY entry);
+    delegate bool EnumWindow(IntPtr window, IntPtr parameter);
+    [DllImport("user32.dll")] static extern bool EnumWindows(EnumWindow callback, IntPtr parameter);
+    [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr window, StringBuilder text, int count);
 
     public class GroupEvidence { public string Sid; public uint Attributes; }
     public class PrivilegeEvidence { public string Name; public uint Attributes; }
@@ -87,9 +105,93 @@ public static class RestrictedTokenLauncher
         public TokenEvidence Source, Prepared, Child;
         public uint ChildProcessId, ExitCode;
         public bool TokenGatePassed, ProcessTreeFinished;
+        public ProcessEvidence[] RemainingBeforeCleanup;
+        public bool ForcedCleanup, CleanupTreeFinished;
+        public string CleanupError;
     }
+    public class ProcessEvidence { public int Pid, ParentPid; public string Path, QueryError; public string[] Windows; }
     // Single-invocation helper: lets the PowerShell consumer preserve evidence on failure.
     public static LaunchEvidence LastEvidence;
+
+    static int[] OwnedIds(IntPtr job)
+    {
+        for (int capacity = 64; capacity <= 65536; capacity *= 2)
+        {
+            int size = 8 + capacity * IntPtr.Size; IntPtr buffer = Marshal.AllocHGlobal(size);
+            try
+            {
+                if (!QueryProcessIds(job, 3, buffer, (uint)size, IntPtr.Zero))
+                { if (Marshal.GetLastWin32Error() == 234) continue; Win32(false, "Read outer job IDs"); }
+                int count = Marshal.ReadInt32(buffer, 4);
+                if (count < 0 || count > capacity) throw new InvalidOperationException("Invalid outer job PID count");
+                int[] ids = new int[count];
+                for (int i = 0; i < count; i++) ids[i] = checked((int)Marshal.ReadIntPtr(buffer, 8 + i * IntPtr.Size).ToInt64());
+                return ids;
+            }
+            finally { Marshal.FreeHGlobal(buffer); }
+        }
+        throw new InvalidOperationException("Outer job PID inventory exceeded bound");
+    }
+    static ProcessEvidence[] DescribeOwned(IntPtr job)
+    {
+        var rows = new Dictionary<int, ProcessEvidence>();
+        foreach (int id in OwnedIds(job)) rows[id] = new ProcessEvidence { Pid = id };
+        IntPtr snapshot = CreateToolhelp32Snapshot(2, 0);
+        if (snapshot != new IntPtr(-1))
+        {
+            try
+            {
+                PROCESS_ENTRY entry = new PROCESS_ENTRY(); entry.size = (uint)Marshal.SizeOf(typeof(PROCESS_ENTRY));
+                if (Process32First(snapshot, ref entry)) do
+                { if (rows.ContainsKey((int)entry.processId)) rows[(int)entry.processId].ParentPid = (int)entry.parentId; }
+                while (Process32Next(snapshot, ref entry));
+            }
+            finally { CloseHandle(snapshot); }
+        }
+        foreach (ProcessEvidence row in rows.Values)
+        {
+            // Diagnostics use limited query rights; no ALL_ACCESS reopen or PID-based termination.
+            IntPtr process = OpenProcess(0x1000, false, (uint)row.Pid);
+            if (process == IntPtr.Zero) row.QueryError = "OpenProcess limited query: " + Marshal.GetLastWin32Error();
+            else try
+            {
+                uint size = 32768; var path = new StringBuilder((int)size);
+                if (QueryFullProcessImageName(process, 0, path, ref size)) row.Path = path.ToString();
+                else row.QueryError = "QueryFullProcessImageName: " + Marshal.GetLastWin32Error();
+            }
+            finally { CloseHandle(process); }
+            var windows = new List<string>();
+            EnumWindows(delegate(IntPtr window, IntPtr parameter)
+            {
+                uint pid; GetWindowThreadProcessId(window, out pid);
+                if (pid == row.Pid && windows.Count < 20)
+                { var title = new StringBuilder(512); GetWindowText(window, title, title.Capacity); windows.Add(title.ToString()); }
+                return true;
+            }, IntPtr.Zero);
+            row.Windows = windows.ToArray();
+        }
+        return new List<ProcessEvidence>(rows.Values).ToArray();
+    }
+    static void StopFailedJob(IntPtr job)
+    {
+        LastEvidence.ForcedCleanup = true;
+        try { LastEvidence.RemainingBeforeCleanup = DescribeOwned(job); }
+        catch (Exception error) { LastEvidence.CleanupError = "Snapshot: " + error.Message; }
+        try
+        {
+            Win32(TerminateJobObject(job, 0xdead), "Terminate failed outer job");
+            var timer = Stopwatch.StartNew();
+            do
+            {
+                JOB_ACCOUNTING info;
+                Win32(QueryInformationJobObject(job, 1, out info, (uint)Marshal.SizeOf(typeof(JOB_ACCOUNTING)), IntPtr.Zero), "Observe failed outer job cleanup");
+                if (info.activeProcesses == 0) { LastEvidence.CleanupTreeFinished = true; break; }
+                Thread.Sleep(50);
+            } while (timer.ElapsedMilliseconds < 5000);
+            if (!LastEvidence.CleanupTreeFinished) throw new TimeoutException("Failed outer job did not empty within cleanup bound");
+        }
+        catch (Exception error) { LastEvidence.CleanupError = (LastEvidence.CleanupError ?? "") + "; " + error.Message; }
+    }
 
     static void Win32(bool success, string stage)
     { if (!success) throw new Win32Exception(Marshal.GetLastWin32Error(), stage); }
@@ -300,6 +402,13 @@ public static class RestrictedTokenLauncher
             if (wait == WAIT_TIMEOUT) throw new TimeoutException("Initial child timed out");
             if (wait != WAIT_OBJECT_0) throw new InvalidOperationException("Unexpected process wait result");
             uint exit; Win32(GetExitCodeProcess(pi.process, out exit), "GetExitCodeProcess"); LastEvidence.ExitCode = exit;
+            // A failed probe can never qualify. Its leftover descendants must not
+            // consume the successful-probe wait budget before owned-job cleanup.
+            if (exit != 0)
+            {
+                LastEvidence.Stage = "probe-exit-nonzero";
+                throw new InvalidOperationException("Restricted probe exited with code " + exit);
+            }
             LastEvidence.Stage = "wait-process-tree";
             while (true)
             {
@@ -314,6 +423,7 @@ public static class RestrictedTokenLauncher
         }
         finally
         {
+            if (assigned && !finished) StopFailedJob(job);
             // An unassigned suspended child cannot be cleaned by closing the job.
             if (pi.process != IntPtr.Zero && !assigned && !finished) TerminateProcess(pi.process, 0xdead);
             if (job != IntPtr.Zero) CloseHandle(job); // Kills this job's remaining descendants on any failure.

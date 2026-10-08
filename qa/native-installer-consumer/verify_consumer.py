@@ -11,6 +11,8 @@ import stat
 
 HEX = re.compile(r"[a-f0-9]{64}\Z")
 COMMIT = re.compile(r"[a-f0-9]{40}\Z")
+NSIS_PACKAGE_TYPE = {"path": "resources/package-type", "bytes": 4,
+                     "sha256": hashlib.sha256(b"nsis").hexdigest()}
 
 
 def require(value, message):
@@ -156,7 +158,11 @@ def verify_tree(root, manifest, uninstaller=None):
             require(relative.casefold() not in actual_folded, "Case-conflicting payload files")
             actual.add(relative)
             actual_folded.add(relative.casefold())
-    allowed = {uninstaller} if uninstaller else set()
+    allowed = set()
+    if uninstaller:
+        require(re.fullmatch(r"Uninstall [^/\\]+\.exe", uninstaller), "Expected a root NSIS uninstaller")
+        allowed = {uninstaller, NSIS_PACKAGE_TYPE["path"]}
+        require(not (set(expected) & allowed), "Installer-generated files cannot replace original payload files")
     require(actual == set(expected) | allowed, "Exact payload membership differs")
     for row in expected.values():
         verify_file(root, row)
@@ -167,6 +173,10 @@ def verify_tree(root, manifest, uninstaller=None):
         with path.open("rb") as stream:
             require(stream.read(2) == b"MZ", "Generated uninstaller is not a Windows executable")
         generated = [{"path": uninstaller, "bytes": path.stat().st_size, "sha256": sha(path)}]
+        # The pinned NSIS template writes this exact four-byte install-method marker.
+        # It is required only for installed trees and is never a wildcard exception.
+        verify_file(root, NSIS_PACKAGE_TYPE)
+        generated.append(dict(NSIS_PACKAGE_TYPE))
     return {"every_payload_file_sha256_verified": True, "exact_membership": True,
             "payload_files": len(expected), "payload_bytes": sum(row["bytes"] for row in expected.values()),
             "generated_installer_files": generated, "source_commit": manifest["source_commit"],

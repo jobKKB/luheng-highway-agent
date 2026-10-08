@@ -15,6 +15,16 @@ if (-not $env:RUNNER_TEMP -or -not $env:GITHUB_ACTIONS) { throw 'Disposable GitH
 $job = [IO.Path]::GetFullPath($JobRoot)
 $runner = [IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd('\') + '\'
 if (-not $job.StartsWith($runner,[StringComparison]::OrdinalIgnoreCase)) { throw 'Lifecycle root is outside disposable runner scratch' }
+$out = Join-Path $job 'evidence'
+New-Item -ItemType Directory -Force $out | Out-Null
+$lifecycleClock=[Diagnostics.Stopwatch]::StartNew()
+function Write-LifecycleCheckpoint([string]$Stage,$Details) {
+  $entry=[ordered]@{utc=[DateTime]::UtcNow.ToString('o');elapsed_ms=$lifecycleClock.ElapsedMilliseconds;stage=$Stage;details=$Details}
+  # A closed append on every checkpoint survives an outer deadline killing the probe.
+  [IO.File]::AppendAllText((Join-Path $out 'lifecycle-checkpoints.jsonl'),(($entry|ConvertTo-Json -Depth 14 -Compress)+[Environment]::NewLine),[Text.UTF8Encoding]::new($false))
+  Write-Output ('Lifecycle checkpoint: '+$Stage+' elapsed_ms='+$lifecycleClock.ElapsedMilliseconds) | Out-Host
+}
+Write-LifecycleCheckpoint 'admission-start' $null
 $pins = Get-Content -LiteralPath $Contract -Raw | ConvertFrom-Json
 if ($pins.qualified -ne $true -or $pins.lifecycleMode -notin @('elevated-runner-explicitly-limited','restricted-token-same-user')) { throw 'Lifecycle mode or qualification is not reviewed' }
 $build = Get-Content -LiteralPath $BuildReceipt -Raw | ConvertFrom-Json
@@ -22,6 +32,7 @@ if ($build.payload.rebuilt -ne $false -or $build.signed -ne $false -or $build.cu
 $installer = if ($pins.scope -eq 'artifact-recovery') { [IO.Path]::GetFullPath((Join-Path $OriginalEvidence $pins.installer.path)) } else { [IO.Path]::GetFullPath($build.installer) }
 if ((Get-Item -LiteralPath $installer).Length -ne $build.bytes -or (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant() -cne $build.sha256) { throw 'Built installer hash/size differs' }
 if ((Get-AuthenticodeSignature -LiteralPath $installer).Status -ne 'NotSigned') { throw 'This lane is required to be explicitly unsigned' }
+Write-LifecycleCheckpoint 'installer-bytes-admitted' @{bytes=$build.bytes;sha256=$build.sha256}
 $python = if ($PythonExecutable) { (Resolve-Path -LiteralPath $PythonExecutable).Path } else { (Get-Command python -ErrorAction Stop).Source }
 $verifierPath = (Resolve-Path -LiteralPath $Verifier).Path
 $contractPath = (Resolve-Path -LiteralPath $Contract).Path
@@ -37,6 +48,7 @@ if ($pins.scope -in @('same-job','artifact-recovery')) {
   & $python -I -S -B $verifierPath contract --contract $contractPath --evidence $evidenceRoot --output (Join-Path $job 'contract-admission.json')
   if ($LASTEXITCODE) { throw 'Same-job installer contract admission failed' }
 }
+Write-LifecycleCheckpoint 'contract-admitted' $null
 $out = Join-Path $job 'evidence'
 $state = Join-Path $job 'lifecycle-state'
 $install = Join-Path $job 'isolated-install'
@@ -109,7 +121,44 @@ $result = [ordered]@{
 }
 $owners = [Collections.Generic.Dictionary[int,object]]::new()
 $result['process_tracking']='owned-native-jobs; ordinary same-token launch'
+function Get-BoundedInventory([string]$Root) {
+  $inventory=[ordered]@{root=$Root;files=0;bytes=0;complete=$false;elapsed_ms=0;longest_path=$null;longest_path_length=0}
+  $clock=[Diagnostics.Stopwatch]::StartNew()
+  try {
+    if($Root -and (Test-Path -LiteralPath $Root)){
+      $inventory.complete=$true
+      foreach($path in [IO.Directory]::EnumerateFiles($Root,'*',[IO.SearchOption]::AllDirectories)){
+        $file=[IO.FileInfo]::new($path);$inventory.files++;$inventory.bytes+=$file.Length
+        if($path.Length -gt $inventory.longest_path_length){$inventory.longest_path=$path;$inventory.longest_path_length=$path.Length}
+        if($inventory.files -ge 150000 -or $clock.ElapsedMilliseconds -ge 3000){$inventory.complete=$false;break}
+      }
+    }
+  }catch{$inventory.complete=$false;$inventory.error=$_.Exception.Message}
+  $inventory.elapsed_ms=$clock.ElapsedMilliseconds
+  return $inventory
+}
+function Get-OwnedDiagnostic($Process) {
+  $owner=$owners[$Process.Id]
+  $snapshot=[ordered]@{pid=$Process.Id;has_exited=$Process.HasExited;exit_code=$null;active=$owner.ActiveProcessCount;job_pids=@($owner.ProcessIds());processes=@()}
+  if($snapshot.has_exited){$snapshot.exit_code=$Process.ExitCode}
+  try {
+    if($snapshot.job_pids.Count){
+      $filter=($snapshot.job_pids|ForEach-Object {'ProcessId='+[int]$_}) -join ' OR '
+      $snapshot.processes=@(Get-CimInstance Win32_Process -Filter $filter -OperationTimeoutSec 3 | ForEach-Object {
+        $row=[ordered]@{pid=$_.ProcessId;parent_pid=$_.ParentProcessId;path=$_.ExecutablePath;command=$_.CommandLine;cpu_kernel=$_.KernelModeTime;cpu_user=$_.UserModeTime;read_bytes=$_.ReadTransferCount;write_bytes=$_.WriteTransferCount;window_title=$null}
+        try{$window=Get-Process -Id $_.ProcessId -ErrorAction Stop;$row.window_title=$window.MainWindowTitle}catch{$row.window_error=$_.Exception.Message}
+        $row
+      })
+    }
+  }catch{$snapshot.process_query_error=$_.Exception.Message}
+  $snapshot.install_inventory=Get-BoundedInventory $install
+  $snapshot.temp_inventory=Get-BoundedInventory $envMap.TEMP
+  try{$snapshot.disk_free_bytes=[IO.DriveInfo]::new([IO.Path]::GetPathRoot($install)).AvailableFreeSpace}catch{$snapshot.disk_query_error=$_.Exception.Message}
+  try{$snapshot.owned_windows=[LifecycleProcessOwner]::ReadOwnedWindowText([int[]]$snapshot.job_pids)}catch{$snapshot.window_query_error=$_.Exception.Message}
+  return $snapshot
+}
 function Start-OwnedProcess([string]$Exe,[string]$ArgumentLine,[string]$Cwd,[string]$Label) {
+  Write-LifecycleCheckpoint ($Label+'-create-start') @{executable=$Exe}
   $pairs=@($envMap.Keys | ForEach-Object { $_ + '=' + [string]$envMap[$_] })
   try { $owner=[LifecycleProcessOwner]::StartSuspended($Exe,$ArgumentLine,$Cwd,[string[]]$pairs) }
   catch { $result['last_start_evidence']=[LifecycleProcessOwner]::LastStartEvidence; throw }
@@ -119,7 +168,9 @@ function Start-OwnedProcess([string]$Exe,[string]$ArgumentLine,[string]$Cwd,[str
   $token=[RestrictedTokenLauncher]::InspectProcessToken($proc.Id)
   $result.tokens[$Label]=$token
   if ($pins.lifecycleMode -eq 'restricted-token-same-user' -and ($token.IsElevated -ne 0 -or $token.IntegritySid -ne 'S-1-16-8192')) { throw "Unexpected token for $Label" }
+  Write-LifecycleCheckpoint ($Label+'-suspended-token-verified') @{pid=$proc.Id;start=[LifecycleProcessOwner]::LastStartEvidence}
   $owner.Resume()
+  Write-LifecycleCheckpoint ($Label+'-resumed') @{pid=$proc.Id}
   return $proc
 }
 function Descendants([int[]]$Roots) {
@@ -136,9 +187,24 @@ function Descendants([int[]]$Roots) {
 }
 function Wait-OwnedProcess($Process,[int]$TimeoutSeconds) {
   $watch=[Diagnostics.Stopwatch]::StartNew()
-  if (-not $Process.WaitForExit($TimeoutSeconds * 1000)) { return $false }
-  $remaining=[Math]::Max(0,($TimeoutSeconds * 1000)-[int]$watch.ElapsedMilliseconds)
-  return ($Process.ExitCode -eq 0 -and $owners[$Process.Id].WaitForEmpty($remaining))
+  $nextCheckpoint=0L
+  while($true){
+    $elapsed=$watch.ElapsedMilliseconds
+    if($elapsed -ge $nextCheckpoint){Write-LifecycleCheckpoint 'owned-wait-progress' (Get-OwnedDiagnostic $Process);$nextCheckpoint=$elapsed+30000}
+    $childExited=$Process.HasExited
+    if($childExited -and $Process.ExitCode -ne 0){
+      $diagnostic=Get-OwnedDiagnostic $Process;Write-LifecycleCheckpoint 'owned-child-nonzero' $diagnostic
+      throw ('Owned child exited nonzero: pid='+$Process.Id+' exit='+$Process.ExitCode)
+    }
+    if($childExited -and $owners[$Process.Id].ActiveProcessCount -eq 0){Write-LifecycleCheckpoint 'owned-tree-finished' (Get-OwnedDiagnostic $Process);return $true}
+    $remaining=($TimeoutSeconds*1000)-$watch.ElapsedMilliseconds
+    if($remaining -le 0){
+      $kind=if($childExited){'owned-job-not-empty-timeout'}else{'owned-child-timeout'}
+      $diagnostic=Get-OwnedDiagnostic $Process;Write-LifecycleCheckpoint $kind $diagnostic
+      throw ($kind+': pid='+$Process.Id+' exit='+$diagnostic.exit_code+' active='+$diagnostic.active+' job_pids='+($diagnostic.job_pids -join ','))
+    }
+    if($childExited){Start-Sleep -Milliseconds ([Math]::Min(500,$remaining))}else{[void]$Process.WaitForExit([int][Math]::Min(500,$remaining))}
+  }
 }
 function Stop-OwnedProcesses {
   foreach ($owner in $owners.Values) {
@@ -156,20 +222,26 @@ try {
   $installProc=Start-OwnedProcess $installer "/currentuser /S /D=$install" $state 'installer'
   if (-not (Wait-OwnedProcess $installProc 240)) { throw 'Ordinary NSIS install failed or timed out' }
   $result.installed=$true
+  Write-LifecycleCheckpoint 'installation-finished' $null
   $manifestFile=Join-Path $evidenceRoot $pins.evidenceFiles.structure.path
   $structure=Get-Content -LiteralPath $manifestFile -Raw | ConvertFrom-Json
   $expected=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
   foreach ($row in $structure.files) { [void]$expected.Add($row.path) }
-  # Only installer-generated uninstaller may be extra; every payload file and
+  # Only the exact NSIS package marker and root uninstaller may be extra; every payload file and
   # exact membership are still checked independently against frozen evidence.
+  Write-LifecycleCheckpoint 'installed-membership-start' $null
   $extra=@(Get-ChildItem -LiteralPath $install -Recurse -Force -File | Where-Object {
-    -not $expected.Contains([IO.Path]::GetRelativePath($install,$_.FullName).Replace('\','/'))
+    $relative=[IO.Path]::GetRelativePath($install,$_.FullName).Replace('\','/')
+    # NSIS creates this exact marker; the shared tree verifier admits its bytes.
+    -not $expected.Contains($relative) -and $relative -cne 'resources/package-type'
   })
   if ($extra.Count -ne 1 -or $extra[0].DirectoryName -ine $install -or $extra[0].Name -notmatch '^Uninstall [^\\/]+\.exe$') { throw 'Unreviewed installed-file additions; do not execute an unknown uninstaller' }
   $uninstaller=$extra[0].FullName
+  Write-LifecycleCheckpoint 'installed-tree-before-launch-start' $null
   & $python -I -S -B $verifierPath tree --contract $contractPath --evidence $evidenceRoot --root $install --uninstaller $extra[0].Name --output (Join-Path $out 'installed-payload-before-launch.json')
   if ($LASTEXITCODE) { throw 'Installed payload bytes/membership differ' }
   $bytesAdmitted=$true; $result.every_installed_payload_file_verified=$true
+  Write-LifecycleCheckpoint 'installed-tree-before-launch-finished' $null
   $exe=Join-Path $install 'LuhengOfficeAgent.exe'
   $runtime=Get-Content -LiteralPath (Join-Path $install 'resources/agent-payload/manifest.json') -Raw | ConvertFrom-Json
   $backendExe=[IO.Path]::GetFullPath((Join-Path (Join-Path $install 'resources/agent-payload') $runtime.runtime.storePython))
@@ -197,6 +269,7 @@ try {
     Start-Sleep -Milliseconds 750
   } while ([DateTime]::UtcNow -lt $deadline)
   if (-not $result.native_window -or -not $result.contained_backend_health) { throw 'Actual installed native window or contained backend health missing' }
+  Write-LifecycleCheckpoint 'native-window-and-health-verified' @{health_version=$result.health_version;backend_pid=$result.backend_pid}
   Add-Type -AssemblyName System.Drawing
   $rect=[LuhengWindowRect+RECT]::new()
   if (-not [LuhengWindowRect]::GetWindowRect($window.MainWindowHandle,[ref]$rect)) { throw 'Native window rectangle unavailable' }
@@ -208,9 +281,10 @@ try {
   if (-not $result.normal_window_close -or -not $window.WaitForExit(30000)) { throw 'Normal installed window exit failed' }
   if (-not $owners[$app.Id].WaitForEmpty(30000)) { throw 'Contained process remained after normal exit' }
   $result.contained_processes_stopped=$true
+  Write-LifecycleCheckpoint 'installed-tree-after-exit-start' $null
   & $python -I -S -B $verifierPath tree --contract $contractPath --evidence $evidenceRoot --root $install --uninstaller ([IO.Path]::GetFileName($uninstaller)) --output (Join-Path $out 'installed-payload-after-exit.json')
   if ($LASTEXITCODE) { throw 'Installed payload changed during launch/exit' }
-} catch { $result.error=$_.Exception.Message } finally {
+} catch { $result.error=$_.Exception.Message;Write-LifecycleCheckpoint 'lifecycle-failed-before-cleanup' @{error=$result.error} } finally {
   # Do not confuse forced cleanup with graceful success. Jobs contain only
   # children launched by this probe; no executable-name or reused-PID cleanup.
   try { Stop-OwnedProcesses } catch { $result.cleanup_error=$_.Exception.Message; if (-not $result.error) { $result.error=$_.Exception.Message } }
@@ -239,6 +313,7 @@ try {
   $required=$result.installed -and $result.every_installed_payload_file_verified -and $result.native_window -and $result.contained_backend_health -and $result.normal_window_close -and $result.contained_processes_stopped -and $result.normal_uninstall -and $result.installed_tree_removed -and $result.synthetic_userdata_retained -and -not $result.forced_cleanup -and -not $result.error
   if ($required -and $pins.lifecycleMode -eq 'restricted-token-same-user') { $result.restricted_token_lifecycle_verified=$true }
   $result['accepted_with_declared_limits']=$required
+  Write-LifecycleCheckpoint 'lifecycle-complete' @{accepted=$required;error=$result.error;forced_cleanup=$result.forced_cleanup}
   $result | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $out 'installer-lifecycle.json') -Encoding utf8
   $result | ConvertTo-Json -Depth 20 | Write-Output
 }

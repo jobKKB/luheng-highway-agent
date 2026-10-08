@@ -54,6 +54,38 @@ public sealed class LifecycleProcessOwner : IDisposable
     [DllImport("kernel32.dll", SetLastError = true)] static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
     [DllImport("kernel32.dll", SetLastError = true)] static extern bool GetExitCodeProcess(IntPtr process, out uint code);
     [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
+    delegate bool EnumWindow(IntPtr window, IntPtr parameter);
+    [DllImport("user32.dll")] static extern bool EnumWindows(EnumWindow callback, IntPtr parameter);
+    [DllImport("user32.dll")] static extern bool EnumChildWindows(IntPtr parent, EnumWindow callback, IntPtr parameter);
+    [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr SendMessageTimeout(IntPtr window, uint message, UIntPtr size, StringBuilder text, uint flags, uint timeout, out UIntPtr result);
+    public class WindowEvidence { public int Pid; public string Handle; public string[] Text; }
+    public static WindowEvidence[] ReadOwnedWindowText(int[] processIds)
+    {
+        var ids = new HashSet<int>(processIds); var rows = new List<WindowEvidence>();
+        var timer = Stopwatch.StartNew();
+        EnumWindows(delegate(IntPtr window, IntPtr parameter)
+        {
+            if (timer.ElapsedMilliseconds >= 2000 || rows.Count >= 20) return false;
+            uint pid; GetWindowThreadProcessId(window, out pid);
+            if (!ids.Contains((int)pid)) return true;
+            var texts = new List<string>();
+            EnumWindow read = delegate(IntPtr control, IntPtr unused)
+            {
+                if (timer.ElapsedMilliseconds >= 2000 || texts.Count >= 64) return false;
+                var text = new StringBuilder(1024); UIntPtr result;
+                // Bounded WM_GETTEXT can read standard dialog controls across processes;
+                // a hidden or hung installer must not hang diagnostic collection itself.
+                if (SendMessageTimeout(control, 0x000d, (UIntPtr)text.Capacity, text, 2, 100, out result) != IntPtr.Zero && text.Length != 0)
+                    texts.Add(text.ToString());
+                return true;
+            };
+            read(window, IntPtr.Zero); EnumChildWindows(window, read, IntPtr.Zero);
+            rows.Add(new WindowEvidence { Pid = (int)pid, Handle = window.ToInt64().ToString(), Text = texts.ToArray() });
+            return true;
+        }, IntPtr.Zero);
+        return rows.ToArray();
+    }
 
     IntPtr job;
     PROCESS_INFORMATION child;

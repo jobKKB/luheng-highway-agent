@@ -49,10 +49,47 @@ class AdmissionTests(unittest.TestCase):
 
     def test_generated_uninstaller_is_separate(self):
         (self.root / "Uninstall Synthetic.exe").write_bytes(b"MZsynthetic")
+        (self.root / "resources/package-type").write_bytes(b"nsis")
         result = verify_tree(self.root, self.manifest, "Uninstall Synthetic.exe")
         self.assertEqual(result["payload_files"], 2)
-        self.assertEqual(len(result["generated_installer_files"]), 1)
+        self.assertEqual(len(result["generated_installer_files"]), 2)
+        self.assertEqual(result["generated_installer_files"][1], {
+            "path": "resources/package-type", "bytes": 4, "sha256": hashlib.sha256(b"nsis").hexdigest()})
         self.assertFalse(result["rebuilt"])
+
+    def test_nsis_marker_is_required_and_exact(self):
+        uninstaller = "Uninstall Synthetic.exe"
+        (self.root / uninstaller).write_bytes(b"MZsynthetic")
+        with self.assertRaisesRegex(ValueError, "membership"):
+            verify_tree(self.root, self.manifest, uninstaller)
+        marker = self.root / "resources/package-type"
+        for value in (b"NSIS", b"evil", b"nsis\n", b"nsis-web", b"\xef\xbb\xbfnsis"):
+            marker.write_bytes(value)
+            with self.assertRaisesRegex(ValueError, "Pinned file differs"):
+                verify_tree(self.root, self.manifest, uninstaller)
+        marker.write_bytes(b"nsis")
+        with self.assertRaisesRegex(ValueError, "membership"):
+            verify_tree(self.root, self.manifest)
+        (self.root / "resources/another-marker").write_bytes(b"nsis")
+        with self.assertRaisesRegex(ValueError, "membership"):
+            verify_tree(self.root, self.manifest, uninstaller)
+
+    def test_nsis_marker_links_and_payload_shadowing_are_rejected(self):
+        uninstaller = "Uninstall Synthetic.exe"
+        (self.root / uninstaller).write_bytes(b"MZsynthetic")
+        target = Path(self.temp.name) / "external-marker"
+        target.write_bytes(b"nsis")
+        marker = self.root / "resources/package-type"
+        marker.symlink_to(target)
+        with self.assertRaisesRegex(ValueError, "link/junction"):
+            verify_tree(self.root, self.manifest, uninstaller)
+        marker.unlink()
+        marker.write_bytes(b"nsis")
+        manifest = copy.deepcopy(self.manifest)
+        manifest["files"].append({"path": "resources/package-type", "bytes": 4,
+                                  "sha256": hashlib.sha256(b"nsis").hexdigest()})
+        with self.assertRaisesRegex(ValueError, "cannot replace"):
+            verify_tree(self.root, manifest, uninstaller)
 
     def test_links_are_rejected(self):
         (self.root / "linked").symlink_to(self.root / "resources/app.asar")

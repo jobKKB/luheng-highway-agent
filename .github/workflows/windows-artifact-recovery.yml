@@ -43,6 +43,8 @@ jobs:
           $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
           icacls $job /grant "*${sid}:(OI)(CI)F" /T
           if ($LASTEXITCODE) { throw 'Restricted helper directory permissions failed' }
+          & qa/native-installer-consumer/token-review/Test-RestrictedFailureCleanup.ps1 -OutputDirectory (Join-Path $job 'outer-cleanup-selftest')
+          & qa/native-installer-consumer/Test-LifecycleWaitDiagnostics.ps1 -OutputDirectory (Join-Path $job 'wait-diagnostics-selftest')
           $argsLine = '-OutputDirectory "' + (Join-Path $job 'evidence') + '"'
           & qa/native-installer-consumer/token-review/Run-RestrictedLifecycle.ps1 -ProbeScript (Join-Path $env:GITHUB_WORKSPACE 'qa/native-installer-consumer/Test-LifecycleProcessOwner.ps1') -PowerShellExecutable (Get-Command pwsh).Source -ProbeArgumentLine $argsLine -WorkingDirectory $job -EvidencePath (Join-Path $job 'restricted-token.json') -TimeoutSeconds 180 -ExtraEnvironment @{RUNNER_TEMP=$env:RUNNER_TEMP;GITHUB_ACTIONS='true';GITHUB_RUN_ID=$env:GITHUB_RUN_ID;GITHUB_SHA=$env:GITHUB_SHA} -ExecuteProbe
       - name: Admit the exact completed producer and digest-pinned artifacts
