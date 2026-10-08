@@ -32,6 +32,13 @@ jobs:
         if ($LASTEXITCODE) { throw ''Exact source admission failed; no build claim is made'' }
 
         '
+    - name: Run narrow real Windows Vitest before full payload preparation
+      shell: pwsh
+      run: '$ErrorActionPreference = ''Stop''
+
+        python -I -S controller/qa/hermes-native/early-native-vitest.py (Join-Path $env:GITHUB_WORKSPACE ''source'') (Join-Path $env:RUNNER_TEMP ''early-native-vitest/work'') (Join-Path $env:RUNNER_TEMP ''early-native-vitest/cache'') 2>&1 | Tee-Object (Join-Path $env:GITHUB_WORKSPACE ''early-native-vitest.log'')
+
+        if ($LASTEXITCODE) { throw ''Early native Windows Vitest failed; full build not started'' }'
     - name: Prepare locked native Windows inputs
       shell: pwsh
       run: '$ErrorActionPreference = ''Stop''
