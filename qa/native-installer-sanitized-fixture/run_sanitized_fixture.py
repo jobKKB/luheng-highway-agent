@@ -28,9 +28,10 @@ if os.name != 'nt' or os.environ.get('GITHUB_ACTIONS') != 'true':
 if job != Path(os.environ['RUNNER_TEMP']).resolve() / 'luheng-nsis-longpath':
     raise ValueError('Use the full consumer exact job-root layout')
 bootstrap_python, bootstrap_node, _ = prepare_tools(source, bootstrap_work, bootstrap_cache, os.environ)
-# Import the deployed full consumer's function rather than maintaining a second
-# interpretation of its allowlist, HOME/TEMP layout or npm configuration isolation.
-sys.path.insert(0, str(consumer))
+# Test the exact reviewed corrected consumer helper from an isolated diagnostic
+# path; publishing this copy does not trigger the expensive full consumer.
+helper_override = Path(__file__).resolve().parent / 'helper-override'
+sys.path.insert(0, str(helper_override))
 from prepare_and_package import child_env, run, verify_fixture_result
 from pm.build_operations import verified_tools
 from pm.lock import Lockfile
@@ -49,15 +50,15 @@ python, node = [selection.entries[name].binary for name in ('python', 'node')]
 if python != bootstrap_python or node != bootstrap_node:
     raise ValueError('Prepared and verified tool selection differs')
 env.update({'HERMES_PYTHON':str(python), 'HERMES_NODE':str(node), 'PYTHON':str(python)})
-keys = ['GITHUB_ACTIONS', 'RUNNER_TEMP', 'HOME', 'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH',
+keys = ['SystemRoot', 'SystemDrive', 'GITHUB_ACTIONS', 'RUNNER_TEMP', 'HOME', 'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH',
         'LOCALAPPDATA', 'APPDATA', 'TEMP', 'TMP', 'PATH', 'HERMES_HOME', 'HERMES_RUNTIME_DIR',
         'npm_config_cache', 'npm_config_userconfig', 'npm_config_globalconfig', 'CSC_IDENTITY_AUTO_DISCOVERY',
         'HERMES_DESKTOP_VARIANT', 'HERMES_PYTHON', 'HERMES_NODE', 'PYTHON']
 (output/'fixture-environment.json').write_text(json.dumps({
     'schema':1, 'diagnostic_only':True, 'application_payload_downloaded':False,
     'work':str(work), 'cache':str(cache), 'fixture_work':str(work/'fixture'),
-    'consumer_child_env_source':str(consumer/'prepare_and_package.py'),
-    'environment':{key:env.get(key) for key in keys}}, indent=2)+'\n', encoding='utf-8')
+    'consumer_child_env_source':str(helper_override/'prepare_and_package.py'),
+    'environment':{key:next((value for actual, value in env.items() if actual.upper() == key.upper()), None) for key in keys}}, indent=2)+'\n', encoding='utf-8')
 
 native, packager = work/'native-deps', work/'packager'
 scripts = source/'apps/desktop/scripts'

@@ -53,6 +53,14 @@ jobs:
         $tokens = $null; $errors = $null
         [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-installer-sanitized-fixture/fixture/Test-NativeFixture.ps1'),[ref]$tokens,[ref]$errors) | Out-Null
         if ($errors.Count) { $errors | Format-List; throw 'Native fixture syntax failed' }
+    - name: Check corrected Python and native lifecycle SystemDrive derivation
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $override = Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-installer-sanitized-fixture/helper-override'
+        python -I -S -B (Join-Path $override 'selftest_systemdrive.py')
+        if ($LASTEXITCODE) { throw 'Python SystemDrive regression failed' }
+        & (Join-Path $override 'Test-SystemDriveEnvironment.ps1') -LifecycleScript (Join-Path $override 'Invoke-InstallerLifecycle.ps1') -OutputFile (Join-Path $env:GITHUB_WORKSPACE 'systemdrive-selftest.json')
     - name: Reproduce exact full consumer layout sanitized environment and preparation with tiny payload
       shell: pwsh
       run: |
@@ -79,6 +87,7 @@ jobs:
           ${{ runner.temp }}/luheng-nsis-longpath/fresh-helper-work/fixture/fixture-build.json
           ${{ runner.temp }}/luheng-nsis-longpath/fresh-helper-work/fixture/fixture-result.json
           ${{ runner.temp }}/luheng-nsis-longpath/fresh-helper-work/fixture/fixture-inventory.json
+          ${{ github.workspace }}/systemdrive-selftest.json
         include-hidden-files: true
         compression-level: 6
         retention-days: 14
