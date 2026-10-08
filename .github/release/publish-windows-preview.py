@@ -12,10 +12,10 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[2]
 REPOSITORY = "jobKKB/luheng-highway-agent"
 PRODUCERS = {
-    "from": {"runId": None, "headSha": None, "version": "0.7.0", "tag": "v0.7.0-beta.1"},
-    "to": {"runId": None, "headSha": None, "version": "0.7.1", "tag": "v0.7.1-beta.1"},
+    "from": {"runId": 37773571320, "headSha": "2f0c95a02b408ab871986ab7e1d6b16e7946ca3c", "version": "0.7.0", "tag": "v0.7.0-beta.1"},
+    "to": {"runId": 37773394370, "headSha": "441086c414182d204e438df598ad8f967cd23761", "version": "0.7.1", "tag": "v0.7.1-beta.1"},
 }
-# New native producer runs must replace these unset pins after the long-path fix.
+# Both native producers passed the complete long-path installation lifecycle.
 # Previous failed installers are diagnostic inputs, never publication candidates.
 WORKFLOW = ".github/workflows/hermes-native-package-experiment.yml"
 REQUIRED = (

@@ -10,8 +10,8 @@ publication action. Do not add it until both new native producer runs finish suc
 The expected JSON is exactly `schema: luheng-preview-release/v2`,
 `repository: jobKKB/luheng-highway-agent`, `publish: true`, and `producers` equal
 to the `PRODUCERS` constant in `publish-windows-preview.py`. Its run IDs and
-commit hashes remain unset until the actual replacement producers are reviewed.
-Unset pins reject all publication locks. A recovery object is not accepted.
+commit hashes identify reviewed successful runs 37773571320 (0.7.0) and
+37773394370 (0.7.1). Unset pins reject all publication locks. A recovery object is not accepted.
 
 The publisher checks both producer run IDs, commits, workflow paths and every
 required job step, including actual installation, normal exit, uninstall and the
