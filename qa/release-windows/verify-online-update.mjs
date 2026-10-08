@@ -133,6 +133,8 @@ async function main() {
       const markerPath = path.join(runtime.project, 'retained-marker.txt');
       await writeFile(markerPath, marker);
       await evidence('fixture.json', { id, marker, markerPath, markerSha256: await digest(markerPath), project: runtime.project });
+      // Direct fixture import bypasses the UI import action's list-cache refresh.
+      await page.reload({ waitUntil: 'domcontentloaded' });
       const sessionSidebar = page.getByRole('button', { name: /^(搜索会话|Search sessions)$/ });
       await sessionSidebar.click();
       await page.getByRole('button', { name: marker, exact: true }).waitFor({ state: 'visible', timeout: 120000 });
@@ -188,6 +190,13 @@ async function main() {
     }
   } catch (error) {
     report.error = error.message;
+    if (app) {
+      try {
+        const window = await app.firstWindow();
+        await window.screenshot({ path: path.join(runtime.evidence, `renderer-${phase}-failure.png`) });
+        report.uiText = (await window.locator('body').innerText()).slice(0, 20000);
+      } catch (diagnosticError) { report.diagnosticError = diagnosticError.message; }
+    }
     await evidence(`renderer-${phase}.json`, report);
     process.exitCode = 1;
   } finally {
