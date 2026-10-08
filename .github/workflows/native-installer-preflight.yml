@@ -1,0 +1,38 @@
+name: Luheng native installer helper preflight
+'on':
+  push:
+    branches:
+    - probe/hermes-native-package-current-20261006
+    paths:
+    - .github/workflows/native-installer-preflight.yml
+    - qa/native-installer-consumer/**
+  workflow_dispatch: null
+permissions:
+  contents: read
+jobs:
+  native-preflight:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+    - name: Checkout the reviewed private consumer
+      uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      with:
+        ref: ${{ github.sha }}
+        path: consumer
+        persist-credentials: false
+    - name: Select independent admission interpreter
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+      with:
+        python-version: '3.12'
+    - name: Parse and natively selftest lifecycle ownership before large downloads
+      shell: pwsh
+      run: "$ErrorActionPreference = 'Stop'\n$consumer = Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-installer-consumer'\nforeach ($file in @('Invoke-InstallerLifecycle.ps1', 'Test-LifecycleProcessOwner.ps1', 'token-review/Run-RestrictedLifecycle.ps1')) {\n  $tokens = $null; $errors = $null\n  [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $consumer $file), [ref]$tokens, [ref]$errors) | Out-Null\n  if ($errors.Count) { $errors | Format-List; throw \"PowerShell syntax failed: $file\" }\n}\n# Test script compiles both helpers and records only actual native observations.\n& (Join-Path $consumer 'Test-LifecycleProcessOwner.ps1') -OutputDirectory \"${{ runner.temp }}/luheng-nsis-consumer/evidence\"\npython -I -S -B (Join-Path $consumer 'selftest_verifier.py')\nif ($LASTEXITCODE) { throw 'Synthetic admission regression failed' }\n"
+    - name: Preserve actual native helper results
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: luheng-native-installer-helper-preflight
+        path: ${{ runner.temp }}/luheng-nsis-consumer/evidence/**
+        include-hidden-files: true
+        retention-days: 14
+        if-no-files-found: warn
