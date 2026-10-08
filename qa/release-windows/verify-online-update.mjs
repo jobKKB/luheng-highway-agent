@@ -120,7 +120,7 @@ async function main() {
       await page.evaluate(project => window.hermesDesktop.settings.setDefaultProjectDir(project), runtime.project);
       const imported = await api({ path: '/api/sessions/import', method: 'POST', body: { sessions: [{
         id, source: 'cli', title: marker, pinned: true, started_at: Date.now() / 1000,
-        // A completed synthetic exchange avoids resuming an unfinished model turn.
+        // A completed synthetic exchange verifies history without calling a model.
         ended_at: Date.now() / 1000, messages: [{ role: 'user', content: marker },
           { role: 'assistant', content: 'Synthetic fixture acknowledgement: ' + marker }]
       }] } });

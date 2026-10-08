@@ -82,7 +82,6 @@ function Wait-Success([Diagnostics.Process]$Process,[int]$Seconds) {
     if ($Process.ExitCode -ne 0) { throw "Owned process failed with exit $($Process.ExitCode)" }
 }
 Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes
-Add-Type -Path (Join-Path $PSScriptRoot 'verify-online-update.cs')
 function Windows-For([int]$ProcessId) {
     $condition=[Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ProcessIdProperty,$ProcessId)
     return [Windows.Automation.AutomationElement]::RootElement.FindAll([Windows.Automation.TreeScope]::Children,$condition)
@@ -165,8 +164,7 @@ function Open-RetainedFixture([int]$ExpectedPid,[string]$Marker) {
         }
         foreach ($element in $window.FindAll([Windows.Automation.TreeScope]::Descendants,$nameCondition)) {
             if (-not (Test-FixtureCandidate $window.Current.ProcessId $ExpectedPid $element.Current.Name $Marker $element.Current.IsEnabled $element.Current.IsOffscreen)) { continue }
-            # Invoking the actual row drives ordinary session.resume; the launch
-            # profile then keeps its real shared SessionDB open for ownership proof.
+            # Read the retained conversation through the ordinary product UI.
             $pattern=$null
             if ($element.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern,[ref]$pattern)) {
                 $pattern.Invoke(); $method='Invoke'
@@ -281,20 +279,31 @@ try {
         Start-Sleep -Milliseconds 500
     } while ([DateTime]::UtcNow -lt $fixtureDeadline)
     if (-not $report.targetFixtureOpened) { throw 'Automatic target did not expose the exact retained session as an enabled actionable UI element' }
-    # The product's ordinary ownership record identifies the automatic restart, while
-    # Windows file ownership proves that backend opened the original HOME database.
+    # Idle SQLite connections may close without a configured model; verify the
+    # actual retained message in the automatic restart instead of a transient handle.
     $profileDeadline=[DateTime]::UtcNow.AddSeconds(120)
     $ownershipFile=Join-Path $runtime.userData 'backend-ownership.json'
     $database=Join-Path $runtime.home 'state.db'
+    $messageCondition=[Windows.Automation.AndCondition]::new(
+        [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ControlTypeProperty,[Windows.Automation.ControlType]::Text),
+        [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty,('Synthetic fixture acknowledgement: '+$fixture.marker)))
     while ([DateTime]::UtcNow -lt $profileDeadline) {
+        $messageVisible=$false
+        foreach ($window in (Windows-For $restarted.Id)) {
+            foreach ($message in $window.FindAll([Windows.Automation.TreeScope]::Descendants,$messageCondition)) {
+                if ($message.Current.IsEnabled -and -not $message.Current.IsOffscreen) { $messageVisible=$true }
+            }
+        }
+        $report.profileDiagnostics=@{ownershipExists=(Test-Path -LiteralPath $ownershipFile); databaseExists=(Test-Path -LiteralPath $database); retainedMessageVisible=$messageVisible; backends=@()}
         if ((Test-Path -LiteralPath $ownershipFile) -and (Test-Path -LiteralPath $database)) {
             $ownership=Get-Content -LiteralPath $ownershipFile -Raw | ConvertFrom-Json
             foreach ($entry in @($ownership.backends | Where-Object { $_.parentPid -eq $restarted.Id })) {
                 $backend=Get-CimInstance Win32_Process -Filter "ProcessId=$($entry.pid)"
-                if ($backend -and $backend.ExecutablePath.StartsWith($install+'\',[StringComparison]::OrdinalIgnoreCase) -and
-                    [OnlineUpdateFileOwners]::ForFile($database) -contains [int]$entry.pid) {
+                $report.profileDiagnostics.backends += @{pid=$entry.pid; parentPid=$entry.parentPid; image=$backend.ExecutablePath}
+                if ($messageVisible -and $backend -and $backend.ExecutablePath -and
+                    $backend.ExecutablePath.StartsWith($install+'\',[StringComparison]::OrdinalIgnoreCase)) {
                     $report.targetAutomaticProfileVerified=$true
-                    $report.automaticProfile=@{parentPid=$restarted.Id; backendPid=[int]$entry.pid; userData=$runtime.userData; database=$database; method='product-ownership-and-Windows-file-owner'}
+                    $report.automaticProfile=@{parentPid=$restarted.Id; backendPid=[int]$entry.pid; userData=$runtime.userData; database=$database; retainedMessage=('Synthetic fixture acknowledgement: '+$fixture.marker); method='product-ownership-and-exact-retained-message-UI'}
                     break
                 }
             }
