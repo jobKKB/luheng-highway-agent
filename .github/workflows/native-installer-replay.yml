@@ -6,7 +6,8 @@ name: Replay exact retained unsigned installer with native lifecycle diagnostics
     paths:
     - .github/workflows/native-installer-replay.yml
     - qa/native-installer-replay/**
-  workflow_dispatch:
+    - .gitattributes
+  workflow_dispatch: null
 permissions:
   contents: read
   actions: read
@@ -30,38 +31,13 @@ jobs:
         python-version: '3.12'
     - name: Native ownership observation and inventory preflight before downloads
       shell: pwsh
-      run: |
-        $ErrorActionPreference = 'Stop'
-        $consumer = Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-installer-consumer'
-        $replay = Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-installer-replay'
-        $out = Join-Path $env:RUNNER_TEMP 'luheng-nsis-replay/evidence'
-        New-Item -ItemType Directory -Force $out | Out-Null
-        foreach ($file in @('Invoke-InstallerLifecycle.ps1', 'Test-LifecycleProcessOwner.ps1', 'Observe-InstallerLifecycle.ps1', 'Test-LifecycleObservation.ps1', 'token-review/Run-RestrictedLifecycle.ps1')) {
-          $tokens = $null; $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $consumer $file), [ref]$tokens, [ref]$errors) | Out-Null
-          if ($errors.Count) { $errors | Format-List; throw "PowerShell syntax failed: $file" }
-        }
-        $tokens = $null; $errors = $null
-        [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $replay 'admit_replay.ps1'), [ref]$tokens, [ref]$errors) | Out-Null
-        if ($errors.Count) { $errors | Format-List; throw 'Replay admission PowerShell syntax failed' }
-        & (Join-Path $consumer 'Test-LifecycleProcessOwner.ps1') -OutputDirectory $out
-        & (Join-Path $consumer 'Test-LifecycleObservation.ps1') -OutputDirectory "$out/observation-selftest"
-        foreach ($test in @('selftest_verifier.py', 'selftest_inventory_installed.py')) {
-          python -I -S -B (Join-Path $consumer $test)
-          if ($LASTEXITCODE) { throw "Synthetic consumer preflight failed: $test" }
-        }
-        python -I -S -B (Join-Path $replay 'selftest_replay.py') --consumer $consumer
-        if ($LASTEXITCODE) { throw 'Synthetic exact replay regression failed' }
+      run: "$ErrorActionPreference = 'Stop'\n$consumer = Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-installer-consumer'\n$replay = Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-installer-replay'\n$out = Join-Path $env:RUNNER_TEMP 'luheng-nsis-replay/evidence'\nNew-Item -ItemType Directory -Force $out | Out-Null\nforeach ($file in @('Invoke-InstallerLifecycle.ps1', 'Test-LifecycleProcessOwner.ps1', 'Observe-InstallerLifecycle.ps1', 'Test-LifecycleObservation.ps1', 'token-review/Run-RestrictedLifecycle.ps1')) {\n  $tokens = $null; $errors = $null\n  [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $consumer $file), [ref]$tokens, [ref]$errors) | Out-Null\n  if ($errors.Count) { $errors | Format-List; throw \"PowerShell syntax failed: $file\" }\n}\n$tokens = $null; $errors = $null\n[System.Management.Automation.Language.Parser]::ParseFile((Join-Path $replay 'admit_replay.ps1'), [ref]$tokens, [ref]$errors) | Out-Null\nif ($errors.Count) { $errors | Format-List; throw 'Replay admission PowerShell syntax failed' }\n& (Join-Path $consumer 'Test-LifecycleProcessOwner.ps1') -OutputDirectory $out\n& (Join-Path $consumer 'Test-LifecycleObservation.ps1') -OutputDirectory \"$out/observation-selftest\"\nforeach ($test in @('selftest_verifier.py', 'selftest_inventory_installed.py')) {\n  python -I -S -B (Join-Path $consumer $test)\n  if ($LASTEXITCODE) { throw \"Synthetic consumer preflight failed: $test\" }\n}\n$frozen = Join-Path $consumer 'contract.json'\nWrite-Host ('Frozen consumer contract bytes='+ (Get-Item -LiteralPath $frozen).Length + ' SHA256='+ (Get-FileHash -LiteralPath $frozen -Algorithm SHA256).Hash)\npython -I -S -B (Join-Path $replay 'selftest_replay.py') --consumer $consumer\nif ($LASTEXITCODE) { throw 'Synthetic exact replay regression failed' }\n"
     - name: Admit exact failed builder successful wrapping and three retained artifacts
       id: admit
       shell: pwsh
       env:
         READ_TOKEN: ${{ github.token }}
-      run: |
-        & ./consumer/qa/native-installer-replay/admit_replay.ps1 `
-          -ReplayContract ./consumer/qa/native-installer-replay/replay-contract.json `
-          -ConsumerDirectory ./consumer/qa/native-installer-consumer `
-          -JobRoot "${{ runner.temp }}/luheng-nsis-replay"
+      run: "& ./consumer/qa/native-installer-replay/admit_replay.ps1 `\n  -ReplayContract ./consumer/qa/native-installer-replay/replay-contract.json `\n  -ConsumerDirectory ./consumer/qa/native-installer-consumer `\n  -JobRoot \"${{ runner.temp }}/luheng-nsis-replay\"\n"
     - name: Download exact small original source evidence with fatal digest checks
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
       with:
@@ -84,15 +60,7 @@ jobs:
         path: ${{ runner.temp }}/luheng-nsis-replay/builder-evidence
     - name: Verify original receipt bytes and source custody before large EXE download
       shell: pwsh
-      run: |
-        $job = Join-Path $env:RUNNER_TEMP 'luheng-nsis-replay'
-        python -I -S -B ./consumer/qa/native-installer-replay/verify_replay.py evidence `
-          --consumer ./consumer/qa/native-installer-consumer `
-          --contract ./consumer/qa/native-installer-replay/replay-contract.json `
-          --source-contract ./consumer/qa/native-installer-consumer/contract.json `
-          --api-root "$job/evidence" --builder-evidence "$job/builder-evidence" `
-          --source-evidence "$job/original-evidence" --output "$job/evidence/replay-evidence-admission.json"
-        if ($LASTEXITCODE) { throw 'Frozen original receipt or source custody differs' }
+      run: "$job = Join-Path $env:RUNNER_TEMP 'luheng-nsis-replay'\npython -I -S -B ./consumer/qa/native-installer-replay/verify_replay.py evidence `\n  --consumer ./consumer/qa/native-installer-consumer `\n  --contract ./consumer/qa/native-installer-replay/replay-contract.json `\n  --source-contract ./consumer/qa/native-installer-consumer/contract.json `\n  --api-root \"$job/evidence\" --builder-evidence \"$job/builder-evidence\" `\n  --source-evidence \"$job/original-evidence\" --output \"$job/evidence/replay-evidence-admission.json\"\nif ($LASTEXITCODE) { throw 'Frozen original receipt or source custody differs' }\n"
     - name: Download exact retained EXE with fatal digest checks and no rebuild
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
       with:
@@ -105,45 +73,15 @@ jobs:
         path: ${{ runner.temp }}/luheng-nsis-replay/candidate
     - name: Bind exact inner EXE preserve original receipts and relocate only installer path
       shell: pwsh
-      run: |
-        $ErrorActionPreference = 'Stop'
-        $job = Join-Path $env:RUNNER_TEMP 'luheng-nsis-replay'
-        python -I -S -B ./consumer/qa/native-installer-replay/verify_replay.py downloads `
-          --consumer ./consumer/qa/native-installer-consumer `
-          --contract ./consumer/qa/native-installer-replay/replay-contract.json `
-          --source-contract ./consumer/qa/native-installer-consumer/contract.json `
-          --api-root "$job/evidence" --builder-evidence "$job/builder-evidence" `
-          --source-evidence "$job/original-evidence" --candidate "$job/candidate" `
-          --output "$job/evidence/replay-download-admission.json"
-        if ($LASTEXITCODE) { throw 'Exact replay bytes not admitted; do not execute' }
-        $pins = Get-Content ./consumer/qa/native-installer-replay/replay-contract.json -Raw | ConvertFrom-Json
-        $drive = Get-PSDrive -Name ([IO.Path]::GetPathRoot($job).TrimEnd('\').TrimEnd(':'))
-        $remaining = 2 * [long]$pins.scratchBudgetBasis.payloadBytes + [long]$pins.scratchBudgetBasis.reserveBytes
-        @{free_bytes=[long]$drive.Free; minimum_remaining_bytes=$remaining} | ConvertTo-Json | Set-Content "$job/evidence/replay-disk-before-install.json" -Encoding utf8
-        if ($drive.Free -lt $remaining) { throw 'Insufficient remaining scratch for two expanded copies' }
+      run: "$ErrorActionPreference = 'Stop'\n$job = Join-Path $env:RUNNER_TEMP 'luheng-nsis-replay'\npython -I -S -B ./consumer/qa/native-installer-replay/verify_replay.py downloads `\n  --consumer ./consumer/qa/native-installer-consumer `\n  --contract ./consumer/qa/native-installer-replay/replay-contract.json `\n  --source-contract ./consumer/qa/native-installer-consumer/contract.json `\n  --api-root \"$job/evidence\" --builder-evidence \"$job/builder-evidence\" `\n  --source-evidence \"$job/original-evidence\" --candidate \"$job/candidate\" `\n  --output \"$job/evidence/replay-download-admission.json\"\nif ($LASTEXITCODE) { throw 'Exact replay bytes not admitted; do not execute' }\n$pins = Get-Content ./consumer/qa/native-installer-replay/replay-contract.json -Raw | ConvertFrom-Json\n$drive = Get-PSDrive -Name ([IO.Path]::GetPathRoot($job).TrimEnd('\\').TrimEnd(':'))\n$remaining = 2 * [long]$pins.scratchBudgetBasis.payloadBytes + [long]$pins.scratchBudgetBasis.reserveBytes\n@{free_bytes=[long]$drive.Free; minimum_remaining_bytes=$remaining} | ConvertTo-Json | Set-Content \"$job/evidence/replay-disk-before-install.json\" -Encoding utf8\nif ($drive.Free -lt $remaining) { throw 'Insufficient remaining scratch for two expanded copies' }\n"
     - name: Replay exact EXE with current guarded install inventory launch and uninstall
       id: lifecycle
       shell: pwsh
-      run: |
-        $job = Join-Path $env:RUNNER_TEMP 'luheng-nsis-replay'
-        & ./consumer/qa/native-installer-consumer/Invoke-InstallerLifecycle.ps1 `
-          -Contract ./consumer/qa/native-installer-consumer/contract.json `
-          -BuildReceipt "$job/evidence/installer-build.relocated.json" `
-          -OriginalEvidence "$job/original-evidence" -JobRoot $job `
-          -Verifier ./consumer/qa/native-installer-consumer/verify_consumer.py `
-          -PythonExecutable (Get-Command python -ErrorAction Stop).Source
+      run: "$job = Join-Path $env:RUNNER_TEMP 'luheng-nsis-replay'\n& ./consumer/qa/native-installer-consumer/Invoke-InstallerLifecycle.ps1 `\n  -Contract ./consumer/qa/native-installer-consumer/contract.json `\n  -BuildReceipt \"$job/evidence/installer-build.relocated.json\" `\n  -OriginalEvidence \"$job/original-evidence\" -JobRoot $job `\n  -Verifier ./consumer/qa/native-installer-consumer/verify_consumer.py `\n  -PythonExecutable (Get-Command python -ErrorAction Stop).Source\n"
     - name: Independently require complete current native acceptance
       id: accepted
       shell: pwsh
-      run: |
-        $job = Join-Path $env:RUNNER_TEMP 'luheng-nsis-replay'
-        python -I -S -B ./consumer/qa/native-installer-replay/verify_replay.py acceptance `
-          --consumer ./consumer/qa/native-installer-consumer `
-          --contract ./consumer/qa/native-installer-replay/replay-contract.json `
-          --source-contract ./consumer/qa/native-installer-consumer/contract.json `
-          --evidence-root "$job/evidence" --current-run $env:GITHUB_RUN_ID `
-          --output "$job/evidence/replay-acceptance.json"
-        if ($LASTEXITCODE) { throw 'Replay lifecycle incomplete; no qualified installer upload' }
+      run: "$job = Join-Path $env:RUNNER_TEMP 'luheng-nsis-replay'\npython -I -S -B ./consumer/qa/native-installer-replay/verify_replay.py acceptance `\n  --consumer ./consumer/qa/native-installer-consumer `\n  --contract ./consumer/qa/native-installer-replay/replay-contract.json `\n  --source-contract ./consumer/qa/native-installer-consumer/contract.json `\n  --evidence-root \"$job/evidence\" --current-run $env:GITHUB_RUN_ID `\n  --output \"$job/evidence/replay-acceptance.json\"\nif ($LASTEXITCODE) { throw 'Replay lifecycle incomplete; no qualified installer upload' }\n"
     - name: Preserve replay diagnostics and admission evidence even on failure
       if: always()
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

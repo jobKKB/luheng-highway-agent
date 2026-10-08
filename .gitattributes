@@ -1,0 +1,3 @@
+# Frozen CI evidence contracts must retain exact Git blob bytes on Windows.
+qa/native-installer-consumer/contract.json -text
+qa/native-installer-replay/replay-contract.json -text
