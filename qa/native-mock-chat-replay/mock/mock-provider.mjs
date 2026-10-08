@@ -4,6 +4,9 @@ import {createHash} from 'node:crypto';
 
 export const MODEL = 'luheng-local-mock-acceptance';
 export const DUMMY_KEY = 'luheng-disposable-mock-not-a-real-key';
+// Exact read-only server-type waterfall in pinned agent/model_metadata.py.
+// This mock does not implement these products; a bounded 404 is the truthful answer.
+export const CAPABILITY_PROBES = ['/api/v1/models','/api/tags','/v1/props','/props','/version'];
 const MAX_BODY = 8 * 1024 * 1024;
 const digest = x => createHash('sha256').update(x).digest('hex');
 const contentText = value => typeof value === 'string' ? value : Array.isArray(value)
@@ -16,7 +19,8 @@ export function createProtocol({markerPath, markerText, nonce}) {
   const callId = `call_luheng_${nonce}`;
   const args = {path:markerPath, offset:1, limit:5};
   const state = {schema:1, kind:'mocked-model-orchestration', stage:0, model:MODEL, model_requests:0,
-    discovery_requests:0, transport_probes:0, rejected_requests:0, failure:null, requests:[],
+    discovery_requests:0, anonymous_discovery_requests:0, capability_probe_requests:0,
+    capability_probes:{}, transport_probes:0, rejected_requests:0, failure:null, failure_request:null, requests:[],
     tool_name:'read_file', tool_call_id:callId, marker_sha256:digest(markerText), marker_verified:false,
     real_provider_verified:false, llm_quality_verified:false, offline_verified:false};
   function reject(code) {
@@ -73,16 +77,31 @@ export async function startMockProvider(fixture) {
   const sockets = new Set();
   const server = http.createServer(async (req,res) => {
     const send = (status,payload) => {res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(payload));};
+    const authKind=req.headers.authorization===undefined?'missing':req.headers.authorization===`Bearer ${DUMMY_KEY}`?'synthetic':'other';
+    const route=req.url==='/v1/models'?'model_catalog':req.url==='/v1/chat/completions'?'chat_completions':CAPABILITY_PROBES.includes(req.url)?'capability_probe:'+req.url:'other';
     try {
       if (protocol.state.failure) protocol.reject('protocol_already_failed');
       if (req.socket.remoteAddress !== '127.0.0.1' || req.headers.host !== `127.0.0.1:${server.address().port}`) protocol.reject('non_loopback_or_host');
-      if (req.headers.authorization !== `Bearer ${DUMMY_KEY}`) protocol.reject('non_synthetic_auth');
+      // A bare custom model picker deliberately passes api_key="" and headers=None.
+      // Missing auth is permitted for these exact read-only discovery GETs only.
+      // A supplied foreign value is NEVER accepted, even for discovery.
+      if(authKind==='other')protocol.reject('non_synthetic_auth');
       if (req.method === 'GET' && req.url === '/v1/models') {
         if (++protocol.state.discovery_requests > 32) protocol.reject('discovery_limit');
-        send(200,{object:'list',data:[{id:MODEL,object:'model',created:0,owned_by:'disposable-local-mock'}]});
+        if(authKind==='missing')protocol.state.anonymous_discovery_requests++;
+        send(200,{object:'list',data:[{id:MODEL,object:'model',created:0,owned_by:'disposable-local-mock',context_length:131072,max_completion_tokens:8192}]});
+        return;
+      }
+      if(req.method==='GET'&&CAPABILITY_PROBES.includes(req.url)){
+        if(++protocol.state.capability_probe_requests>40)protocol.reject('capability_probe_limit');
+        const row=protocol.state.capability_probes[req.url]??={requests:0,anonymous:0,status:404};
+        if(++row.requests>8)protocol.reject('capability_probe_path_limit');
+        if(authKind==='missing')row.anonymous++;
+        send(404,{error:{message:'This synthetic OpenAI-compatible endpoint does not implement this local server capability'}});
         return;
       }
       if (req.method !== 'POST' || req.url !== '/v1/chat/completions') protocol.reject('unexpected_route_or_method');
+      if(authKind!=='synthetic')protocol.reject('non_synthetic_auth');
       if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] || '')) protocol.reject('unexpected_content_type');
       let bytes=0, chunks=[];
       for await (const c of req) {bytes+=c.length; if(bytes>MAX_BODY) protocol.reject('request_too_large'); chunks.push(c);}
@@ -115,6 +134,7 @@ export async function startMockProvider(fixture) {
     } catch {
       // Never serialize request bodies, auth, external errors or full prompts.
       if (!protocol.state.failure) {protocol.state.failure='server_protocol_error';protocol.state.rejected_requests++;}
+      protocol.state.failure_request??={method:['GET','POST'].includes(req.method)?req.method:'other',route,auth_kind:authKind};
       if (!res.headersSent) send(400,{error:{message:'Local synthetic acceptance protocol rejected the request',type:'invalid_request_error'}});
       else res.end();
     }

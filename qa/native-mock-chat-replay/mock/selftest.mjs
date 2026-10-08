@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
-import {createProtocol,startMockProvider,MODEL,DUMMY_KEY} from './mock-provider.mjs';
+import {createProtocol,startMockProvider,MODEL,DUMMY_KEY,CAPABILITY_PROBES} from './mock-provider.mjs';
 import {main as nativeMain,inspectMockDom,EXPECTED_INSTALLER_SHA,waitForInstalledTarget} from './probe-mock-chat.mjs';
 import {verifyReceipt} from './verify-mock-evidence.mjs';
 
@@ -130,4 +130,44 @@ test('same-socket installed renderer discovery retries zero matches but rejects 
   assert.equal((await waitForInstalledTarget(cdp,'root',helpers,100,1)).targetId,'owned');assert.equal(n,3);
   await assert.rejects(()=>waitForInstalledTarget({call:async()=>({targetInfos:[owned,owned]})},'root',helpers,100,1),/Ambiguous/);
   await assert.rejects(()=>waitForInstalledTarget({call:async()=>({targetInfos:[]})},'root',helpers,0,1),/Bounded timeout/);
+});
+test('anonymous discovery matches pinned picker; exact native capability probes return bounded 404',async()=>{
+  const p=await startMockProvider(fixture);
+  try{
+    const catalog=await fetch(p.baseUrl+'/models');assert.equal(catalog.status,200);
+    assert.equal((await catalog.json()).data[0].context_length,131072);
+    for(const route of CAPABILITY_PROBES){for(const headers of [{},{Authorization:`Bearer ${DUMMY_KEY}`}]){
+      const r=await fetch(`http://127.0.0.1:${p.port}${route}`,{headers});assert.equal(r.status,404);await r.text();
+    }}
+    assert.equal(p.state.failure,null);assert.equal(p.state.rejected_requests,0);
+    assert.equal(p.state.anonymous_discovery_requests,1);assert.equal(p.state.capability_probe_requests,10);
+    assert.equal(p.state.model_requests,0);assert.equal(p.state.stage,0);
+    // Read-only discovery never substitutes for an authenticated real chat turn.
+    const denied=await fetch(p.baseUrl+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(first(p))});
+    assert.equal(denied.status,400);assert.equal(p.state.stage,0);
+    assert.deepEqual(p.state.failure_request,{method:'POST',route:'chat_completions',auth_kind:'missing'});
+  }finally{await p.close();}
+});
+test('discovery exceptions do not permit foreign auth, other routes, query strings or mutation',async()=>{
+  for(const {route,method,headers} of [
+    {route:'/v1/models',method:'GET',headers:{Authorization:'Bearer FOREIGN_VALUE'}},
+    {route:'/api/tags',method:'GET',headers:{Authorization:'Bearer FOREIGN_VALUE'}},
+    {route:'/api/tags',method:'POST',headers:{}},
+    {route:'/v1/models?secret=DO_NOT_LOG_THIS',method:'GET',headers:{}},
+    {route:'/api/show',method:'POST',headers:{}},
+  ]){
+    const p=await startMockProvider(fixture);
+    try{
+      const r=await fetch(`http://127.0.0.1:${p.port}${route}`,{method,headers});assert.equal(r.status,400);assert.ok(p.state.failure);
+      assert.ok(!JSON.stringify(p.state).includes('FOREIGN_VALUE'));assert.ok(!JSON.stringify(p.state).includes('DO_NOT_LOG_THIS'));
+    }finally{await p.close();}
+  }
+});
+test('source-grounded capability exception has a per-path request budget',async()=>{
+  const p=await startMockProvider(fixture);
+  try{
+    for(let i=0;i<8;i++){const r=await fetch(`http://127.0.0.1:${p.port}/version`);assert.equal(r.status,404);await r.text();}
+    const r=await fetch(`http://127.0.0.1:${p.port}/version`);assert.equal(r.status,400);
+    assert.equal(p.state.failure,'capability_probe_path_limit');assert.equal(p.state.model_requests,0);
+  }finally{await p.close();}
 });
