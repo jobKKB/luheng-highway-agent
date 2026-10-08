@@ -1,4 +1,4 @@
-# OPTIONAL DRAFT. Not compiled or executed on Windows. Do not count as validation.
+# Native restricted-token launcher; each caller must verify its own acceptance receipts.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$ProbeScript,
@@ -12,7 +12,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 if (-not $ExecuteProbe) {
-    throw 'Draft helper does not execute by default. Native execution needs authorization, reviewed lifecycle probe, and -ExecuteProbe.'
+    throw 'Native execution requires an explicitly selected lifecycle probe and -ExecuteProbe.'
 }
 if ($env:OS -ne 'Windows_NT') { throw 'Native Windows is required; no emulation or OS mocking.' }
 $probe = (Resolve-Path -LiteralPath $ProbeScript).Path

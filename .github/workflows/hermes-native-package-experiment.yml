@@ -26,6 +26,28 @@ jobs:
       with:
         enable-cache: false
         python-version: '3.12'
+    - name: Diagnose hosted Python launch paths before any payload preparation
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $selected = (uv python find 3.12 | Out-String).Trim()
+        if ($LASTEXITCODE) { throw 'Selected interpreter lookup failed' }
+        $env:UV_PYTHON_INSTALL_DIR = Join-Path $env:RUNNER_TEMP 'python-launch-managed'
+        uv python install --no-bin --no-registry 3.12 2>&1 | Tee-Object python-launch-managed.log
+        if ($LASTEXITCODE) { throw 'Managed interpreter preparation failed' }
+        $managed = (uv python find --managed-python 3.12 | Out-String).Trim()
+        if ($LASTEXITCODE) { throw 'Managed interpreter lookup failed' }
+        $evidence = Join-Path $env:GITHUB_WORKSPACE 'helper-preflight'
+        New-Item -ItemType Directory -Force $evidence | Out-Null
+        $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+        foreach ($directory in @($evidence,$env:UV_PYTHON_INSTALL_DIR)) {
+          icacls $directory /grant "*${sid}:(OI)(CI)F" /T | Out-Host
+          if ($LASTEXITCODE) { throw 'Diagnostic scratch permissions failed' }
+        }
+        $helper = Join-Path $env:GITHUB_WORKSPACE 'controller/qa/native-installer-consumer'
+        $arguments = '-SelectedPython "' + $selected + '" -ManagedPython "' + $managed + '" -WorkRoot "' + (Join-Path $evidence 'python-launch-diagnostics') + '"'
+        & (Join-Path $helper 'token-review/Run-RestrictedLifecycle.ps1') -ProbeScript (Join-Path $helper 'Test-PythonLaunchDiagnostics.ps1') -PowerShellExecutable (Get-Command pwsh).Source -ProbeArgumentLine $arguments -WorkingDirectory $env:GITHUB_WORKSPACE -EvidencePath (Join-Path $evidence 'python-launch-restricted-token.json') -TimeoutSeconds 120 -ExecuteProbe
+        throw 'Diagnostic-only execution completed; payload preparation deliberately not started'
     - name: Check installer helpers and release scripts before preparing payload
       shell: pwsh
       run: |
