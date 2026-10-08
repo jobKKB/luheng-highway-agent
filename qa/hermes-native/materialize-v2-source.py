@@ -197,12 +197,15 @@ def main():
     restore_raw_git_blobs(source, head, manifest)
     apply_overlay(source, manifest, content)
     result = verify_source(source, manifest)
-    paths = source.parent / "overlay-paths.bin"
-    paths.write_bytes(("\0".join(row["path"] for row in manifest["files"]) + "\0").encode())
+    # Checkout newline attributes may refresh non-overlay Git index entries too.
+    # Stage only the complete source inventory whose exact bytes just passed.
+    paths = source.parent / "admitted-paths.bin"
+    paths.write_bytes(("\0".join(row["path"] for row in manifest["source_files"]) + "\0").encode())
     subprocess.run(["git", "-C", str(source), "add", "-f", "--pathspec-from-file=" + str(paths), "--pathspec-file-nul"], check=True)
     subprocess.run(["git", "-C", str(source), "-c", "user.name=Luheng CI Source Fixture", "-c", "user.email=ci-source@invalid.example", "commit", "-m", "Apply pinned unified Luheng source-only build candidate"], check=True)
-    if subprocess.check_output(["git", "-C", str(source), "status", "--porcelain"], text=True):
-        raise SystemExit("Candidate checkout is dirty after exact source admission")
+    status = subprocess.check_output(["git", "-C", str(source), "status", "--porcelain"], text=True)
+    if status:
+        raise SystemExit("Candidate checkout is dirty after exact source admission:\n" + status)
     commit = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
     (source.parent / "admitted-source-sha.txt").write_text(commit + "\n", encoding="utf-8")
     result.update({"source_commit": commit, "upstream_commit": head, "overlay_sha256": identity["overlay_zip_sha256"], "source_only": True, "build_performed": False, "fresh_upstream_reconstruction": True})
