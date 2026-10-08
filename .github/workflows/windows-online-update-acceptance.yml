@@ -4,7 +4,7 @@ on:
     branches:
       - codex/windows-release-completion
     paths:
-      - qa/release-windows/update-pairs/qualified-0.7.0-to-0.7.1.json
+      - qa/release-windows/update-pairs/qualified-0.7.0-to-0.7.2.json
   workflow_dispatch:
     inputs:
       pair_lock_path:
@@ -39,7 +39,7 @@ jobs:
         id: pair
         shell: pwsh
         env:
-          PAIR_LOCK_PATH: ${{ inputs.pair_lock_path || 'qa/release-windows/update-pairs/qualified-0.7.0-to-0.7.1.json' }}
+          PAIR_LOCK_PATH: ${{ inputs.pair_lock_path || 'qa/release-windows/update-pairs/qualified-0.7.0-to-0.7.2.json' }}
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
@@ -59,7 +59,7 @@ jobs:
       - name: Download only the real baseline and admit both producer evidence chains
         shell: pwsh
         env:
-          PAIR_LOCK_PATH: ${{ inputs.pair_lock_path || 'qa/release-windows/update-pairs/qualified-0.7.0-to-0.7.1.json' }}
+          PAIR_LOCK_PATH: ${{ inputs.pair_lock_path || 'qa/release-windows/update-pairs/qualified-0.7.0-to-0.7.2.json' }}
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'

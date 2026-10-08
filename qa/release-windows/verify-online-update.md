@@ -4,13 +4,19 @@ The `windows-online-update-acceptance.yml` consumes a committed
 `qa/release-windows/update-pairs/*.json`. It never builds, publishes, edits an ASAR,
 changes product versions, replaces the update feed, or downloads the target installer.
 The baseline must be a real `0.7.0` product with the shipped updater, published under
-`v0.7.0-beta.1`. The target must be a real `0.7.1` product published under
-`v0.7.1-beta.1`. Both producer runs must already have passed restricted-token install,
+`v0.7.0-beta.1`. The target must be a real `0.7.2` product published under
+`v0.7.2-beta.1`. Both producer runs must already have passed restricted-token install,
 launch, full-tree verification, close, uninstall, and data-retention acceptance.
-Adding or updating `qualified-0.7.0-to-0.7.1.json` on
+Adding or updating `qualified-0.7.0-to-0.7.2.json` on
 `codex/windows-release-completion` triggers the consumer; manual dispatch supports
 subsequent retries with a committed pair path. A lock must only be committed after
 both producer runs pass and the real target feed is published.
+
+The preserved `0.7.0` to `0.7.1` pair is historical evidence and cannot qualify this
+release. A real Windows probe showed its Explorer-based NSIS relaunch could inherit
+high integrity instead of the installer's medium token. The `0.7.2` target addresses
+that relaunch path; its new pair lock must come from actual qualified producer bytes,
+and the automatic relaunch token check remains mandatory.
 
 ## Pair lock
 
@@ -46,9 +52,9 @@ producer's success label. The lock contains no credentials.
 The consumer runs only on a disposable `github-hosted` Windows x64 runner at medium
 integrity under the same runner user. It refuses pre-existing default product data
 directories and uses the normal `%LOCALAPPDATA%/luheng-agent` and
-`%APPDATA%/luheng-agent-desktop` locations. This matters because NSIS's normal Finish
-action can restart through Explorer without inheriting temporary process environment
-overrides. The test never changes a user machine or overwrites an existing profile.
+`%APPDATA%/luheng-agent-desktop` locations. These stable defaults let the test verify
+the real automatic relaunch and data ownership without temporary profile overrides.
+The test never changes a user machine or overwrites an existing profile.
 
 The updater cache must be absent before baseline installation. NSIS then creates
 its normal `installer.exe` cache, which must match the admitted baseline size and

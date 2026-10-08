@@ -12,7 +12,7 @@ export function validatePair(pair) {
   assert.equal(pair.repository, 'jobKKB/luheng-highway-agent');
   assert.equal(pair.feed, 'https://apps.luotuai.me/updates/windows/');
   assert.equal(pair.from.version, '0.7.0');
-  assert.equal(pair.to.version, '0.7.1');
+  assert.equal(pair.to.version, '0.7.2');
   for (const entry of [pair.from, pair.to]) {
     assert.match(entry.sha256, /^[a-f0-9]{64}$/);
     assert.ok(Number.isSafeInteger(entry.bytes) && entry.bytes > 0);
@@ -194,12 +194,13 @@ async function main() {
 if (process.argv[2] === '--self-test') {
   const entry = { bytes: 1, sha256: 'a'.repeat(64), exeSha256: 'b'.repeat(64), asarSha256: 'c'.repeat(64) };
   const pair = { schema: 'luheng-online-update/v1', repository: 'jobKKB/luheng-highway-agent', feed: 'https://apps.luotuai.me/updates/windows/',
-    from: { ...entry, version: '0.7.0', url: 'https://github.com/jobKKB/luheng-highway-agent/releases/download/v0.7.0-beta.1/Luheng.exe' }, to: { ...entry, version: '0.7.1',
-      url: 'https://github.com/jobKKB/luheng-highway-agent/releases/download/v0.7.1-beta.1/Luheng.exe' } };
+    from: { ...entry, version: '0.7.0', url: 'https://github.com/jobKKB/luheng-highway-agent/releases/download/v0.7.0-beta.1/Luheng.exe' }, to: { ...entry, version: '0.7.2',
+      url: 'https://github.com/jobKKB/luheng-highway-agent/releases/download/v0.7.2-beta.1/Luheng.exe' } };
   validatePair(pair);
   for (const url of ['https://evil.example/Luheng.exe', pair.to.url + '?redirect=1', pair.to.url.replace('jobKKB', 'other')])
     assert.throws(() => validatePair({ ...pair, to: { ...pair.to, url } }));
   assert.throws(() => validatePair({ ...pair, to: { ...pair.to, version: '0.7.0' } }));
+  assert.throws(() => validatePair({ ...pair, to: { ...pair.to, version: '0.7.1', url: pair.to.url.replaceAll('0.7.2', '0.7.1') } }));
   assert.ok(within('C:\\owned', 'C:\\owned\\state'));
   for (const value of ['C:\\owned', 'C:\\owned-other\\state', 'C:\\owned\\..\\other', 'D:\\state'])
     assert.equal(within('C:\\owned', value), false);

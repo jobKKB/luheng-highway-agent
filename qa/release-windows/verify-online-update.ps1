@@ -157,7 +157,7 @@ try {
     if ($LASTEXITCODE) { throw 'Consumer invariant self-test failed' }
     & $node (Join-Path $PSScriptRoot 'verify-online-update.mjs') --validate-pair $PairLock
     if ($LASTEXITCODE) { throw 'Pair authority or exact artifact fields are invalid' }
-    if ($pair.schema -cne 'luheng-online-update/v1' -or $pair.repository -cne 'jobKKB/luheng-highway-agent' -or $pair.from.version -cne '0.7.0' -or $pair.to.version -cne '0.7.1') { throw 'Unexpected version pair' }
+    if ($pair.schema -cne 'luheng-online-update/v1' -or $pair.repository -cne 'jobKKB/luheng-highway-agent' -or $pair.from.version -cne '0.7.0' -or $pair.to.version -cne '0.7.2') { throw 'Unexpected version pair' }
     $baseline=(Resolve-Path -LiteralPath $pair.from.path).Path
     $item=Get-Item -LiteralPath $baseline
     if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint -or $item.Length -ne $pair.from.bytes -or (Hash $baseline) -cne $pair.from.sha256) { throw 'Baseline installer custody mismatch' }
