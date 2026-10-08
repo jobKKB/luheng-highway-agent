@@ -1,0 +1,85 @@
+name: Native NSIS exact full-consumer environment diagnostic
+'on':
+  push:
+    branches:
+    - probe/hermes-native-package-current-20261006
+    paths:
+    - .github/workflows/native-installer-sanitized-fixture.yml
+    - qa/native-installer-sanitized-fixture/**
+  workflow_dispatch: null
+permissions:
+  contents: read
+concurrency:
+  group: luheng-native-sanitized-fixture-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  native-fixture:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+    - name: Checkout reviewed helper control
+      uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      with:
+        persist-credentials: false
+        path: consumer
+    - name: Checkout exact qualified source-only controller
+      uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      with:
+        ref: 90424705b9ca9f8537ffee15635b914ce52d0183
+        persist-credentials: false
+        path: controller
+    - name: Checkout immutable original upstream source
+      uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      with:
+        repository: NousResearch/hermes-agent
+        ref: 158fd638da1629c8e62caf9ade1515d162def8ab
+        persist-credentials: false
+        path: source
+    - name: Select independent source-admission interpreter
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+      with:
+        python-version: '3.12'
+    - name: Admit unchanged baseline then separately commit only installer helper overlay
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        python -I -S -B controller/qa/hermes-native/materialize-v2-source.py controller source
+        if ($LASTEXITCODE) { throw 'Original source admission failed' }
+        python -I -S -B consumer/qa/native-installer-longpaths/apply_helper_overlay.py --controller controller --source source --overlay consumer/qa/native-installer-longpaths/helper-source-overlay.json --output helper-source-admission.json
+        if ($LASTEXITCODE) { throw 'Installer helper overlay admission failed' }
+        $consumer = Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-installer-longpath-consumer'
+        python -I -S -B (Join-Path $consumer 'selftest_verifier.py')
+        if ($LASTEXITCODE) { throw 'Admission regression failed' }
+        $tokens = $null; $errors = $null
+        [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-installer-sanitized-fixture/fixture/Test-NativeFixture.ps1'),[ref]$tokens,[ref]$errors) | Out-Null
+        if ($errors.Count) { $errors | Format-List; throw 'Native fixture syntax failed' }
+    - name: Reproduce exact full consumer layout sanitized environment and preparation with tiny payload
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $job = Join-Path $env:RUNNER_TEMP 'luheng-nsis-longpath'
+        $script = Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-installer-sanitized-fixture/run_sanitized_fixture.py'
+        $source = Join-Path $env:GITHUB_WORKSPACE 'source'
+        $fixture = Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-installer-sanitized-fixture/fixture'
+        $consumer = Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-installer-longpath-consumer'
+        $pwsh = (Get-Process -Id $PID).Path
+        python -I -S -B $script $source $job $fixture $consumer $pwsh 2>&1 | Tee-Object (Join-Path $env:GITHUB_WORKSPACE 'native-sanitized-fixture.log')
+        if ($LASTEXITCODE) { throw 'Exact-environment tiny fixture rejected; inspect full inventory diagnostics' }
+    - name: Preserve source and actual native fixture evidence
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: luheng-native-nsis-sanitized-fixture-evidence
+        path: |
+          ${{ github.workspace }}/source-admission.json
+          ${{ github.workspace }}/helper-source-admission.json
+          ${{ github.workspace }}/native-sanitized-fixture.log
+          ${{ runner.temp }}/luheng-nsis-longpath/diagnostic-evidence/**
+          ${{ runner.temp }}/luheng-nsis-longpath/fresh-helper-work/fixture/fixture-build.log
+          ${{ runner.temp }}/luheng-nsis-longpath/fresh-helper-work/fixture/fixture-build.json
+          ${{ runner.temp }}/luheng-nsis-longpath/fresh-helper-work/fixture/fixture-result.json
+          ${{ runner.temp }}/luheng-nsis-longpath/fresh-helper-work/fixture/fixture-inventory.json
+        include-hidden-files: true
+        compression-level: 6
+        retention-days: 14
+        if-no-files-found: warn
