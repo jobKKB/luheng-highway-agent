@@ -9,5 +9,6 @@
     "evidenceArtifactId": 11543800246,
     "installerArtifactDigest": "sha256:ccd44d10dd25118389dbfd1080b13a417d6885d65596639415fd3b9667625030",
     "evidenceArtifactDigest": "sha256:4f6530d9e16092d5197fc1194c6e44b614217cdf1c79e2f7bf8171eb70b78260"
-  }
+  },
+  "acceptanceReason": "Repeat with native installer progress diagnostics, fail-fast owned-job cleanup, and exact NSIS generated-file checks."
 }
