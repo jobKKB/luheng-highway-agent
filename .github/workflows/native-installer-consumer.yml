@@ -22,7 +22,7 @@ jobs:
         python-version: '3.12'
     - name: Parse and natively selftest lifecycle ownership before large downloads
       shell: pwsh
-      run: "$ErrorActionPreference = 'Stop'\n$consumer = Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-installer-consumer'\nforeach ($file in @('Invoke-InstallerLifecycle.ps1', 'Test-LifecycleProcessOwner.ps1', 'token-review/Run-RestrictedLifecycle.ps1')) {\n  $tokens = $null; $errors = $null\n  [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $consumer $file), [ref]$tokens, [ref]$errors) | Out-Null\n  if ($errors.Count) { $errors | Format-List; throw \"PowerShell syntax failed: $file\" }\n}\n# Test script compiles both helpers and records only actual native observations.\n& (Join-Path $consumer 'Test-LifecycleProcessOwner.ps1') -OutputDirectory \"${{ runner.temp }}/luheng-nsis-consumer/evidence\"\npython -I -S -B (Join-Path $consumer 'selftest_verifier.py')\nif ($LASTEXITCODE) { throw 'Synthetic admission regression failed' }\n"
+      run: "$ErrorActionPreference = 'Stop'\n$consumer = Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-installer-consumer'\nforeach ($file in @('Invoke-InstallerLifecycle.ps1', 'Test-LifecycleProcessOwner.ps1', 'Observe-InstallerLifecycle.ps1', 'Test-LifecycleObservation.ps1', 'token-review/Run-RestrictedLifecycle.ps1')) {\n  $tokens = $null; $errors = $null\n  [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $consumer $file), [ref]$tokens, [ref]$errors) | Out-Null\n  if ($errors.Count) { $errors | Format-List; throw \"PowerShell syntax failed: $file\" }\n}\n# Test script compiles both helpers and records only actual native observations.\n& (Join-Path $consumer 'Test-LifecycleProcessOwner.ps1') -OutputDirectory \"${{ runner.temp }}/luheng-nsis-consumer/evidence\"\n& (Join-Path $consumer 'Test-LifecycleObservation.ps1') -OutputDirectory \"${{ runner.temp }}/luheng-nsis-consumer/evidence/observation-selftest\"\npython -I -S -B (Join-Path $consumer 'selftest_verifier.py')\nif ($LASTEXITCODE) { throw 'Synthetic admission regression failed' }\n"
     - name: Require exact completed producer API identities and capacity
       id: admit
       shell: pwsh
@@ -82,6 +82,14 @@ jobs:
     - name: Prepare fresh native helpers then wrap unchanged payload using strict NSIS
       shell: pwsh
       run: "$job = Join-Path $env:RUNNER_TEMP 'luheng-nsis-consumer'\npython -I -S -B ./consumer/qa/native-installer-consumer/prepare_and_package.py `\n  --contract ./consumer/qa/native-installer-consumer/contract.json `\n  --source source --portable \"$job/portable\" --evidence \"$job/original-evidence\" `\n  --payload \"$job/pristine/Luheng-Windows-x64\" --work \"$job/fresh-helper-work\" `\n  --cache \"$job/fresh-helper-cache\" --output \"$job/evidence\"\nif ($LASTEXITCODE) { throw 'Fresh strict native NSIS wrapping failed' }\n"
+    - name: Retain exact built installer candidate before lifecycle; not acceptance
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: luheng-nsis-built-candidate-unqualified
+        path: source/apps/desktop/release/nsis-prepackaged-test/Luheng-Unsigned-Manual-Test-*-x64.exe
+        compression-level: 0
+        retention-days: 14
+        if-no-files-found: error
     - name: Install exact bytes launch native window close and normal-uninstall retaining synthetic data
       shell: pwsh
       run: "$job = Join-Path $env:RUNNER_TEMP 'luheng-nsis-consumer'\n& ./consumer/qa/native-installer-consumer/Invoke-InstallerLifecycle.ps1 `\n  -Contract ./consumer/qa/native-installer-consumer/contract.json `\n  -BuildReceipt \"$job/evidence/installer-build.json\" -OriginalEvidence \"$job/original-evidence\" `\n  -JobRoot $job -Verifier ./consumer/qa/native-installer-consumer/verify_consumer.py `\n  -PythonExecutable (Get-Command python -ErrorAction Stop).Source\n"

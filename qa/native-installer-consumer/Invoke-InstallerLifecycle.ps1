@@ -34,6 +34,7 @@ New-Item -ItemType Directory -Force $state,$out | Out-Null
 foreach ($name in @('user','local','roaming','temp','home','parent-tools','electron-user-data','work','programdata')) { New-Item -ItemType Directory -Force (Join-Path $state $name) | Out-Null }
 Add-Type -Path (Join-Path $PSScriptRoot 'token-review/RestrictedTokenLauncher.cs')
 Add-Type -Path (Join-Path $PSScriptRoot 'LifecycleProcessOwner.cs')
+. (Join-Path $PSScriptRoot 'Observe-InstallerLifecycle.ps1')
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -142,7 +143,9 @@ try {
   # /D= must be last and unquoted in NSIS's raw argument string. Ordinary
   # /currentuser /S install keeps runAfterFinish false and requests no elevation.
   $installProc=Start-OwnedProcess $installer "/currentuser /S /D=$install" $state 'installer'
-  if (-not (Wait-OwnedProcess $installProc 240)) { throw 'Ordinary NSIS install failed or timed out' }
+  $installWait=Wait-OwnedProcessObserved -Process $installProc -Owner $owners[$installProc.Id] -Phase installer -TimeoutSeconds 1800 -InstallRoot $install -TempRoot $envMap['TEMP'] -EvidenceDirectory $out
+  $result['installer_wait']=$installWait
+  if (-not $installWait.completed) { throw ('Ordinary NSIS install incomplete: '+$installWait.reason) }
   $result.installed=$true
   $manifestFile=Join-Path $evidenceRoot $pins.evidenceFiles.structure.path
   $structure=Get-Content -LiteralPath $manifestFile -Raw | ConvertFrom-Json
@@ -207,7 +210,9 @@ try {
       # Normal product uninstall only. No --updated, --delete-app-data, manual
       # registry deletion, file removal substitute, or app-data destruction.
       $uninstallProc=Start-OwnedProcess $uninstaller '/currentuser /S' $state 'uninstaller'
-      if (-not (Wait-OwnedProcess $uninstallProc 180)) { throw 'Normal uninstall failed or timed out' }
+      $uninstallWait=Wait-OwnedProcessObserved -Process $uninstallProc -Owner $owners[$uninstallProc.Id] -Phase uninstaller -TimeoutSeconds 900 -InstallRoot $install -TempRoot $envMap['TEMP'] -EvidenceDirectory $out
+      $result['uninstaller_wait']=$uninstallWait
+      if (-not $uninstallWait.completed) { throw ('Normal uninstall incomplete: '+$uninstallWait.reason) }
       $deadline=[DateTime]::UtcNow.AddSeconds(60)
       do {
         $uninstallActive=$owners[$uninstallProc.Id].ActiveProcessCount

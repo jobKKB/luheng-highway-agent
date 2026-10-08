@@ -37,6 +37,16 @@ public sealed class LifecycleProcessOwner : IDisposable
         public long totalUserTime, totalKernelTime, thisPeriodUserTime, thisPeriodKernelTime;
         public uint pageFaults, totalProcesses, activeProcesses, terminatedProcesses;
     }
+    [StructLayout(LayoutKind.Sequential)] struct JOB_BASIC_AND_IO
+    { public JOB_ACCOUNTING basic; public IO_COUNTERS io; }
+    public sealed class Accounting
+    {
+        public uint ActiveProcesses, TotalProcesses, TerminatedProcesses;
+        public double CpuSeconds;
+        public ulong ReadOperations, WriteOperations, OtherOperations, ReadBytes, WriteBytes, OtherBytes;
+    }
+    [DllImport("kernel32.dll", SetLastError = true, EntryPoint = "QueryInformationJobObject")]
+    static extern bool QueryAccounting(IntPtr job, int kind, out JOB_BASIC_AND_IO info, uint size, IntPtr returned);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true, ExactSpelling = true)]
     static extern bool CreateProcessW(string application, StringBuilder command, IntPtr processAttributes,
         IntPtr threadAttributes, bool inheritHandles, uint flags, IntPtr environment, string directory,
@@ -121,6 +131,17 @@ public sealed class LifecycleProcessOwner : IDisposable
             Require(QueryInformationJobObject(job, 1, out info, (uint)Marshal.SizeOf(typeof(JOB_ACCOUNTING)), IntPtr.Zero), "Read lifecycle job accounting");
             return info.activeProcesses;
         }
+    }
+    // Monotonic native job totals include already-exited descendants.
+    // Read-only observation; no changes to limits, membership, tokens or cleanup.
+    public Accounting AccountingSnapshot()
+    {
+        RequireOpen(); JOB_BASIC_AND_IO info;
+        Require(QueryAccounting(job, 8, out info, (uint)Marshal.SizeOf(typeof(JOB_BASIC_AND_IO)), IntPtr.Zero), "Read lifecycle job CPU and IO accounting");
+        return new Accounting { ActiveProcesses=info.basic.activeProcesses, TotalProcesses=info.basic.totalProcesses,
+            TerminatedProcesses=info.basic.terminatedProcesses, CpuSeconds=(info.basic.totalUserTime+info.basic.totalKernelTime)/10000000.0,
+            ReadOperations=info.io.readOperations, WriteOperations=info.io.writeOperations, OtherOperations=info.io.otherOperations,
+            ReadBytes=info.io.readBytes, WriteBytes=info.io.writeBytes, OtherBytes=info.io.otherBytes };
     }
     public int[] ProcessIds()
     {
