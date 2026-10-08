@@ -301,4 +301,6 @@ jobs:
     paths:
     - .github/workflows/hermes-native-package-experiment.yml
     - qa/**
+    - '!qa/release-windows/update-pairs/**'
+    - '!qa/release-windows/verify-online-update*'
   workflow_dispatch: null

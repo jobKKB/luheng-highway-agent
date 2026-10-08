@@ -1,0 +1,134 @@
+name: Luheng real Windows online update acceptance
+on:
+  push:
+    branches:
+      - codex/windows-release-completion
+    paths:
+      - qa/release-windows/update-pairs/qualified-0.7.0-to-0.7.1.json
+  workflow_dispatch:
+    inputs:
+      pair_lock_path:
+        description: Committed qa/release-windows/update-pairs/*.json for a qualified A/B pair
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: windows-online-update-acceptance
+  cancel-in-progress: false
+jobs:
+  online-update:
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - name: Checkout the exact committed consumer and pair
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+        with:
+          persist-credentials: false
+      - name: Select Node for the independent renderer consumer
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.12.0'
+      - name: Select uv for source-only evidence admission
+        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff
+        with:
+          enable-cache: false
+          python-version: '3.12'
+      - name: Validate committed pair and successful producer runs
+        id: pair
+        shell: pwsh
+        env:
+          PAIR_LOCK_PATH: ${{ inputs.pair_lock_path || 'qa/release-windows/update-pairs/qualified-0.7.0-to-0.7.1.json' }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:PAIR_LOCK_PATH -cnotmatch '^qa/release-windows/update-pairs/[A-Za-z0-9._-]+\.json$') { throw 'Unreviewed pair path' }
+          git ls-files --error-unmatch -- $env:PAIR_LOCK_PATH
+          if ($LASTEXITCODE) { throw 'Pair must be committed in this checkout' }
+          $qa = Join-Path $env:GITHUB_WORKSPACE 'qa/release-windows'
+          uv run --no-project --python 3.12 python -I -S -B (Join-Path $qa 'verify-online-update.py') self-test
+          if ($LASTEXITCODE) { throw 'Evidence admission self-test failed' }
+          node (Join-Path $qa 'verify-online-update.mjs') --self-test
+          if ($LASTEXITCODE) { throw 'Renderer consumer self-test failed' }
+          uv run --no-project --python 3.12 python -I -S -B (Join-Path $qa 'verify-online-update.py') lock --pair $env:PAIR_LOCK_PATH
+          if ($LASTEXITCODE) { throw 'Pair lock is invalid' }
+          $pair = Get-Content -LiteralPath $env:PAIR_LOCK_PATH -Raw | ConvertFrom-Json
+          $runs = Join-Path $env:RUNNER_TEMP 'update-runs'
+          New-Item -ItemType Directory -Path $runs | Out-Null
+          foreach ($side in @('from','to')) {
+            $run = gh api "repos/jobKKB/luheng-highway-agent/actions/runs/$($pair.$side.evidence.runId)" | ConvertFrom-Json
+            if ($LASTEXITCODE -or $run.conclusion -cne 'success' -or $run.status -cne 'completed' -or $run.head_sha -cne $pair.$side.evidence.headSha -or $run.repository.full_name -cne $pair.repository) { throw 'Producer run is not the admitted successful build' }
+            $run | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath (Join-Path $runs "$side.json") -Encoding utf8NoBOM
+            "$($side)_run=$($pair.$side.evidence.runId)" >> $env:GITHUB_OUTPUT
+          }
+      - name: Obtain baseline qualification evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: luheng-windows-release-evidence
+          repository: jobKKB/luheng-highway-agent
+          run-id: ${{ steps.pair.outputs.from_run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/update-evidence/from
+      - name: Obtain target qualification evidence without downloading its installer
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: luheng-windows-release-evidence
+          repository: jobKKB/luheng-highway-agent
+          run-id: ${{ steps.pair.outputs.to_run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/update-evidence/to
+      - name: Download only the real baseline and admit both producer evidence chains
+        shell: pwsh
+        env:
+          PAIR_LOCK_PATH: ${{ inputs.pair_lock_path || 'qa/release-windows/update-pairs/qualified-0.7.0-to-0.7.1.json' }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pair = Get-Content -LiteralPath $env:PAIR_LOCK_PATH -Raw | ConvertFrom-Json
+          $baseline = Join-Path $env:RUNNER_TEMP 'update-baseline'
+          New-Item -ItemType Directory -Path $baseline | Out-Null
+          $asset = ([uri]$pair.from.url).Segments[-1]
+          gh release download v0.7.0-beta.1 --repo jobKKB/luheng-highway-agent --pattern $asset --dir $baseline
+          if ($LASTEXITCODE) { throw 'Published baseline download failed' }
+          uv run --no-project --python 3.12 python -I -S -B qa/release-windows/verify-online-update.py evidence --pair $env:PAIR_LOCK_PATH --evidence (Join-Path $env:RUNNER_TEMP 'update-evidence') --runs (Join-Path $env:RUNNER_TEMP 'update-runs') --baseline (Join-Path $baseline $asset) --output (Join-Path $env:RUNNER_TEMP 'admitted-update-pair.json')
+          if ($LASTEXITCODE) { throw 'Exact baseline or A/B evidence custody failed' }
+      - name: Install only lock-pinned consumer dependencies
+        shell: pwsh
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dependencies = Join-Path $env:RUNNER_TEMP 'update-consumer-dependencies'
+          New-Item -ItemType Directory -Path $dependencies | Out-Null
+          Copy-Item qa/release-windows/verify-online-update.package.json (Join-Path $dependencies 'package.json')
+          Copy-Item qa/release-windows/verify-online-update.package-lock.json (Join-Path $dependencies 'package-lock.json')
+          npm ci --prefix $dependencies --ignore-scripts --no-audit --no-fund
+          if ($LASTEXITCODE) { throw 'Pinned consumer dependency installation failed' }
+      - name: Exercise product download consent NSIS wizard automatic restart and retained state
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $qa = Join-Path $env:GITHUB_WORKSPACE 'qa/release-windows'
+          $outer = Join-Path $env:RUNNER_TEMP 'update-consumer'
+          New-Item -ItemType Directory -Path $outer | Out-Null
+          $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+          icacls $outer /grant "*${sid}:(OI)(CI)F" /T
+          if ($LASTEXITCODE) { throw 'Restricted consumer directory access failed' }
+          $python = (uv python find 3.12).Trim()
+          if ($LASTEXITCODE) { throw 'Managed Python interpreter unavailable' }
+          $arguments = '-PairLock "' + (Join-Path $env:RUNNER_TEMP 'admitted-update-pair.json') + '" -JobRoot "' + (Join-Path $outer 'job') + '" -NodeExecutable "' + (Get-Command node).Source + '" -DependencyPackage "' + (Join-Path $env:RUNNER_TEMP 'update-consumer-dependencies/package.json') + '" -PythonExecutable "' + $python + '"'
+          & qa/native-installer-consumer/token-review/Run-RestrictedLifecycle.ps1 -ProbeScript (Join-Path $qa 'verify-online-update.ps1') -PowerShellExecutable (Get-Command pwsh).Source -ProbeArgumentLine $arguments -WorkingDirectory $outer -EvidencePath (Join-Path $outer 'restricted-token.json') -TimeoutSeconds 3000 -ExtraEnvironment @{RUNNER_TEMP=$env:RUNNER_TEMP;GITHUB_ACTIONS='true';RUNNER_ENVIRONMENT='github-hosted'} -ExecuteProbe
+          $result = Get-Content -LiteralPath (Join-Path $outer 'job/evidence/online-update.json') -Raw | ConvertFrom-Json
+          if ($result.status -cne 'online-update-verified' -or $result.automaticUpdateVerified -ne $true -or $result.forcedCleanup -ne $false -or $result.error) { throw 'Real online upgrade did not complete' }
+      - name: Preserve exact pair and native online-update evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: luheng-windows-online-update-evidence
+          path: |
+            ${{ runner.temp }}/update-consumer/restricted-token.json
+            ${{ runner.temp }}/update-consumer/job/evidence/**
+            ${{ runner.temp }}/admitted-update-pair.json
+          if-no-files-found: warn
+          retention-days: 14

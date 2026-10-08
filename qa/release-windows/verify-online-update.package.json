@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "name": "luheng-online-update-consumer",
+  "dependencies": {
+    "playwright": "1.62.1"
+  },
+  "private": true
+}
