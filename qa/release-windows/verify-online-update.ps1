@@ -89,7 +89,11 @@ function Windows-For([int]$ProcessId) {
 }
 function Save-RestartDiagnostics {
     $rows=@(Get-Process -Name 'LuhengOfficeAgent','explorer' -ErrorAction SilentlyContinue | ForEach-Object {
-        @{pid=$_.Id; name=$_.ProcessName; image=$_.Path; session=$_.SessionId; window=$_.MainWindowTitle; handle=$_.MainWindowHandle.ToInt64(); token=$([RestrictedTokenLauncher]::InspectProcessToken($_.Id))}
+        $observed=$_
+        $processToken=$null; $tokenError=$null
+        try { $processToken=[RestrictedTokenLauncher]::InspectProcessToken($observed.Id) }
+        catch { $tokenError=$_.Exception.GetBaseException().Message }
+        @{pid=$observed.Id; name=$observed.ProcessName; image=$observed.Path; session=$observed.SessionId; window=$observed.MainWindowTitle; handle=$observed.MainWindowHandle.ToInt64(); token=$processToken; tokenError=$tokenError}
     })
     $report.restartDiagnostics=@{processes=$rows; expectedImage=$exe; expectedImageSha256=$(if (Test-Path -LiteralPath $exe) { Hash $exe }); observedUtc=[DateTime]::UtcNow.ToString('o')}
     $report | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $out 'online-update.json') -Encoding utf8NoBOM

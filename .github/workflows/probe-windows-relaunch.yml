@@ -1,0 +1,41 @@
+name: Synthetic Windows relaunch token probe
+on:
+  push:
+    branches: [codex/windows-release-completion]
+    paths:
+      - .github/workflows/probe-windows-relaunch.yml
+      - qa/relaunch-probe/**
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+        with:
+          persist-credentials: false
+      - name: Fetch the exact already-reviewed NSIS supplier
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          $tools=Join-Path $env:RUNNER_TEMP 'relaunch-nsis'
+          New-Item -ItemType Directory -Path $tools|Out-Null
+          gh release download 'nsis@1.2.1' --repo electron-userland/electron-builder-binaries --pattern nsis-bundle-3.12.tar.gz --dir $tools
+          if($LASTEXITCODE){throw 'Pinned supplier download failed'}
+          $archive=Join-Path $tools 'nsis-bundle-3.12.tar.gz'
+          if((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() -cne '56997fdefe25e7928a1a68b4583d08b240b66cf660234053b20131a74cc082f4'){throw 'Pinned supplier checksum differs'}
+          tar -xzf $archive -C $tools nsis-bundle/windows
+          if($LASTEXITCODE){throw 'Pinned supplier extraction failed'}
+      - name: Compare filtered installer direct and shell launches
+        shell: pwsh
+        run: |
+          & qa/relaunch-probe/verify-relaunch-tokens.ps1 -NsisDirectory (Join-Path $env:RUNNER_TEMP 'relaunch-nsis/nsis-bundle/windows') -OutputDirectory (Join-Path $env:RUNNER_TEMP 'relaunch-token-probe')
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: synthetic-relaunch-token-evidence
+          path: ${{ runner.temp }}/relaunch-token-probe
+          retention-days: 7
