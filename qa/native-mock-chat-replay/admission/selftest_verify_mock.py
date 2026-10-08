@@ -229,7 +229,8 @@ class AdmissionTests(unittest.TestCase):
                  lambda r:(r/'resources/app.asar').unlink(),lambda r:(r/'unexpected').write_bytes(b'extra'),
                  lambda r:(r/'Uninstall LuhengOfficeAgent.exe').write_bytes(b'MZother'),
                  lambda r:(r/'resources/package-type').write_bytes(b'zip!'),
-                 lambda r:(r/'resources/App.asar').write_bytes(b'synthetic-asar')]
+                 # Remove first so case-insensitive Windows cannot turn this into a no-op overwrite.
+                 lambda r:((r/'resources/app.asar').unlink(), (r/'resources/App.asar').write_bytes(b'synthetic-asar'))]
         for index,change in enumerate(changes):
             with self.subTest(index=index),tempfile.TemporaryDirectory() as temp:
                 f=Fixture(temp);root=f.install_tree();change(root);fails(lambda:check(f,root))
