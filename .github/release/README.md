@@ -6,18 +6,20 @@ All GitHub operations use `gh`.
 
 The workflow only runs when `.github/release/windows-preview-release-lock.json`
 changes on `codex/windows-release-completion`. Adding that file is the explicit
-publication action. Do not add it until both new native producer runs finish successfully.
+publication action. Do not add it until both pinned native producer runs finish successfully.
 The expected JSON is exactly `schema: luheng-preview-release/v2`,
 `repository: jobKKB/luheng-highway-agent`, `publish: true`, and `producers` equal
 to the `PRODUCERS` constant in `publish-windows-preview.py`. Its run IDs and
 commit hashes identify reviewed successful runs 37773571320 (0.7.0) and
-37773394370 (0.7.1). Unset pins reject all publication locks. A recovery object is not accepted.
+37809587446 (0.7.2). Unset pins reject all publication locks. A recovery object is not accepted.
 
 The publisher checks both producer run IDs, commits, workflow paths and every
 required job step, including actual installation, normal exit, uninstall and the
 final acceptance gate in that same run. Failed, partial and lifecycle-only
-recovery runs cannot qualify. The replacement producers rebuild versions 0.7.0
-and 0.7.1 with the corrected NSIS long-path handling and synchronous verification.
+recovery runs cannot qualify. The preserved 0.7.0 baseline and new 0.7.2 target
+include corrected NSIS long-path handling and synchronous verification. The 0.7.2
+installer additionally keeps the current user's privilege level during restart,
+instead of inheriting a potentially elevated Explorer token.
 It selects the unique exact-name installer and evidence artifacts and checks
 their IDs, size and digest metadata again after `gh run download`. It locates each
 required evidence basename exactly once, pins its actual relative path and bytes,
@@ -36,11 +38,19 @@ verified. It never uses `--clobber`, deletes assets or moves tags. Public releas
 are prereleases and are not marked latest. A failed upload may leave a draft for
 inspection; it does not weaken the checks on a rerun.
 
+Each pinned version needs its `notes-<version>.md` before publication. When the
+Actions token cannot create a release at the admitted producer commit, create
+the exact missing tag and empty draft prerelease with the already-authorized local
+`gh` account before rerunning publication. Verify the tag's object SHA and draft's
+target equal the producer's `headSha`. The publisher still validates all uploaded
+assets before exposing the release; never move an existing tag or expand workflow
+permissions to bypass these checks.
+
 The small `luheng-preview-publication-metadata` artifact contains the actual
 `pair-lock.json`, target `latest.yml`, `SHA256SUMS.txt`, and publication receipt.
 The downloaded Windows artifacts remain on the disposable runner. Publish the
 target feed and commit the pair lock to the independent online-update consumer
-before claiming 0.7.0-to-0.7.1 update acceptance.
+before claiming 0.7.0-to-0.7.2 update acceptance.
 
 Run the non-network self-check with:
 
