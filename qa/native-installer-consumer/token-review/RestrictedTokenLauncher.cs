@@ -104,7 +104,21 @@ public static class RestrictedTokenLauncher
         catch { Marshal.FreeHGlobal(p); throw; }
     }
     static uint Dword(IntPtr token, int kind)
-    { IntPtr p = Read(token, kind); try { return unchecked((uint)Marshal.ReadInt32(p)); } finally { Marshal.FreeHGlobal(p); } }
+    {
+        // These TOKEN_INFORMATION_CLASS values return a fixed DWORD, not a
+        // variable-size object. Supply its documented buffer directly.
+        IntPtr p = Marshal.AllocHGlobal(sizeof(uint));
+        try
+        {
+            int needed;
+            bool ok = GetTokenInformation(token, kind, p, sizeof(uint), out needed);
+            int error = Marshal.GetLastWin32Error();
+            if (!ok) throw new Win32Exception(error, "GetTokenInformation DWORD " + kind + " (Win32 " + error + ")");
+            if (needed != sizeof(uint)) throw new InvalidOperationException("Unexpected token DWORD size " + kind + ": " + needed);
+            return unchecked((uint)Marshal.ReadInt32(p));
+        }
+        finally { Marshal.FreeHGlobal(p); }
+    }
     static string Sid(IntPtr p) { return new SecurityIdentifier(p).Value; }
     static string TokenSid(IntPtr token, int kind)
     { IntPtr p = Read(token, kind); try { return Sid(Marshal.ReadIntPtr(p)); } finally { Marshal.FreeHGlobal(p); } }
