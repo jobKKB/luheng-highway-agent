@@ -117,6 +117,7 @@ public static class RestrictedTokenLauncher
     {
         public string Coverage = "same-runner-user restricted-token subprocess; not a separate standard account";
         public string Stage;
+        public string PrivateDefaultDaclBefore;
         public TokenEvidence Source, Prepared, Child;
         public uint ChildProcessId, ExitCode;
         public bool TokenGatePassed, ProcessTreeFinished;
@@ -451,6 +452,40 @@ public static class RestrictedTokenLauncher
         }
         finally { Marshal.FreeHGlobal(p); }
     }
+    static void PreserveCreatorAccess(IntPtr restricted, string userSid)
+    {
+        IntPtr buffer = Read(restricted, TokenDefaultDacl);
+        IntPtr aclMemory = IntPtr.Zero, information = IntPtr.Zero;
+        try
+        {
+            IntPtr pointer = Marshal.ReadIntPtr(buffer);
+            if (pointer == IntPtr.Zero) throw new InvalidOperationException("Unexpected unrestricted NULL default DACL");
+            int size = (ushort)Marshal.ReadInt16(pointer, 2);
+            if (size < 8) throw new InvalidOperationException("Invalid restricted token default ACL");
+            byte[] bytes = new byte[size]; Marshal.Copy(pointer, bytes, 0, size);
+            var acl = new RawAcl(bytes, 0); var user = new SecurityIdentifier(userSid);
+            foreach (GenericAce entry in acl)
+            {
+                var allowed = entry as CommonAce;
+                if (allowed != null && allowed.AceQualifier == AceQualifier.AccessAllowed && allowed.SecurityIdentifier.Equals(user) &&
+                    (allowed.AccessMask & 0x10000000) != 0) return;
+            }
+            // Hosted Administrator defaults grant BA/SYSTEM, but BA is now deny-only.
+            // Repair only this private token's future objects so their creator can
+            // use ordinary pipes/process handles; existing ACLs and privileges stay intact.
+            acl.InsertAce(acl.Count, new CommonAce(AceFlags.None, AceQualifier.AccessAllowed, 0x10000000, user, false, null));
+            bytes = new byte[acl.BinaryLength]; acl.GetBinaryForm(bytes, 0);
+            aclMemory = Marshal.AllocHGlobal(bytes.Length); Marshal.Copy(bytes, 0, aclMemory, bytes.Length);
+            information = Marshal.AllocHGlobal(IntPtr.Size); Marshal.WriteIntPtr(information, aclMemory);
+            Win32(SetTokenInformation(restricted, TokenDefaultDacl, information, IntPtr.Size), "Set private restricted token creator default DACL");
+        }
+        finally
+        {
+            if (information != IntPtr.Zero) Marshal.FreeHGlobal(information);
+            if (aclMemory != IntPtr.Zero) Marshal.FreeHGlobal(aclMemory);
+            Marshal.FreeHGlobal(buffer);
+        }
+    }
     static IntPtr EnvironmentBlock(string[] pairs)
     {
         if (pairs == null || pairs.Length == 0) throw new ArgumentException("Explicit non-secret environment is required");
@@ -495,6 +530,9 @@ public static class RestrictedTokenLauncher
             LastEvidence.Stage = "create-restricted-token";
             Win32(CreateRestrictedToken(source, LUA_TOKEN, (uint)disabled.Count, disabled.ToArray(), (uint)deleted.Count,
                 deleted.ToArray(), 0, IntPtr.Zero, out restricted), LastEvidence.Stage);
+            LastEvidence.Stage = "preserve-private-token-creator-access";
+            LastEvidence.PrivateDefaultDaclBefore = Snapshot(restricted).DefaultDaclSddl;
+            PreserveCreatorAccess(restricted, LastEvidence.Source.UserSid);
             LastEvidence.Stage = "lower-private-token-integrity"; Medium(restricted);
             LastEvidence.Prepared = Snapshot(restricted); Check(LastEvidence.Source, LastEvidence.Prepared);
             env = EnvironmentBlock(environment);
