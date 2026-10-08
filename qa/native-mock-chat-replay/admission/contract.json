@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "qualified": true,
+  "repository": "jobKKB/luheng-highway-agent",
+  "build": {
+    "runId": 37773394370,
+    "head": "441086c414182d204e438df598ad8f967cd23761",
+    "runAttempt": 1,
+    "workflowPath": ".github/workflows/hermes-native-package-experiment.yml"
+  },
+  "source": {
+    "commit": "c3490f7ffe0eaa501aa1e20c55e84fd5180e66dd",
+    "treeSha256": "b5350603c19132f71748bbcbc436ef20e897513210a8538bfb2d30ceb3081031",
+    "count": 17266,
+    "baseVersion": "0.7.1"
+  },
+  "evidenceArtifact": {
+    "id": 11554708380,
+    "name": "luheng-windows-release-evidence",
+    "bytes": 5808718,
+    "digest": "sha256:0d2f55db77a006bcb04a5573ba3f345bd7d593274b8c1d3f6da3399ef791084a"
+  },
+  "installer": {
+    "url": "https://github.com/jobKKB/luheng-highway-agent/releases/download/v0.7.1-beta.1/Luheng-Office-Agent-0.7.1-windows-x64.exe",
+    "bytes": 1593299205,
+    "sha256": "e510b8d17bd8145f1fcbfe5ab3e57070988b1b62f6d9c6e1f169233de1dd080f",
+    "exeSha256": "25836d42c1b97983dd88093d1c475da54aba896e7466a720d3111e6a3fbf4599",
+    "asarSha256": "77eb8388efa9951b755ea4ad1e4f47dc581f9282cfc296090d9fd2428271f880",
+    "path": "Luheng-Office-Agent-0.7.1-windows-x64.exe"
+  },
+  "release": {
+    "id": 406894002,
+    "tag": "v0.7.1-beta.1",
+    "assetId": 621995936,
+    "assetName": "Luheng-Office-Agent-0.7.1-windows-x64.exe"
+  },
+  "evidenceFiles": {
+    "sourceAdmission": {
+      "path": "luheng-highway-agent/luheng-highway-agent/source-admission.json",
+      "bytes": 468,
+      "sha256": "83662a1e265d66961db1dcd6c5898b7c6aba5e4a2d86f92b5c3e837089d62d1f"
+    },
+    "structure": {
+      "path": "luheng-highway-agent/luheng-highway-agent/windows-unpacked-structure.json",
+      "bytes": 28476068,
+      "sha256": "402375d298166512a02ee07b7ecaa671610b55dd1551251582ce2c354b2d0e5f"
+    },
+    "health": {
+      "path": "luheng-highway-agent/luheng-highway-agent/native-smoke-evidence/native-startup.json",
+      "bytes": 430,
+      "sha256": "7e230ef087e0bc392a043cf45dde7e769f3db5a6d52d111df6d91315f7634233"
+    },
+    "installerReceipt": {
+      "path": "luheng-highway-agent/luheng-highway-agent/installer-product/installer-build.json",
+      "bytes": 3395,
+      "sha256": "d379aeed84f0904c524accaeb2dc587875015899ae104c532f1c821a2b2b4523"
+    },
+    "lifecycle": {
+      "path": "_temp/luheng-installer-acceptance/evidence/installer-lifecycle.json",
+      "bytes": 10225,
+      "sha256": "e5fc3c4096fba2d2d8184d1c287cf0d75180926455bcb199be1f368e3777b778"
+    }
+  },
+  "payload": {
+    "files": 117874,
+    "bytes": 6470743229
+  },
+  "generatedInstallerFiles": [
+    {
+      "path": "Uninstall LuhengOfficeAgent.exe",
+      "bytes": 201575,
+      "sha256": "103ca0de8e3872d4628f1096d3bbefc81bd49a1e4b46faa2129948fd08bd6c91"
+    },
+    {
+      "path": "resources/package-type",
+      "bytes": 4,
+      "sha256": "c5c323aec3f9d0b72cf187886981dee0f111fa12249e38e447d0e477df153176"
+    }
+  ],
+  "lifecycleMode": "elevated-runner-explicitly-limited",
+  "priorLifecycleMode": "restricted-token-same-user",
+  "minimumScratchBytes": 18835561677,
+  "reviewedController": "589eb5bdc8fc66569500903ca733c4e01dd592db",
+  "notes": "Exact published unsigned 0.7.1 bytes with nsis-preview updates enabled. Prior restricted-token install/uninstall proof is independently frozen. New mocked-model test uses elevated hosted runner; no real provider, offline, physical IME, standard-account, or updater claims."
+}

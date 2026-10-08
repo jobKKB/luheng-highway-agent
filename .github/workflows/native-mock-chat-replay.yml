@@ -1,0 +1,131 @@
+name: Exact 0.7.1 installed mock chat and file tool acceptance
+'on':
+  push:
+    branches:
+      - probe/hermes-native-package-current-20261006
+    paths:
+      - .github/workflows/native-mock-chat-replay.yml
+      - qa/native-mock-chat-replay/**
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: luheng-exact-071-mock-chat-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  exact-native-mock-chat:
+    runs-on: windows-2025
+    timeout-minutes: 90
+    steps:
+      - name: Checkout only reviewed consumer at exact workflow commit
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+        with:
+          ref: ${{ github.sha }}
+          path: consumer
+          persist-credentials: false
+      - name: Select independent admission interpreter
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Native ownership and strict synthetic preflight before downloads
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $qa=Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-mock-chat-replay'
+          $out=Join-Path $env:RUNNER_TEMP 'lh-mock/evidence'
+          New-Item -ItemType Directory -Force $out | Out-Null
+          foreach ($file in @('admit-mock.ps1','lifecycle/Invoke-MockChatLifecycle.ps1','lifecycle/Test-LifecycleProcessOwner.ps1','lifecycle/Observe-InstallerLifecycle.ps1','lifecycle/Test-LifecycleObservation.ps1')) {
+            $tokens=$null; $errors=$null
+            [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $qa $file),[ref]$tokens,[ref]$errors) | Out-Null
+            if ($errors.Count) { $errors | Format-List; throw "PowerShell syntax failed: $file" }
+          }
+          & (Join-Path $qa 'lifecycle/Test-LifecycleProcessOwner.ps1') -OutputDirectory $out
+          & (Join-Path $qa 'lifecycle/Test-LifecycleObservation.ps1') -OutputDirectory "$out/observation-selftest"
+          python -I -S -B (Join-Path $qa 'admission/selftest_verify_mock.py')
+          if ($LASTEXITCODE) { throw 'Strict admission/tree acceptance selftest failed' }
+          python -I -S -B (Join-Path $qa 'selftest_integration.py')
+          if ($LASTEXITCODE) { throw 'Sanitized mock lifecycle integration selftest failed' }
+          node -e "if (Number(process.versions.node.split('.')[0]) < 22 || typeof WebSocket !== 'function') process.exit(1); console.log(process.version)"
+          if ($LASTEXITCODE) { throw 'Existing trusted Node >=22 with built-in WebSocket required' }
+          node --test (Join-Path $qa 'selftest-ui.mjs')
+          if ($LASTEXITCODE) { throw 'Dependency-free CDP/selector transport selftest failed' }
+          node --test (Join-Path $qa 'mock/selftest.mjs')
+          if ($LASTEXITCODE) { throw 'Local mock model/tool protocol selftest failed' }
+      - name: Admit exact successful producer evidence artifact and published EXE metadata
+        id: admit
+        shell: pwsh
+        env:
+          READ_TOKEN: ${{ github.token }}
+        run: |
+          & ./consumer/qa/native-mock-chat-replay/admit-mock.ps1 `
+            -Contract ./consumer/qa/native-mock-chat-replay/admission/contract.json `
+            -JobRoot "${{ runner.temp }}/lh-mock"
+      - name: Download only exact producer evidence with fatal ZIP digest checking
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: ${{ steps.admit.outputs.evidence-id }}
+          run-id: ${{ steps.admit.outputs.producer-run }}
+          repository: jobKKB/luheng-highway-agent
+          github-token: ${{ github.token }}
+          digest-mismatch: error
+          merge-multiple: true
+          path: ${{ runner.temp }}/lh-mock/original-evidence
+      - name: Verify exact source policy original file manifest and prior restricted lifecycle
+        shell: pwsh
+        run: |
+          $job=Join-Path $env:RUNNER_TEMP 'lh-mock'
+          python -I -S -B ./consumer/qa/native-mock-chat-replay/admission/verify_mock.py evidence `
+            --contract ./consumer/qa/native-mock-chat-replay/admission/contract.json `
+            --evidence "$job/original-evidence" --output "$job/evidence/frozen-evidence-admission.json"
+          if ($LASTEXITCODE) { throw 'Exact current source/update policy or restricted acceptance evidence differs' }
+      - name: Download hash-pinned public EXE without source rebuild or wrapping
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $job=Join-Path $env:RUNNER_TEMP 'lh-mock'
+          $qa=Join-Path $env:GITHUB_WORKSPACE 'consumer/qa/native-mock-chat-replay'
+          $pins=Get-Content (Join-Path $qa 'admission/contract.json') -Raw | ConvertFrom-Json
+          $candidate=Join-Path $job 'candidate'
+          if (Test-Path -LiteralPath $candidate) { throw 'Fresh candidate directory required' }
+          New-Item -ItemType Directory -Path $candidate | Out-Null
+          $exe=Join-Path $candidate 'Luheng-Office-Agent-0.7.1-windows-x64.exe'
+          Invoke-WebRequest -Uri $pins.installer.url -OutFile $exe -MaximumRedirection 5 -TimeoutSec 1200
+          python -I -S -B (Join-Path $qa 'admission/verify_mock.py') downloads `
+            --contract (Join-Path $qa 'admission/contract.json') --evidence "$job/original-evidence" `
+            --installer $exe --output "$job/evidence/download-admission.json"
+          if ($LASTEXITCODE) { throw 'Exact EXE bytes/PE or original receipt custody differ; do not execute' }
+          $drive=Get-PSDrive -Name ([IO.Path]::GetPathRoot($job).TrimEnd('\').TrimEnd(':'))
+          $minimum=2*[long]6470743229+4GB
+          @{free_bytes=[long]$drive.Free;minimum_remaining_bytes=$minimum} | ConvertTo-Json | Set-Content "$job/evidence/disk-before-install.json" -Encoding utf8
+          if ($drive.Free -lt $minimum) { throw 'Insufficient remaining scratch for install and NSIS extraction' }
+      - name: Install exact bytes exercise real chat file tool and normal close and uninstall
+        shell: pwsh
+        run: |
+          $job=Join-Path $env:RUNNER_TEMP 'lh-mock'
+          & ./consumer/qa/native-mock-chat-replay/lifecycle/Invoke-MockChatLifecycle.ps1 `
+            -Contract ./consumer/qa/native-mock-chat-replay/admission/contract.json `
+            -BuildReceipt "$job/evidence/installer-build.relocated.json" -OriginalEvidence "$job/original-evidence" `
+            -JobRoot $job -Verifier ./consumer/qa/native-mock-chat-replay/admission/verify_mock.py `
+            -PythonExecutable (Get-Command python -ErrorAction Stop).Source `
+            -NodeExecutable (Get-Command node -ErrorAction Stop).Source
+      - name: Independently require complete current mock tool UI and lifecycle evidence
+        shell: pwsh
+        run: |
+          $job=Join-Path $env:RUNNER_TEMP 'lh-mock'
+          python -I -S -B ./consumer/qa/native-mock-chat-replay/admission/verify_mock.py acceptance `
+            --contract ./consumer/qa/native-mock-chat-replay/admission/contract.json `
+            --evidence "$job/original-evidence" --root "$job/evidence" --current-run $env:GITHUB_RUN_ID `
+            --output "$job/evidence/current-acceptance.json"
+          if ($LASTEXITCODE) { throw 'Current exact-artifact lifecycle or mock acceptance incomplete' }
+          node ./consumer/qa/native-mock-chat-replay/mock/verify-mock-evidence.mjs "$job/evidence"
+          if ($LASTEXITCODE) { throw 'Mock protocol, rendered real response, owner or visual evidence incomplete' }
+      - name: Preserve bounded native mock and exact artifact evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: luheng-exact-071-native-mock-chat-evidence
+          path: ${{ runner.temp }}/lh-mock/evidence/**
+          include-hidden-files: true
+          compression-level: 6
+          retention-days: 14
+          if-no-files-found: warn
