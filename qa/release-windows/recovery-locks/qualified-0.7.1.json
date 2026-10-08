@@ -1,0 +1,13 @@
+{
+  "schema": "luheng-artifact-recovery/v1",
+  "repository": "jobKKB/luheng-highway-agent",
+  "version": "0.7.1",
+  "producer": {
+    "runId": 37751086133,
+    "headSha": "0b886722f2861ec551bb6c8c7aae24f0d260e6c1",
+    "installerArtifactId": 11542771041,
+    "evidenceArtifactId": 11543800246,
+    "installerArtifactDigest": "sha256:ccd44d10dd25118389dbfd1080b13a417d6885d65596639415fd3b9667625030",
+    "evidenceArtifactDigest": "sha256:4f6530d9e16092d5197fc1194c6e44b614217cdf1c79e2f7bf8171eb70b78260"
+  }
+}
