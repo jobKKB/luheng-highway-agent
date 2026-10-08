@@ -159,9 +159,8 @@ try {
         if (-not $ready -and (Test-Path -LiteralPath (Join-Path $out 'baseline-ready.json'))) {
             $ready=Get-Content -LiteralPath (Join-Path $out 'baseline-ready.json') -Raw | ConvertFrom-Json
             $process=Get-Process -Id $ready.pid -ErrorAction Stop
-            $image=[RestrictedTokenLauncher]::InspectProcessImage([int]$ready.pid)
-            $report.baselineImage=@{pid=$ready.pid; image=$image; expected=$exe; modulePath=$process.Path}
-            if ($image -ine $exe -or (Hash $image) -cne $pair.from.exeSha256) { throw 'Baseline UI ownership mismatch' }
+            $report.baselineImage=@{pid=$ready.pid; image=$process.Path; expected=$exe; launcherPid=$ready.launcherPid}
+            if ($process.Path -ine $exe -or (Hash $process.Path) -cne $pair.from.exeSha256) { throw 'Baseline UI ownership mismatch' }
         }
         if ($ready -and -not $report.productConsentConfirmed) {
             foreach ($window in (Windows-For $ready.pid)) {
@@ -174,7 +173,6 @@ try {
         if ($report.productConsentConfirmed) {
             foreach ($process in @(Get-CimInstance Win32_Process)) {
                 $file=[string]$process.ExecutablePath
-                if (-not $file) { try { $file=[RestrictedTokenLauncher]::InspectProcessImage([int]$process.ProcessId) } catch { continue } }
                 if (-not $file -or (-not $file.StartsWith($job+'\',[StringComparison]::OrdinalIgnoreCase) -and -not $file.StartsWith($cache+'\',[StringComparison]::OrdinalIgnoreCase))) { continue }
                 if (-not $checkedFiles.ContainsKey($file) -and (Test-Path -LiteralPath $file -PathType Leaf)) {
                     $candidate=Get-Item -LiteralPath $file
@@ -193,13 +191,12 @@ try {
         }
         if ($ready -and $report.installerWizardCompleted) {
             foreach ($process in @(Get-Process -Name 'LuhengOfficeAgent' -ErrorAction SilentlyContinue)) {
-                $image=[RestrictedTokenLauncher]::InspectProcessImage($process.Id)
-                if ($process.Id -ne $ready.pid -and $image -ieq $exe -and $process.MainWindowHandle -ne 0) {
+                if ($process.Id -ne $ready.pid -and $process.Path -ieq $exe -and $process.MainWindowHandle -ne 0) {
                     if ((Hash $exe) -cne $pair.to.exeSha256 -or (Hash (Join-Path $install 'resources/app.asar')) -cne $pair.to.asarSha256) { throw 'Relaunched target payload differs' }
                     $childToken=[RestrictedTokenLauncher]::InspectProcessToken($process.Id)
                     if ($childToken.UserSid -cne $token.UserSid -or $childToken.IsElevated -ne 0 -or $childToken.IntegritySid -cne 'S-1-16-8192') { throw 'Target restart changed user or elevated' }
                     $restarted=$process; $report.targetAutomaticallyRelaunched=$true
-                    $report.relaunch=@{pid=$process.Id; exe=$image; token=$childToken; observedUtc=[DateTime]::UtcNow.ToString('o')}
+                    $report.relaunch=@{pid=$process.Id; exe=$process.Path; token=$childToken; observedUtc=[DateTime]::UtcNow.ToString('o')}
                     break
                 }
             }
@@ -232,7 +229,7 @@ try {
             $ownership=Get-Content -LiteralPath $ownershipFile -Raw | ConvertFrom-Json
             foreach ($entry in @($ownership.backends | Where-Object { $_.parentPid -eq $restarted.Id })) {
                 $backend=Get-CimInstance Win32_Process -Filter "ProcessId=$($entry.pid)"
-                if ($backend -and ([RestrictedTokenLauncher]::InspectProcessImage([int]$entry.pid)).StartsWith($install+'\',[StringComparison]::OrdinalIgnoreCase) -and
+                if ($backend -and $backend.ExecutablePath.StartsWith($install+'\',[StringComparison]::OrdinalIgnoreCase) -and
                     [OnlineUpdateFileOwners]::ForFile($database) -contains [int]$entry.pid) {
                     $report.targetAutomaticProfileVerified=$true
                     $report.automaticProfile=@{parentPid=$restarted.Id; backendPid=[int]$entry.pid; userData=$runtime.userData; database=$database; method='product-ownership-and-Windows-file-owner'}

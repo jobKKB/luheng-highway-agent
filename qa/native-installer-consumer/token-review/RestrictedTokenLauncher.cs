@@ -396,21 +396,6 @@ public static class RestrictedTokenLauncher
     }
     // Read-only evidence for tracked lifecycle-created processes only. A short-lived
     // process may exit first; that is missing evidence, never a fabricated snapshot.
-    public static string InspectProcessImage(int processId)
-    {
-        if (processId <= 0) throw new ArgumentException("Positive tracked process ID required");
-        IntPtr process = OpenProcess(0x1000, false, (uint)processId);
-        Win32(process != IntPtr.Zero, "OpenProcess for read-only image evidence");
-        try
-        {
-            // Reading a process image must not require module-memory access.
-            uint size = 32768;
-            var path = new StringBuilder((int)size);
-            Win32(QueryFullProcessImageName(process, 0, path, ref size), "QueryFullProcessImageName");
-            return path.ToString();
-        }
-        finally { CloseHandle(process); }
-    }
     public static TokenEvidence InspectProcessToken(int processId)
     {
         if (processId <= 0) throw new ArgumentException("Positive tracked process ID required");

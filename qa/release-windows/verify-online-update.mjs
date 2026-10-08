@@ -89,10 +89,11 @@ async function main() {
     app = await _electron.launch({ executablePath: runtime.exe, args: [], timeout: 120000,
       cwd: runtime.project, env: { ...process.env } });
     const page = await app.firstWindow();
-    const actual = await app.evaluate(({ app }) => ({ version: app.getVersion(), packaged: app.isPackaged,
+    const actual = await app.evaluate(({ app }) => ({ pid: process.pid, version: app.getVersion(), packaged: app.isPackaged,
       userData: app.getPath('userData'), homeOverride: process.env.HERMES_HOME,
       sandboxDisabled: app.commandLine.hasSwitch('no-sandbox') }));
     assert.equal(actual.version, expected.version);
+    assert.ok(Number.isSafeInteger(actual.pid) && actual.pid > 0);
     assert.equal(actual.packaged, true);
     assert.equal(actual.sandboxDisabled, false);
     assert.equal(path.resolve(actual.userData).toLowerCase(), path.resolve(runtime.userData).toLowerCase());
@@ -146,7 +147,8 @@ async function main() {
         return writes;
       });
       await page.evaluate(() => window.hermesDesktop.updates.onProgress(event => window.recordOwnedUpdateProgress(event)));
-      await evidence('baseline-ready.json', { pid: app.process().pid, exe: runtime.exe, exeSha256: expected.exeSha256 });
+      // Playwright's Windows launcher PID belongs to cmd.exe, not the Electron main process.
+      await evidence('baseline-ready.json', { pid: actual.pid, launcherPid: app.process().pid, exe: runtime.exe, exeSha256: expected.exeSha256 });
       await page.screenshot({ path: path.join(runtime.evidence, 'baseline.png') });
       const closed = new Promise(resolve => app.once('close', resolve));
       const applying = page.evaluate(() => window.hermesDesktop.updates.apply({})).catch(error => ({ transportClosed: error.message }));
