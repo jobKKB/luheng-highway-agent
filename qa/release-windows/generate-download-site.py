@@ -56,7 +56,7 @@ def validate_upgrade(report, entry, version):
     pair = report["pair"]
     require(pair.get("schema") == "luheng-online-update/v1" and
             pair.get("repository") == "jobKKB/luheng-highway-agent" and
-            pair["from"]["version"] == "0.7.0" and pair["to"]["version"] == version == "0.7.2",
+            pair["from"]["version"] == "0.7.2" and pair["to"]["version"] == version == "0.7.3",
             "Online update evidence describes a different version pair")
     for item in (pair["from"], pair["to"]):
         require(type(item.get("bytes")) is int and item["bytes"] > 0 and
@@ -78,8 +78,8 @@ def generate(installer, version, tag, lifecycle_path, output, upgrade_path=None)
     for parent in (output, *output.parents):
         require(not parent.is_symlink() and not (hasattr(parent, "is_junction") and parent.is_junction()),
                 "Site output crosses a link or junction")
-    accepted = "Online update 0.7.0 → 0.7.2: confirmed download, consent, NSIS wizard, automatic relaunch and test-data retention."
-    pending = "Online update 0.7.0 → 0.7.2 has not been accepted for this download."
+    accepted = "Online update 0.7.2 → 0.7.3: confirmed download, consent, NSIS wizard, automatic relaunch and test-data retention."
+    pending = "Online update 0.7.2 → 0.7.3 has not been accepted for this download."
     migration = " Migration from the legacy Node prototype remains unverified. Back up existing settings and files before migration."
     values = {
         "URL": entry["url"], "VERSION": version, "SHA256": entry["sha256"],

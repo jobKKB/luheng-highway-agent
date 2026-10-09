@@ -243,6 +243,14 @@ jobs:
         $ErrorActionPreference = 'Stop'
         uv run --no-project --python 3.12 python -I -S -B controller/qa/release-windows/package-installer.py --source source --prepared (Join-Path $env:RUNNER_TEMP 'luheng-current-unpacked-build/work/prepared.json') --structure windows-unpacked-structure.json --health native-smoke-evidence/native-startup.json --archive portable-product/Luheng-Windows-x64-verified.7z --run-id $env:GITHUB_RUN_ID --output installer-product 2>&1 | Tee-Object installer-package.log
         if ($LASTEXITCODE) { throw 'NSIS installer packaging failed' }
+    - name: Verify actual application and installer shell icons
+      id: branding
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $installers = @(Get-ChildItem -LiteralPath installer-product -Filter '*.exe')
+        if ($installers.Count -ne 1) { throw 'Expected one installer for branding verification' }
+        & controller/qa/release-windows/verify-branding.ps1 -ExpectedIcon source/apps/desktop/assets/luheng-icon.ico -Executables @('source/apps/desktop/release/win-unpacked/LuhengOfficeAgent.exe', $installers[0].FullName) -OutputDirectory branding-evidence
     - name: Preserve installer bytes before installation acceptance
       if: ${{ always() && steps.installer.outcome == 'success' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -290,6 +298,7 @@ jobs:
           ${{ github.workspace }}/lifecycle-contract.json
           ${{ github.workspace }}/installer-product/installer-build.json
           ${{ github.workspace }}/helper-preflight/**
+          ${{ github.workspace }}/branding-evidence/**
         include-hidden-files: true
         compression-level: 6
         retention-days: 14
@@ -301,10 +310,11 @@ jobs:
         CONTRACT_RESULT: ${{ steps.contracts.outcome }}
         NATIVE_RESULT: ${{ steps.native_smoke.outcome }}
         INSTALLER_RESULT: ${{ steps.installer.outcome }}
+        BRANDING_RESULT: ${{ steps.branding.outcome }}
         LIFECYCLE_RESULT: ${{ steps.lifecycle.outcome }}
       run: |
         $ErrorActionPreference = 'Stop'
-        foreach ($name in @('CONTRACT_RESULT','NATIVE_RESULT','INSTALLER_RESULT','LIFECYCLE_RESULT')) {
+        foreach ($name in @('CONTRACT_RESULT','NATIVE_RESULT','INSTALLER_RESULT','BRANDING_RESULT','LIFECYCLE_RESULT')) {
           if ([Environment]::GetEnvironmentVariable($name) -ne 'success') { throw "Release acceptance failed: $name" }
         }
         Write-Output 'Windows installer, runtime contracts, native launch and restricted-token lifecycle passed. Artifacts remain unpublished pending release.'

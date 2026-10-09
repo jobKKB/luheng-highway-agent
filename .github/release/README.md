@@ -9,17 +9,20 @@ changes on `codex/windows-release-completion`. Adding that file is the explicit
 publication action. Do not add it until both pinned native producer runs finish successfully.
 The expected JSON is exactly `schema: luheng-preview-release/v2`,
 `repository: jobKKB/luheng-highway-agent`, `publish: true`, and `producers` equal
-to the `PRODUCERS` constant in `publish-windows-preview.py`. Its run IDs and
-commit hashes identify reviewed successful runs 37773571320 (0.7.0) and
-37809587446 (0.7.2). Unset pins reject all publication locks. A recovery object is not accepted.
+to the `PRODUCERS` constant in `publish-windows-preview.py`. The baseline is the
+reviewed successful run 37809587446 (0.7.2), commit
+`4036b65ade36eaaff2be1fe60b7ac2b8eeb1eb3d`. The 0.7.3 target run and commit remain
+unset until its complete producer passes. Unset pins reject all publication locks.
+The existing publication lock is historical and cannot enable this new pair.
+A recovery object is not accepted.
 
 The publisher checks both producer run IDs, commits, workflow paths and every
 required job step, including actual installation, normal exit, uninstall and the
 final acceptance gate in that same run. Failed, partial and lifecycle-only
-recovery runs cannot qualify. The preserved 0.7.0 baseline and new 0.7.2 target
-include corrected NSIS long-path handling and synchronous verification. The 0.7.2
-installer additionally keeps the current user's privilege level during restart,
-instead of inheriting a potentially elevated Explorer token.
+recovery runs cannot qualify. The preserved 0.7.2 baseline and new 0.7.3 target
+include corrected NSIS long-path handling and synchronous verification, and keep
+the current user's privilege level during restart instead of inheriting a
+potentially elevated Explorer token. The new target adds dedicated Luheng artwork.
 It selects the unique exact-name installer and evidence artifacts and checks
 their IDs, size and digest metadata again after `gh run download`. It locates each
 required evidence basename exactly once, pins its actual relative path and bytes,
@@ -50,7 +53,9 @@ The small `luheng-preview-publication-metadata` artifact contains the actual
 `pair-lock.json`, target `latest.yml`, `SHA256SUMS.txt`, and publication receipt.
 The downloaded Windows artifacts remain on the disposable runner. Publish the
 target feed and commit the pair lock to the independent online-update consumer
-before claiming 0.7.0-to-0.7.2 update acceptance.
+before claiming 0.7.2-to-0.7.3 update acceptance. Save the actual generated pair as
+`qa/release-windows/update-pairs/qualified-0.7.2-to-0.7.3.json` only after publication
+and deployment of its target feed. Preserve earlier pair files and release assets.
 
 Run the non-network self-check with:
 

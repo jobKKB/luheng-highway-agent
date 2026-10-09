@@ -19,7 +19,7 @@ RECOVERY = runpy.run_path(str(Path(__file__).with_name("artifact-recovery.py")))
 def validate(pair):
     require(pair["schema"] == "luheng-online-update/v1" and pair["repository"] == "jobKKB/luheng-highway-agent"
             and pair["feed"] == FEED, "Unexpected update authority")
-    for side, version in (("from", "0.7.0"), ("to", "0.7.2")):
+    for side, version in (("from", "0.7.2"), ("to", "0.7.3")):
         entry = pair[side]
         require(entry["version"] == version, "Unexpected A/B version")
         require(type(entry["bytes"]) is int and entry["bytes"] > 0, "Invalid installer size")
@@ -168,7 +168,7 @@ def self_test():
     import copy
     pin = {"path": "file.json", "bytes": 1, "sha256": "a" * 64}
     pair = {"schema": "luheng-online-update/v1", "repository": "jobKKB/luheng-highway-agent", "feed": FEED}
-    for side, version in (("from", "0.7.0"), ("to", "0.7.2")):
+    for side, version in (("from", "0.7.2"), ("to", "0.7.3")):
         pair[side] = {"version": version, "bytes": 1, "sha256": "a" * 64, "exeSha256": "b" * 64,
                       "asarSha256": "c" * 64,
                       "url": f"https://github.com/jobKKB/luheng-highway-agent/releases/download/v{version}-beta.1/Luheng.exe",
@@ -177,8 +177,9 @@ def self_test():
     validate(pair)
     for mutation in (
         lambda value: value.update(feed="https://example.com/"),
-        lambda value: value["to"].update(version="0.7.0"),
-        lambda value: value["to"].update(version="0.7.1", url=value["to"]["url"].replace("0.7.2", "0.7.1")),
+        lambda value: value["from"].update(version="0.7.0", url=value["from"]["url"].replace("0.7.2", "0.7.0")),
+        lambda value: value["to"].update(version="0.7.2"),
+        lambda value: value["to"].update(version="0.7.1", url=value["to"]["url"].replace("0.7.3", "0.7.1")),
         lambda value: value["from"].update(url=value["from"]["url"] + "?redirect=1"),
         lambda value: value["from"]["evidence"]["files"]["health"].update(path="../outside.json"),
         lambda value: value["to"]["evidence"].update(runId=-1),
@@ -203,7 +204,7 @@ def qualification_self_test(pair):
            "repository": {"full_name": pair["repository"]}, "path": ".github/workflows/hermes-native-package-experiment.yml"}
     admission = {"source_commit": "e" * 40, "source_tree_sha256": "f" * 64, "source_count": 2,
                  "source_only": True, "license_preserved": True}
-    structure = {**admission, "schema": 2, "target": "win32-x64", "base_version": "0.7.0",
+    structure = {**admission, "schema": 2, "target": "win32-x64", "base_version": "0.7.2",
                  "artifact_kind": "official-prepared-unpacked-Windows-x64-build-only",
                  "desktop_and_embedded_cli_stamp_match": True, "production_update_enabled": True,
                  "update_mechanism": "electron-updater", "files": [
@@ -211,19 +212,19 @@ def qualification_self_test(pair):
                      {"path": "resources/app.asar", "bytes": 1, "sha256": entry["asarSha256"]}],
                  "update_stamp": {"desktopReleasePolicy": dict(policy["UPDATE_POLICY"]), "source": "commit-build",
                                   "payload": "bundled", "distribution": "desktop-app", "dirty": False,
-                                  "commit": admission["source_commit"], "baseVersion": "0.7.0",
+                                  "commit": admission["source_commit"], "baseVersion": "0.7.2",
                                   "channelBuild": None, "updateMechanism": "electron-updater"},
                  "update_configuration": {"provider": "generic", "url": FEED, "channel": "latest"}}
     health = {"native_windows": True, "architecture": "X64", "plain_launch": True, "contained_backend_health": True,
-              "normal_window_close": True, "forced_cleanup": False, "error": None, "health_version": "0.7.0", "build_run_id": "1"}
+              "normal_window_close": True, "forced_cleanup": False, "error": None, "health_version": "0.7.2", "build_run_id": "1"}
     lifecycle = {key: True for key in ("restricted_token_lifecycle_verified", "accepted_with_declared_limits", "installed",
                                       "every_installed_payload_file_verified", "native_window", "contained_backend_health",
                                       "normal_window_close", "contained_processes_stopped", "normal_uninstall", "installed_tree_removed",
                                       "synthetic_userdata_retained")}
     lifecycle.update(error=None, forced_cleanup=False, build_run_id=1, installer_sha256=entry["sha256"],
-                     health_version="0.7.0", coverage="restricted-token-same-user", architecture="X64", immutable_payload_rebuilt=False)
+                     health_version="0.7.2", coverage="restricted-token-same-user", architecture="X64", immutable_payload_rebuilt=False)
     build = {"schema": 1, "signed": False, "bytes": entry["bytes"], "sha256": entry["sha256"],
-             "payload": {"baseVersion": "0.7.0", "sourceCommit": admission["source_commit"],
+             "payload": {"baseVersion": "0.7.2", "sourceCommit": admission["source_commit"],
                          "sourceTreeSha256": admission["source_tree_sha256"], "sourceCount": 2, "fileCount": 2, "rebuilt": False},
              "custody": {"runId": "1"}}
     with tempfile.TemporaryDirectory(prefix="luheng-update-admission-") as directory:
@@ -245,11 +246,11 @@ def qualification_self_test(pair):
             raise AssertionError("Unqualified run accepted")
         for name, original, field, value in (("lifecycle", lifecycle, "forced_cleanup", True),
                                              ("lifecycle", lifecycle, "installer_sha256", "0" * 64),
-                                             ("lifecycle", lifecycle, "health_version", "0.7.2"),
+                                             ("lifecycle", lifecycle, "health_version", "0.7.3"),
                                              ("lifecycle", lifecycle, "coverage", "elevated-runner-explicitly-limited"),
                                              ("lifecycle", lifecycle, "architecture", "Arm64"),
                                              ("lifecycle", lifecycle, "immutable_payload_rebuilt", True),
-                                             ("health", health, "health_version", "0.7.2"),
+                                             ("health", health, "health_version", "0.7.3"),
                                              ("sourceAdmission", admission, "source_tree_sha256", "0" * 64),
                                              ("installerReceipt", build, "sha256", "0" * 64)):
             save(name, {**original, field: value})

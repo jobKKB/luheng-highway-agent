@@ -2,11 +2,11 @@
   "schema": 2,
   "upstream_commit": "158fd638da1629c8e62caf9ade1515d162def8ab",
   "source_count": 17266,
-  "source_tree_sha256": "80120bb33646d6e090297ad919d568af3ebb3c242f1dbb399711d6a2eb9df62f",
-  "overlay_count": 382,
+  "source_tree_sha256": "f0f4e16ed09dbafe05c7e78181c098a15fe22291afa90f692f0a1616fc4e90d3",
+  "overlay_count": 384,
   "LICENSE_sha256": "821556e6336796450ab852d375117b48a4887e71d255794fd6318d99982a5ab6",
-  "overlay_zip_sha256": "84757054345995fccb7fb4de6b55d7f4671c28f095668b96d8d8e288fc6373a2",
-  "overlay_zip_bytes": 3769898,
+  "overlay_zip_sha256": "6114932a0c8a87730f818fb241bd25fd2d2edf9e79ef1599c5fbc2986d3e0826",
+  "overlay_zip_bytes": 5747201,
   "source_provenance": {
     "sealed_source": {
       "filename": "Luheng-Silver-release-candidate-source-v6-20261005.zip",

@@ -29,7 +29,7 @@ subprocess.run([str(node), str(source/'node_modules/vitest/vitest.mjs'), 'run', 
                 'electron/updater/nsis.test.ts', 'electron/updater/nsis-client.test.ts',
                 'electron/updater/distribution-policy.test.ts', 'electron/updater/commit-build.test.ts',
                 'scripts/commit-stamp-identity.test.mjs', 'scripts/write-build-stamp.test.mjs',
-                'scripts/preview-update-config.test.mjs',
+                'scripts/preview-update-config.test.mjs', 'scripts/set-exe-identity.test.mjs',
                 'electron/product-identity.test.ts', 'electron/channel-build-version.test.ts'],
                cwd=source/'apps/desktop', env=env, check=True)
 subprocess.run([str(node), str(source/'node_modules/typescript/bin/tsc'), '--ignoreConfig', '--allowJs', '--checkJs', '--noEmit', '--skipLibCheck', '--module', 'nodenext', '--moduleResolution', 'nodenext', '--target', 'es2022', 'electron-builder.nsis-prepackaged-test.cjs'], cwd=source/'apps/desktop', env=env, check=True)

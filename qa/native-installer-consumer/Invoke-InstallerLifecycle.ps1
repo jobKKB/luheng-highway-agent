@@ -256,6 +256,10 @@ try {
   $bytesAdmitted=$true; $result.every_installed_payload_file_verified=$true
   Write-LifecycleCheckpoint 'installed-tree-before-launch-finished' $null
   $exe=Join-Path $install 'LuhengOfficeAgent.exe'
+  if ([version]$structure.base_version -ge [version]'0.7.3') {
+    & (Join-Path (Split-Path $verifierPath) 'verify-branding.ps1') -ExpectedIcon (Join-Path $install 'resources/luheng-icon.ico') -Executables @($exe,$uninstaller) -OutputDirectory (Join-Path $out 'branding')
+    Write-LifecycleCheckpoint 'installed-application-and-uninstaller-icons-verified' $null
+  }
   $runtime=Get-Content -LiteralPath (Join-Path $install 'resources/agent-payload/manifest.json') -Raw | ConvertFrom-Json
   $backendExe=[IO.Path]::GetFullPath((Join-Path (Join-Path $install 'resources/agent-payload') $runtime.runtime.storePython))
   $app=Start-OwnedProcess $exe '' $state 'desktop'
