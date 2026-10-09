@@ -34,7 +34,7 @@ class DownloadSiteTests(unittest.TestCase):
                 self.assertNotIn(old, html)
             self.assertIn(entry["url"], html)
             self.assertIn(entry["sha256"], html)
-            self.assertIn('舟山管理中心AI团队', html)
+            self.assertIn('舟岱收费中心所AI团队', html)
             for removed in ('hermes', '开源', '源码', '个人软件', '个人作品', '/tree/', 'PERSONAL SOFTWARE PROJECT'):
                 self.assertNotIn(removed.lower(), html.lower())
             self.assertNotIn('sourceUrl', metadata)

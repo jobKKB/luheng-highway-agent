@@ -96,7 +96,7 @@ def generate(installer, version, tag, lifecycle_path, output, upgrade_path=None)
     require(not re.search(r"__LUHENG_[A-Z_]+__", document), "Unfilled site template field")
     require("0.5.1" not in document and "static.cloudflareinsights.com" not in document,
             "Stale release or copied analytics remains")
-    metadata = {"version": version, "tag": tag, "windowsUrl": entry["url"], "publisher": "舟山管理中心AI团队", "sizeBytes": entry["size"],
+    metadata = {"version": version, "tag": tag, "windowsUrl": entry["url"], "publisher": "舟岱收费中心所AI团队", "sizeBytes": entry["size"],
                 "sha256": entry["sha256"], "unsignedPreview": True, "installationVerified": True,
                 "onlineUpdateVerified": upgrade is not None, "legacyPrototypeMigrationVerified": False,
                 "lifecycleEvidenceSha256": digest(lifecycle_path), "upgrade": upgrade}
