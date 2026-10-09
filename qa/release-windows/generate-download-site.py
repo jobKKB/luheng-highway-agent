@@ -83,7 +83,6 @@ def generate(installer, version, tag, lifecycle_path, output, upgrade_path=None)
     migration = " Migration from the legacy Node prototype remains unverified. Back up existing settings and files before migration."
     values = {
         "URL": entry["url"], "VERSION": version, "SHA256": entry["sha256"],
-        "SOURCE_URL": f"https://github.com/jobKKB/luheng-highway-agent/tree/{tag}",
         "BYTES_FORMATTED": f"{entry['size']:,}",
         "SIZE": f"{entry['size'] / 1_000_000:.1f} MB / {entry['size'] / 1024**2:.1f} MiB",
         "UPGRADE_ACCEPTANCE": f"<li>{accepted}</li>" if upgrade else "",
@@ -97,7 +96,7 @@ def generate(installer, version, tag, lifecycle_path, output, upgrade_path=None)
     require(not re.search(r"__LUHENG_[A-Z_]+__", document), "Unfilled site template field")
     require("0.5.1" not in document and "static.cloudflareinsights.com" not in document,
             "Stale release or copied analytics remains")
-    metadata = {"version": version, "tag": tag, "windowsUrl": entry["url"], "sourceUrl": values["SOURCE_URL"], "sizeBytes": entry["size"],
+    metadata = {"version": version, "tag": tag, "windowsUrl": entry["url"], "publisher": "舟山管理中心AI团队", "sizeBytes": entry["size"],
                 "sha256": entry["sha256"], "unsignedPreview": True, "installationVerified": True,
                 "onlineUpdateVerified": upgrade is not None, "legacyPrototypeMigrationVerified": False,
                 "lifecycleEvidenceSha256": digest(lifecycle_path), "upgrade": upgrade}

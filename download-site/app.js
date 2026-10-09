@@ -26,7 +26,7 @@
       if (!safeUrl) event.preventDefault();
     });
   });
-  if (safeUrl) document.querySelectorAll('[data-download-status]').forEach(function (status) { status.textContent = '无需登录 GitHub，直接下载 EXE。下载后请核对 SHA-256。'; });
+  if (safeUrl) document.querySelectorAll('[data-download-status]').forEach(function (status) { status.textContent = '直接下载 Windows 安装包，下载后请核对 SHA-256。'; });
 
   var toast = document.getElementById('toast');
   var toastTimer;

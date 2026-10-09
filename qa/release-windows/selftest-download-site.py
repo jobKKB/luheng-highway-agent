@@ -34,7 +34,10 @@ class DownloadSiteTests(unittest.TestCase):
                 self.assertNotIn(old, html)
             self.assertIn(entry["url"], html)
             self.assertIn(entry["sha256"], html)
-            self.assertIn('href="https://github.com/jobKKB/luheng-highway-agent/tree/v0.7.2-beta.1"', html)
+            self.assertIn('舟山管理中心AI团队', html)
+            for removed in ('hermes', '开源', '源码', '个人软件', '个人作品', '/tree/', 'PERSONAL SOFTWARE PROJECT'):
+                self.assertNotIn(removed.lower(), html.lower())
+            self.assertNotIn('sourceUrl', metadata)
             self.assertNotIn('href="https://github.com/jobKKB/luheng-highway-agent"', html)
             self.assertIn("has not been accepted", html)
             self.assertIn("Cache-Control: no-store", (output / "_headers").read_text())
