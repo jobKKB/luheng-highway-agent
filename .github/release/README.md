@@ -1,5 +1,12 @@
 # Qualified Windows preview publication
 
+Current scope: 0.7.3 is a local USB delivery build. Native producer 37871112024
+passed installation, launch, uninstall and actual executable icon acceptance
+under a restricted medium-integrity token. The publication
+procedure below is not being executed for this iteration: do not update release
+locks, online pair locks, or the public feed. Public 0.7.2 remains unchanged, and
+the 0.7.2-to-0.7.3 online transition has not been executed or claimed as verified.
+
 This lane downloads existing qualified native producer artifacts on an Ubuntu
 runner. It never rebuilds or executes the Windows installer or artifact code.
 All GitHub operations use `gh`.
@@ -11,8 +18,8 @@ The expected JSON is exactly `schema: luheng-preview-release/v2`,
 `repository: jobKKB/luheng-highway-agent`, `publish: true`, and `producers` equal
 to the `PRODUCERS` constant in `publish-windows-preview.py`. The baseline is the
 reviewed successful run 37809587446 (0.7.2), commit
-`4036b65ade36eaaff2be1fe60b7ac2b8eeb1eb3d`. The 0.7.3 target run and commit remain
-unset until its complete producer passes. Unset pins reject all publication locks.
+`4036b65ade36eaaff2be1fe60b7ac2b8eeb1eb3d`. The 0.7.3 publication target run and commit remain
+unset because this iteration is for local USB delivery only. Unset pins reject all publication locks.
 The existing publication lock is historical and cannot enable this new pair.
 A recovery object is not accepted.
 

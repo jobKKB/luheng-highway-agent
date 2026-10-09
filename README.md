@@ -1,5 +1,12 @@
 # Luheng Windows release source
 
+Current delivery scope: 0.7.3 is a local USB delivery build. Native producer
+37871112024 passed installation, launch, uninstall and actual executable icon
+acceptance under a restricted medium-integrity token.
+This iteration does not publish 0.7.3 or change the website or update feed. The
+public 0.7.2 release remains unchanged. The 0.7.2-to-0.7.3 online transition has
+not been executed and is not claimed as verified.
+
 This branch contains the reproducible release controller for the Hermes-based Luheng desktop application. The repository's older `main` branch contains the earlier Node prototype and is not the source of these Windows installers.
 
 ## Reconstruct the application
@@ -18,7 +25,7 @@ The command verifies every admitted file before creating the local source commit
 
 Unreleased artifacts are saved before functional acceptance so a failed verification does not discard the build. A saved artifact alone is not release approval. The final acceptance gate requires all functional stages to pass.
 
-Publication requires complete successful native producer runs for both versions, including the corrected NSIS long-path handling, synchronous Python validation and actual installation lifecycle in the same run. The 0.7.3 branding release reuses the published 0.7.2 baseline from successful producer 37809587446; its new target run and commit remain unset until qualification. Earlier pair evidence and public assets are preserved. Failed installers and retained-artifact recovery reports cannot qualify the new release.
+Publication requires complete successful native producer runs for both versions, including the corrected NSIS long-path handling, synchronous Python validation and actual installation lifecycle in the same run. The 0.7.3 branding release reuses the published 0.7.2 baseline from successful producer 37809587446; its publication target run and commit remain unset because this iteration is for local USB delivery only. Earlier pair evidence and public assets are preserved. Failed installers and retained-artifact recovery reports cannot qualify the new release.
 
 The separate online-update consumer in `qa/release-windows/verify-online-update.ps1` exercises two genuine installed versions through the application's own update bridge. The target installer is downloaded by the application from the fixed HTTPS feed. The consumer verifies confirmation, installation, automatic restart and retention of isolated settings, session data and a project file.
 
